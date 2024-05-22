@@ -25,7 +25,7 @@ while True:
 
     if rval:
         # image = Image.open("/Users/victorsahin/Desktop/Screenshot 2024-05-22 at 12.33.48 PM.png").convert("RGB")
-        image = Image.fromarray(frame)
+        image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
 
         inputs = processor(images=image, return_tensors="pt")
         outputs = model(**inputs)
@@ -33,17 +33,18 @@ while True:
         target_sizes = torch.tensor([image.size[::-1]])
         results = processor.post_process_object_detection(outputs, target_sizes=target_sizes, threshold=0.95)[0]
 
-        for score, label, box in zip(results["scores"], results["labels"], results["boxes"]):
-            box = [round(i, 2) for i in box.tolist()]
-            if model.config.id2label[label.item()] == "person":
-                print(
-                    f"Detected {model.config.id2label[label.item()]} with confidence "
-                    f"{round(score.item(), 3)} at location {box}"
-                )
-                if VISUALIZE:
-                    draw = ImageDraw.Draw(image)
-                    draw.rectangle((tuple(box[0:2]), tuple(box[2:])))
-                    image.show()
-            midpoint = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
+        score, label, box = sorted([e for e in zip(results["scores"], results["labels"], results["boxes"])
+                                    if model.config.id2label[e[1].item()] == "person"], key=lambda x: -x[0])[0]
+        box = [round(i, 2) for i in box.tolist()]
+        if model.config.id2label[label.item()] == "person":
+            print(
+                f"Detected {model.config.id2label[label.item()]} with confidence "
+                f"{round(score.item(), 3)} at location {box}"
+            )
+            if VISUALIZE:
+                draw = ImageDraw.Draw(image)
+                draw.rectangle((tuple(box[0:2]), tuple(box[2:])))
+                image.show()
+        midpoint = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2)
 
         print("=================================")
