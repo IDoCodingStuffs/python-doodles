@@ -5,3 +5,4 @@ catboost_info
 **/.ipynb_checkpoints
 submission.csv
 data
+models
