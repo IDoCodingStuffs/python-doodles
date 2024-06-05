@@ -2,6 +2,8 @@ import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 from pathlib import Path
 from torch import optim
+from sklearn.model_selection import train_test_split
+
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 
@@ -48,9 +50,8 @@ def load_dataset():
             except:
                 print("Failed on", s, k)
 
-    sample_patient = train_data.iloc[1]
-    image_set = get_imageset_for_patient(sample_patient, train_data, image_metadata_set)
-    show_images(image_set)
+    return train_data, image_metadata_set
+
 
 def get_imageset_for_patient(sample_patient, train_data, image_metadata_set):
     # !TODO: Index by some patient id
@@ -101,4 +102,27 @@ def display_images(images, title, max_images_per_row=4):
     plt.tight_layout()
     plt.show()
 
-load_dataset()
+
+LABELS = ['Normal/Mild', 'Moderate', 'Severe']
+EXCLUDE_COLS = ["study_id"]
+def convert_to_output_vector(train_data: pd.DataFrame):
+    # !TODO: Naive approach
+    # !TODO: Submission requires bin probabilities, rather than 1d score, need to think about that
+    train_data_features = train_data[[e for e in train_data.columns if e not in EXCLUDE_COLS]]
+    train_data_features = [[LABELS.index(e_) for e_ in e] for e in train_data_features.values]
+    return train_data_features
+
+def train():
+    study_data, image_metadata_set = load_dataset()
+    study_data = study_data.dropna()
+    # First approach: just get each individual image, tack on expected labels 0-2, train away
+    study_data["features"] = convert_to_output_vector(study_data)
+    study_data = study_data[["study_id", "features"]]
+
+    # !TODO: Split within same study?
+    # !TODO: Tripartite split vs bipartite?
+    train_data, val_data = train_test_split(study_data, test_size=0.2)
+
+
+
+train()
