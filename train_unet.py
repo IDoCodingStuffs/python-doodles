@@ -1,13 +1,15 @@
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 from pathlib import Path
-from torch import optim
+from torch import optim, nn
 from sklearn.model_selection import train_test_split
 
+import torch
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 
 import pandas as pd
+import numpy as np
 import os
 import glob
 import pydicom
@@ -113,6 +115,8 @@ def convert_to_output_vector(train_data: pd.DataFrame):
     return train_data_features
 
 def train():
+    EPOCH_COUNT = 50
+
     study_data, image_metadata_set = load_dataset()
     study_data = study_data.dropna()
     # First approach: just get each individual image, tack on expected labels 0-2, train away
@@ -123,6 +127,31 @@ def train():
     # !TODO: Tripartite split vs bipartite?
     train_data, val_data = train_test_split(study_data, test_size=0.2)
 
+    num_classes = len(study_data["features"].iloc[0])
+    model = UNet(n_channels=1, n_classes=num_classes)
+
+    image_examples = get_imageset_for_patient(train_data.iloc[0], train_data, image_metadata_set)
+    train_set = [np.array(e, dtype=np.int32) for e in image_examples["Sagittal T1"]]
+    exp = torch.tensor(train_data.iloc[0]["features"])
+    # !TODO: Loader args?
+    train_loader = DataLoader(train_set, shuffle=True)
+    pred = model(list(train_loader)[0].float().unsqueeze(0))
+
+    # Just the first one that comes to mind. To be tooned
+    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+    loss_fn = nn.CrossEntropyLoss()
+
+    for epoch in range(EPOCH_COUNT):
+        total_loss = 0
+        for batch in train_loader:
+            optimizer.zero_grad()
+            output = model(batch.float().unsqueeze(0))
+            print(output.shape, exp.shape)
+            loss = loss_fn(output, exp)
+            total_loss += loss.item()
+            loss.backward()
+            optimizer.step()
+        print("Loss at epoch", epoch, total_loss)
 
 
 train()
