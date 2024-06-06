@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 class DoubleConv(nn.Module):
     """(convolution => [BN] => ReLU) * 2"""
 
@@ -84,13 +83,36 @@ class ConvToFC(nn.Module):
     def forward(self, x):
         return self.fc(self.relu(self.conv(x)))
 
+
+class MiniUNet(nn.Module):
+    def __init__(self, n_channels, n_classes, bilinear=False):
+        super(MiniUNet, self).__init__()
+        self.n_channels = n_channels
+        self.n_classes = n_classes
+        self.bilinear = bilinear
+        # self.resize = Resize((512, 512))
+        self.inc = (DoubleConv(n_channels, 64))
+        self.down = (Down(64, 128))
+        self.up = (Up(128, 64, bilinear))
+        #self.outc = (OutConv(64, n_classes))
+        self.outc = (ConvToFC(64, in_dims=512, out_dims=n_classes))
+
+    def forward(self, x):
+        # x0 = self.resize(x)
+        x1 = self.inc(x)
+        x2 = self.down(x1)
+        x = self.up(x2, x1)
+        logits = self.outc(x)
+        return logits
+
+
 class UNet(nn.Module):
     def __init__(self, n_channels, n_classes, bilinear=False):
         super(UNet, self).__init__()
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.bilinear = bilinear
-
+        # self.resize = Resize((512, 512))
         self.inc = (DoubleConv(n_channels, 64))
         self.down1 = (Down(64, 128))
         self.down2 = (Down(128, 256))
@@ -105,6 +127,7 @@ class UNet(nn.Module):
         self.outc = (ConvToFC(64, in_dims=512, out_dims=n_classes))
 
     def forward(self, x):
+        # x0 = self.resize(x)
         x1 = self.inc(x)
         x2 = self.down1(x1)
         x3 = self.down2(x2)
