@@ -5,7 +5,7 @@ from torch import optim, nn
 from sklearn.model_selection import train_test_split
 
 import torch
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, Dataset
 from tqdm import tqdm
 
 import pandas as pd
@@ -14,8 +14,29 @@ import os
 import glob
 import pydicom
 import matplotlib.pyplot as plt
+from time import time_ns
 
 from unet import UNet
+
+
+class CustomImageDataset(Dataset):
+    def __init__(self, labels, images, transform=None, target_transform=None):
+        self.labels = labels
+        self.images = images
+        self.transform = transform
+        self.target_transform = target_transform
+
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, idx):
+        image = self.images[idx]
+        label = self.labels[idx]
+        if self.transform:
+            image = self.transform(image)
+        if self.target_transform:
+            label = self.target_transform(label)
+        return image, label
 
 
 def load_dataset():
@@ -115,7 +136,7 @@ def convert_to_output_vector(train_data: pd.DataFrame):
     return train_data_features
 
 def train():
-    EPOCH_COUNT = 50
+    EPOCH_COUNT = 10
 
     study_data, image_metadata_set = load_dataset()
     study_data = study_data.dropna()
@@ -130,28 +151,39 @@ def train():
     num_classes = len(study_data["features"].iloc[0])
     model = UNet(n_channels=1, n_classes=num_classes)
 
-    image_examples = get_imageset_for_patient(train_data.iloc[0], train_data, image_metadata_set)
-    train_set = [np.array(e, dtype=np.int32) for e in image_examples["Sagittal T1"]]
-    exp = torch.tensor(train_data.iloc[0]["features"])
+    exp = []
+    train_set = []
+
+    for i in range(10):
+        image_examples = get_imageset_for_patient(train_data.iloc[i], train_data, image_metadata_set)
+        train_set += [np.array(e, dtype=np.int32) for e in image_examples["Sagittal T1"]]
+        exp += [train_data["features"].iloc[i] for e in image_examples["Sagittal T1"]]
+
     # !TODO: Loader args?
-    train_loader = DataLoader(train_set, shuffle=True)
-    pred = model(list(train_loader)[0].float().unsqueeze(0))
+    train_dataset = CustomImageDataset(exp, train_set)
+    train_loader = DataLoader(train_dataset, shuffle=True)
+    #pred = model(list(train_loader)[0].float().unsqueeze(0))
 
     # Just the first one that comes to mind. To be tooned
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-    loss_fn = nn.CrossEntropyLoss()
+    # loss_fn = nn.CrossEntropyLoss()
+    loss_fn = nn.L1Loss()
 
     for epoch in range(EPOCH_COUNT):
         total_loss = 0
-        for batch in train_loader:
+        start = time_ns()
+        for image, target in train_loader:
+            # !TODO: Admit any image size
+            if image.shape != (1, 512, 512):
+                continue
             optimizer.zero_grad()
-            output = model(batch.float().unsqueeze(0))
-            print(output.shape, exp.shape)
-            loss = loss_fn(output, exp)
+            output = model(image.float().unsqueeze(0))
+            loss = loss_fn(output.squeeze(0).squeeze(0), torch.tensor(target).unsqueeze(0))
             total_loss += loss.item()
             loss.backward()
             optimizer.step()
+        end = time_ns()
         print("Loss at epoch", epoch, total_loss)
-
+        print("Seconds elapsed at epoch", epoch, (end - start) // 1e9)
 
 train()

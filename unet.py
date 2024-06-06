@@ -74,6 +74,16 @@ class OutConv(nn.Module):
     def forward(self, x):
         return self.conv(x)
 
+
+class ConvToFC(nn.Module):
+    def __init__(self, in_channels, in_dims, out_dims):
+        super(ConvToFC, self).__init__()
+        self.conv = nn.Conv2d(in_channels, 1, kernel_size=(in_dims, 1))
+        self.relu = nn.ReLU(inplace=True)
+        self.fc = nn.Linear(in_dims, out_dims)
+    def forward(self, x):
+        return self.fc(self.relu(self.conv(x)))
+
 class UNet(nn.Module):
     def __init__(self, n_channels, n_classes, bilinear=False):
         super(UNet, self).__init__()
@@ -91,7 +101,8 @@ class UNet(nn.Module):
         self.up2 = (Up(512, 256 // factor, bilinear))
         self.up3 = (Up(256, 128 // factor, bilinear))
         self.up4 = (Up(128, 64, bilinear))
-        self.outc = (OutConv(64, n_classes))
+        #self.outc = (OutConv(64, n_classes))
+        self.outc = (ConvToFC(64, in_dims=512, out_dims=n_classes))
 
     def forward(self, x):
         x1 = self.inc(x)

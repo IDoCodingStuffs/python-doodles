@@ -6,3 +6,4 @@ catboost_info
 submission.csv
 data
 models
+__pycache__
