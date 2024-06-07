@@ -28,7 +28,7 @@ class CustomImageDataset(Dataset):
         self.target_transform = target_transform
 
     def __len__(self):
-        return len(self.labels)
+        return len(self.images)
 
     def __getitem__(self, idx):
         image = self.images[idx]
@@ -183,7 +183,7 @@ def train() -> UNet:
     train_dataset = CustomImageDataset(exp, train_set, transform=tf)
     train_loader = DataLoader(train_dataset, batch_size=50, shuffle=True)
 
-    val_dataset = CustomImageDataset(exp, val_set)
+    val_dataset = CustomImageDataset(val_exp, val_set, transform=tf)
     val_loader = DataLoader(val_dataset, shuffle=True)
 
     # Just the first one that comes to mind. To be tooned
@@ -208,9 +208,9 @@ def train() -> UNet:
             val_loss = 0
             model.eval()
             for image, target in val_loader:
-                output = model(image.float().unsqueeze(0))
-                loss = loss_fn(output.squeeze(0).squeeze(0), torch.tensor(target).unsqueeze(0))
-                val_loss += loss
+                output = model(image.float())
+                loss = loss_fn(output.squeeze((1, 2)), torch.stack(target, dim=1))
+                val_loss += loss.item()
             print("Validation loss at epoch", epoch, val_loss)
             model.train()
 
@@ -218,4 +218,4 @@ def train() -> UNet:
 
 model = train()
 os.makedirs("models", exist_ok=True)
-torch.save(model, "models/my_unet_model.pt")
+torch.save(model, "models/my_unet_model_.pt")
