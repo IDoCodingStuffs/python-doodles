@@ -1,24 +1,9 @@
-import seaborn as sns
-
 import matplotlib.pyplot as plt
 import os
-import time
 import numpy as np
-import glob
-import json
-import collections
-import torch
-import torch.nn as nn
-
-import pydicom as dicom
-import matplotlib.patches as patches
-
-from matplotlib import animation, rc
 import pandas as pd
 
-import pydicom as dicom  # dicom
 import pydicom
-from pydicom.pixel_data_handlers.util import apply_voi_lut
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 import torchvision.transforms as transforms
