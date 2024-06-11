@@ -75,10 +75,13 @@ def _train_model_with_validation(model,
     return epoch_losses, epoch_validation_losses
 
 
-def train(training_dataloader, val_dataloader, label_map, epoch_count=50) -> UNet:
+def train(training_dataloader, val_dataloader, label_map, model=None, epoch_count=50) -> UNet:
     # Just the first one that comes to mind. To be tooned
-    model = UNet(n_channels=1, n_classes=3)
-    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+    if model is None:
+        model = UNet(n_channels=1, n_classes=3)
+    #optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+
+    optimizer = optim.Adam(model.model.fc.parameters())
     loss_fn = nn.CrossEntropyLoss()
 
     train_losses, val_losses = _train_model_with_validation(model,
