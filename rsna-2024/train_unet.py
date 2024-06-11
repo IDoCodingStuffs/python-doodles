@@ -81,7 +81,8 @@ def train(training_dataloader, val_dataloader, label_map, model=None, epoch_coun
         model = UNet(n_channels=1, n_classes=3)
     #optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
-    optimizer = optim.Adam(model.model.fc.parameters())
+    # optimizer = optim.Adam(model.model.fc.parameters())
+    optimizer = optim.Adam(model.parameters())
     loss_fn = nn.CrossEntropyLoss()
 
     train_losses, val_losses = _train_model_with_validation(model,
