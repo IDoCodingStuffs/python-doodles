@@ -19,8 +19,54 @@ import pandas as pd
 import pydicom as dicom  # dicom
 import pydicom
 from pydicom.pixel_data_handlers.util import apply_voi_lut
+from torch.utils.data import Dataset, DataLoader
+from sklearn.model_selection import train_test_split
+import torchvision.transforms as transforms
 
-TRAIN_PATH = '../data/rsna-2024-lumbar-spine-degenerative-classification/'
+
+TRANSFORM = transforms.Compose([
+    transforms.Lambda(lambda x: (x * 255).astype(np.uint8)),  # Convert back to uint8 for PIL
+    transforms.ToPILImage(),
+    transforms.Resize((224, 224)),
+    transforms.Grayscale(num_output_channels=3),
+    transforms.ToTensor(),
+])
+
+
+class CustomDataset(Dataset):
+    def __init__(self, dataframe, transform=None):
+        self.dataframe = dataframe
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataframe)
+
+    def __getitem__(self, index):
+        image_path = self.dataframe['image_path'][index]
+        image = load_dicom(image_path)  # Define this function to load your DICOM images
+        label = self.dataframe['severity'][index]
+
+        if self.transform:
+            image = self.transform(image)
+
+        return image, label
+
+
+def create_datasets_and_loaders(df, series_description, transform, batch_size=8):
+    filtered_df = df[df['series_description'] == series_description]
+
+    train_df, val_df = train_test_split(filtered_df, test_size=0.2, random_state=42)
+    train_df = train_df.reset_index(drop=True)
+    val_df = val_df.reset_index(drop=True)
+
+    train_dataset = CustomDataset(train_df, transform)
+    val_dataset = CustomDataset(val_df, transform)
+
+    trainloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    valloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+    return trainloader, valloader, len(train_df), len(val_df)
+
 
 def generate_image_paths(df, data_dir):
     image_paths = []
@@ -63,6 +109,17 @@ def load_dicom_files(path_to_folder):
     files = [os.path.join(path_to_folder, f) for f in os.listdir(path_to_folder) if f.endswith('.dcm')]
     files.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('-')[-1]))
     return files
+
+
+def load_dicom(path):
+    dicom = pydicom.read_file(path)
+    data = dicom.pixel_array
+    data = data - np.min(data)
+    if np.max(data) != 0:
+        data = data / np.max(data)
+    data = (data * 255).astype(np.uint8)
+    return data
+
 
 def retrieve_training_data(train_path):
     def reshape_row(row):
