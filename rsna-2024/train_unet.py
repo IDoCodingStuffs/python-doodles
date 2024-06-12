@@ -50,11 +50,11 @@ def _train_model_with_validation(model,
                                  epochs=10):
     epoch_losses = []
     epoch_validation_losses = []
-    for epoch in range(epochs):
+    for epoch in tqdm(range(epochs)):
         epoch_loss = 0
         model.train()
 
-        for images, labels in tqdm(train_loader, desc=train_loader_desc):
+        for images, labels in tqdm(train_loader, desc=train_loader_desc, position=0, leave=False):
             labels = torch.tensor([label_map[label] for label in labels])
             labels = labels.to(device)
 
@@ -75,7 +75,7 @@ def _train_model_with_validation(model,
     return epoch_losses, epoch_validation_losses
 
 
-def train(training_dataloader, val_dataloader, label_map, model=None, epoch_count=50) -> UNet:
+def train(training_dataloader, val_dataloader, label_map, model=None, model_desc="my_model", epoch_count=50) -> UNet:
     # Just the first one that comes to mind. To be tooned
     if model is None:
         model = UNet(n_channels=1, n_classes=3)
@@ -92,14 +92,14 @@ def train(training_dataloader, val_dataloader, label_map, model=None, epoch_coun
                                                             val_dataloader,
                                                             label_map,
                                                             train_loader_desc=None,
-                                                            model_desc="unet",
+                                                            model_desc=model_desc,
                                                             epochs=epoch_count)
 
     plt.plot(train_losses)
     plt.plot(val_losses)
     plt.title("Train and val losses per epoch")
 
-    return model
+    return model, train_losses, val_losses
 
 #my_model = train()
 #pass
