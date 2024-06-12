@@ -29,7 +29,7 @@ def _model_validation_loss(model,
                            desc=None):
     model.eval()
     total_loss = 0
-    for images, labels in tqdm(val_loader, desc=desc):
+    for images, labels in val_loader:
         labels = torch.tensor([label_map[label] for label in labels])
         labels = labels.to(device)
 
@@ -54,7 +54,7 @@ def _train_model_with_validation(model,
         epoch_loss = 0
         model.train()
 
-        for images, labels in tqdm(train_loader, desc=train_loader_desc, position=0, leave=False):
+        for images, labels in train_loader:
             labels = torch.tensor([label_map[label] for label in labels])
             labels = labels.to(device)
 
@@ -68,7 +68,7 @@ def _train_model_with_validation(model,
 
         epoch_validation_loss = _model_validation_loss(model, val_loader, loss_fn, label_map)
         if len(epoch_validation_losses) == 0 or epoch_validation_loss < min(epoch_validation_losses):
-            torch.save(model, "/Users/Victor/Documents/pythonProject/models/" + model_desc + ".pt")
+            torch.save(model, "/Users/Victor/Documents/python-doodles/models/" + model_desc + ".pt")
         epoch_validation_losses.append(epoch_validation_loss)
         epoch_losses.append(epoch_loss)
 
