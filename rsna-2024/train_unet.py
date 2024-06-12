@@ -34,7 +34,7 @@ def _model_validation_loss(model,
         labels = labels.to(device)
 
         output = model(images.to(device))
-        loss = loss_fn(output, labels)
+        loss = loss_fn(output.squeeze(1, 2), labels)
         total_loss += loss.item()
     return total_loss
 
@@ -61,14 +61,14 @@ def _train_model_with_validation(model,
             optimizer.zero_grad()
             output = model(images.to(device))
             # !TODO: This is sus
-            loss = loss_fn(output.squeeze(1,2), labels)
+            loss = loss_fn(output.squeeze(1, 2), labels)
             epoch_loss += loss.item()
             loss.backward()
             optimizer.step()
 
-        epoch_validation_loss = _model_validation_loss(model, val_loader, loss_fn)
+        epoch_validation_loss = _model_validation_loss(model, val_loader, loss_fn, label_map)
         if len(epoch_validation_losses) == 0 or epoch_validation_loss < min(epoch_validation_losses):
-            torch.save(model, "/Users/victorsahin/PycharmProjects/pythonProject/models/" + model_desc + ".pt")
+            torch.save(model, "/Users/Victor/Documents/pythonProject/models/" + model_desc + ".pt")
         epoch_validation_losses.append(epoch_validation_loss)
         epoch_losses.append(epoch_loss)
 
@@ -79,7 +79,7 @@ def train(training_dataloader, val_dataloader, label_map, model=None, model_desc
     # Just the first one that comes to mind. To be tooned
     if model is None:
         model = UNet(n_channels=1, n_classes=3)
-    #optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+    # optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
     # optimizer = optim.Adam(model.model.fc.parameters())
     optimizer = optim.Adam(model.parameters())
@@ -101,5 +101,5 @@ def train(training_dataloader, val_dataloader, label_map, model=None, model_desc
 
     return model, train_losses, val_losses
 
-#my_model = train()
-#pass
+# my_model = train()
+# pass
