@@ -37,15 +37,15 @@ class CustomDataset(Dataset):
         return image, label
 
 
-def create_datasets_and_loaders(df, series_description, transform, batch_size=8):
+def create_datasets_and_loaders(df, series_description, transform_train, transform_val, batch_size=8):
     filtered_df = df[df['series_description'] == series_description]
 
     train_df, val_df = train_test_split(filtered_df, test_size=0.2, random_state=42)
     train_df = train_df.reset_index(drop=True)
     val_df = val_df.reset_index(drop=True)
 
-    train_dataset = CustomDataset(train_df, transform)
-    val_dataset = CustomDataset(val_df, transform)
+    train_dataset = CustomDataset(train_df, transform_train)
+    val_dataset = CustomDataset(val_df, transform_val)
 
     trainloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     valloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
