@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 
 import pydicom
+import torch
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 import torchvision.transforms as transforms
@@ -28,6 +29,48 @@ class CustomDataset(Dataset):
         return image, label
 
 
+class SeriesLevelDataset(Dataset):
+    def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
+        self.base_path = base_path
+        self.dataframe = dataframe[['study_id', "series_id", "severity"]].drop_duplicates()
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataframe)
+
+    def __getitem__(self, index):
+        curr = self.dataframe.iloc[index]
+
+        images = np.array([self.transform(load_dicom(image_path)) if self.transform else load_dicom(image_path)
+                           for image_path in retrieve_image_paths(self.base_path, curr["study_id"], curr["series_id"])])
+        label = curr['severity']
+
+        return images, label
+
+
+def create_series_level_datasets_and_loaders(df: pd.DataFrame,
+                                series_description: str,
+                                transform_train: transforms.Compose,
+                                transform_val: transforms.Compose,
+                                base_path: str,
+                                split_factor=0.2,
+                                random_seed=42,
+                                batch_size=1):
+    filtered_df = df[df['series_description'] == series_description]
+
+    train_df, val_df = train_test_split(filtered_df, test_size=split_factor, random_state=random_seed)
+    train_df = train_df.reset_index(drop=True)
+    val_df = val_df.reset_index(drop=True)
+
+    train_dataset = SeriesLevelDataset(base_path, train_df, transform_train)
+    val_dataset = SeriesLevelDataset(base_path, val_df, transform_val)
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+    return train_loader, val_loader, len(train_df), len(val_df)
+
+
 def create_datasets_and_loaders(df: pd.DataFrame,
                                 series_description: str,
                                 transform_train: transforms.Compose,
@@ -50,19 +93,14 @@ def create_datasets_and_loaders(df: pd.DataFrame,
     return train_loader, val_loader, len(train_df), len(val_df)
 
 
-def retrieve_image_paths(df, data_dir):
-    image_paths = dict()
-    for study_id in df['study_id'].unique():
-        image_paths[study_id] = dict()
-        study_dir = os.path.join(data_dir, str(study_id))
-        for series_id in df[df["study_id"] == study_id]['series_id'].unique():
-            series_dir = os.path.join(study_dir, str(series_id))
-            images = os.listdir(series_dir)
-            image_paths[study_id][series_id] = [os.path.join(series_dir, img) for img in images]
+def retrieve_image_paths(base_path, study_id, series_id):
+    series_dir = os.path.join(base_path, str(study_id), str(series_id))
+    images = os.listdir(series_dir)
+    image_paths = [os.path.join(series_dir, img) for img in images]
     return image_paths
 
 
-def display_dicom_with_coordinates(image_paths, label_df):
+def display_dicom_with_coordinates(image_paths: list, label_df: pd.DataFrame):
     fig, axs = plt.subplots(1, len(image_paths), figsize=(18, 6))
 
     for idx, path in enumerate(image_paths):  # Display images
