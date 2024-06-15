@@ -58,7 +58,7 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                 split_factor=0.2,
                                 random_seed=42,
                                 batch_size=1,
-                                num_workers=4):
+                                num_workers=0):
     filtered_df = df[df['series_description'] == series_description]
 
     train_df, val_df = train_test_split(filtered_df, test_size=split_factor, random_state=random_seed)
