@@ -50,13 +50,15 @@ def create_datasets_and_loaders(df: pd.DataFrame,
     return train_loader, val_loader, len(train_df), len(val_df)
 
 
-def generate_image_paths(df, data_dir):
-    image_paths = []
-    for study_id, series_id in zip(df['study_id'], df['series_id']):
+def retrieve_image_paths(df, data_dir):
+    image_paths = dict()
+    for study_id in df['study_id'].unique():
+        image_paths[study_id] = dict()
         study_dir = os.path.join(data_dir, str(study_id))
-        series_dir = os.path.join(study_dir, str(series_id))
-        images = os.listdir(series_dir)
-        image_paths.extend([os.path.join(series_dir, img) for img in images])
+        for series_id in df[df["study_id"] == study_id]['series_id'].unique():
+            series_dir = os.path.join(study_dir, str(series_id))
+            images = os.listdir(series_dir)
+            image_paths[study_id][series_id] = [os.path.join(series_dir, img) for img in images]
     return image_paths
 
 
