@@ -9,15 +9,6 @@ from sklearn.model_selection import train_test_split
 import torchvision.transforms as transforms
 
 
-TRANSFORM = transforms.Compose([
-    transforms.Lambda(lambda x: (x * 255).astype(np.uint8)),  # Convert back to uint8 for PIL
-    transforms.ToPILImage(),
-    transforms.Resize((224, 224)),
-    transforms.Grayscale(num_output_channels=3),
-    transforms.ToTensor(),
-])
-
-
 class CustomDataset(Dataset):
     def __init__(self, dataframe, transform=None):
         self.dataframe = dataframe
@@ -37,20 +28,26 @@ class CustomDataset(Dataset):
         return image, label
 
 
-def create_datasets_and_loaders(df, series_description, transform_train, transform_val, batch_size=8):
+def create_datasets_and_loaders(df: pd.DataFrame,
+                                series_description: str,
+                                transform_train: transforms.Compose,
+                                transform_val: transforms.Compose,
+                                split_factor=0.2,
+                                random_seed=42,
+                                batch_size=8):
     filtered_df = df[df['series_description'] == series_description]
 
-    train_df, val_df = train_test_split(filtered_df, test_size=0.2, random_state=42)
+    train_df, val_df = train_test_split(filtered_df, test_size=split_factor, random_state=random_seed)
     train_df = train_df.reset_index(drop=True)
     val_df = val_df.reset_index(drop=True)
 
     train_dataset = CustomDataset(train_df, transform_train)
     val_dataset = CustomDataset(val_df, transform_val)
 
-    trainloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    valloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    return trainloader, valloader, len(train_df), len(val_df)
+    return train_loader, val_loader, len(train_df), len(val_df)
 
 
 def generate_image_paths(df, data_dir):
@@ -181,5 +178,6 @@ def clean_training_data(train_data, train_path):
     # Filter train_data
     train_data = train_data[
         (train_data['study_id_exists']) & (train_data['series_id_exists']) & (train_data['image_exists'])]
+    train_data = train_data.dropna()
 
     return train_data
