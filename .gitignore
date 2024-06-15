@@ -7,5 +7,5 @@ submission.csv
 data
 models
 __pycache__
-
+.idea
 foo.py

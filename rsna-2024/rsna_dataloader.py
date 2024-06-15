@@ -57,7 +57,8 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                 base_path: str,
                                 split_factor=0.2,
                                 random_seed=42,
-                                batch_size=1):
+                                batch_size=1,
+                                num_workers=4):
     filtered_df = df[df['series_description'] == series_description]
 
     train_df, val_df = train_test_split(filtered_df, test_size=split_factor, random_state=random_seed)
@@ -67,8 +68,8 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     train_dataset = SeriesLevelDataset(base_path, train_df, transform_train)
     val_dataset = SeriesLevelDataset(base_path, val_df, transform_val)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     return train_loader, val_loader, len(train_df), len(val_df)
 
