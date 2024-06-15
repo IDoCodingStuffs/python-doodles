@@ -14,30 +14,6 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 from rsna_dataloader import *
 
-data_basepath = "C://Users/Victor/Documents/python-doodles/data/rsna-2024-lumbar-spine-degenerative-classification/"
-training_data = retrieve_training_data(data_basepath)
-
-transform_train = transforms.Compose([
-    transforms.Lambda(lambda x: (x * 255).astype(np.uint8)),  # Convert back to uint8 for PIL
-    transforms.ToPILImage(),
-    transforms.Resize((224, 224)),
-    transforms.Grayscale(num_output_channels=3),
-    transforms.ToTensor(),
-])
-
-trainloader_t1, valloader_t1, len_train_t1, len_val_t1 = create_series_level_datasets_and_loaders(training_data,
-                                                                                                  'Sagittal T1',
-                                                                                                  transform_train,
-                                                                                                  transform_train,
-                                                                                                  data_basepath + "train_images")
-trainloader_t2, valloader_t2, len_train_t2, len_val_t2 = create_series_level_datasets_and_loaders(training_data,
-                                                                                                  'Axial T2',
-                                                                                                  transform_train,
-                                                                                                  transform_train,
-                                                                                                  data_basepath + "train_images")
-trainloader_t2stir, valloader_t2stir, len_train_t2stir, len_val_t2stir = create_series_level_datasets_and_loaders(
-    training_data, 'Sagittal T2/STIR', transform_train, transform_train, data_basepath + "train_images")
-
 
 class CustomResNet(nn.Module):
     def __init__(self, pretrained_weights=None):
@@ -87,34 +63,6 @@ def freeze_model_initial_layers(model: CustomLSTM):
         param.requires_grad = False
     for param in model.resnet.model.fc.parameters():
         param.requires_grad = True
-
-
-weights_path = '../models/resnet50-19c8e357.pth'
-NUM_EPOCHS = 12
-
-sagittal_t1_model = CustomLSTM(resnet_weights=weights_path).to(device)
-axial_t2_model = CustomLSTM(resnet_weights=weights_path).to(device)
-sagittal_t2stir_model = CustomLSTM(resnet_weights=weights_path).to(device)
-
-optimizer_sagittal_t1 = torch.optim.Adam(sagittal_t1_model.parameters(), lr=23e-5)
-scheduler_sagittal_t1 = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer_sagittal_t1, NUM_EPOCHS, eta_min=23e-6)
-
-optimizer_axial_t2 = torch.optim.Adam(axial_t2_model.parameters(), lr=23e-5)
-scheduler_axial_t2 = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer_axial_t2, NUM_EPOCHS, eta_min=23e-6)
-
-optimizer_sagittal_t2stir = torch.optim.Adam(sagittal_t2stir_model.parameters(), lr=23e-5)
-scheduler_sagittal_t2stir = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer_sagittal_t2stir, NUM_EPOCHS,
-                                                                       eta_min=23e-6)
-
-freeze_model_initial_layers(sagittal_t1_model)
-freeze_model_initial_layers(axial_t2_model)
-freeze_model_initial_layers(sagittal_t2stir_model)
-
-trainable_params = sum(p.numel() for p in sagittal_t1_model.parameters() if p.requires_grad)
-print(f"Number of parameters: {trainable_params}")
-
-label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
-print(len(trainloader_t1), len(trainloader_t2), len(trainloader_t2stir))
 
 
 def model_validation_loss(model, val_loader, loss_fn):
@@ -176,55 +124,106 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
     return epoch_losses, epoch_validation_losses, epoch_accs, epoch_val_accs
 
 
-criterion = nn.CrossEntropyLoss()
+if __name__ == '__main__':
+    data_basepath = "C://Users/Victor/Documents/python-doodles/data/rsna-2024-lumbar-spine-degenerative-classification/"
+    training_data = retrieve_training_data(data_basepath)
 
-# _logger.log(logging.INFO, "Starting to train Sagittal T1")
-losses_t1, val_losses_t1, acc_t1, val_acc_t1 = train_model_with_validation(sagittal_t1_model, optimizer_sagittal_t1,
-                                                                           scheduler_sagittal_t1,
-                                                                           criterion, trainloader_t1, valloader_t1,
-                                                                           model_desc="resnet50_lstm_t1",
-                                                                           train_loader_desc="Training Sagittal T1",
-                                                                           epochs=NUM_EPOCHS)
-plt.plot(losses_t1, label="train")
-plt.plot(val_losses_t1, label="test")
-plt.legend(loc="center right")
-plt.show()
+    transform_train = transforms.Compose([
+        transforms.Lambda(lambda x: (x * 255).astype(np.uint8)),  # Convert back to uint8 for PIL
+        transforms.ToPILImage(),
+        transforms.Resize((224, 224)),
+        transforms.Grayscale(num_output_channels=3),
+        transforms.ToTensor(),
+    ])
 
-plt.plot([e.item() for e in acc_t1], label="train")
-plt.plot([e.item() for e in val_acc_t1], label="val")
-plt.legend(loc="center right")
-plt.show()
+    trainloader_t1, valloader_t1, len_train_t1, len_val_t1 = create_series_level_datasets_and_loaders(training_data,
+                                                                                                      'Sagittal T1',
+                                                                                                      transform_train,
+                                                                                                      transform_train,
+                                                                                                      data_basepath + "train_images")
+    trainloader_t2, valloader_t2, len_train_t2, len_val_t2 = create_series_level_datasets_and_loaders(training_data,
+                                                                                                      'Axial T2',
+                                                                                                      transform_train,
+                                                                                                      transform_train,
+                                                                                                      data_basepath + "train_images")
+    trainloader_t2stir, valloader_t2stir, len_train_t2stir, len_val_t2stir = create_series_level_datasets_and_loaders(
+        training_data, 'Sagittal T2/STIR', transform_train, transform_train, data_basepath + "train_images")
 
+    weights_path = '../models/resnet50-19c8e357.pth'
+    NUM_EPOCHS = 12
 
-losses_t2, val_losses_t2, acc_t2, val_acc_t2 = train_model_with_validation(axial_t2_model, optimizer_axial_t2,
-                                                                           scheduler_axial_t2,
-                                                                           criterion, trainloader_t2, valloader_t2,
-                                                                           model_desc="resnet50_lstm_t2",
-                                                                           train_loader_desc="Training Axial T2",
-                                                                           epochs=NUM_EPOCHS)
-plt.plot(losses_t2, label="train")
-plt.plot(val_losses_t2, label="test")
-plt.legend(loc="center right")
-plt.show()
+    sagittal_t1_model = CustomLSTM(resnet_weights=weights_path).to(device)
+    axial_t2_model = CustomLSTM(resnet_weights=weights_path).to(device)
+    sagittal_t2stir_model = CustomLSTM(resnet_weights=weights_path).to(device)
 
-plt.plot([e.item() for e in acc_t2], label="train")
-plt.plot([e.item() for e in val_acc_t2], label="val")
-plt.legend(loc="center right")
-plt.show()
+    optimizer_sagittal_t1 = torch.optim.Adam(sagittal_t1_model.parameters(), lr=23e-5)
+    scheduler_sagittal_t1 = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer_sagittal_t1, NUM_EPOCHS, eta_min=23e-6)
 
+    optimizer_axial_t2 = torch.optim.Adam(axial_t2_model.parameters(), lr=23e-5)
+    scheduler_axial_t2 = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer_axial_t2, NUM_EPOCHS, eta_min=23e-6)
 
-losses_t2stir, val_losses_t2stir, acc_t2stir, val_acc_t2stir = train_model_with_validation(sagittal_t2stir_model, optimizer_sagittal_t2stir,
-                                                                           scheduler_sagittal_t2stir,
-                                                                           criterion, trainloader_t2stir, valloader_t2stir,
-                                                                           model_desc="resnet50_lstm_t2stir",
-                                                                           train_loader_desc="Training Sagittal T2/STIR",
-                                                                           epochs=NUM_EPOCHS)
-plt.plot(losses_t2stir, label="train")
-plt.plot(val_losses_t2stir, label="test")
-plt.legend(loc="center right")
-plt.show()
+    optimizer_sagittal_t2stir = torch.optim.Adam(sagittal_t2stir_model.parameters(), lr=23e-5)
+    scheduler_sagittal_t2stir = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer_sagittal_t2stir, NUM_EPOCHS,
+                                                                           eta_min=23e-6)
 
-plt.plot([e.item() for e in acc_t1], label="train")
-plt.plot([e.item() for e in val_acc_t1], label="val")
-plt.legend(loc="center right")
-plt.show()
+    freeze_model_initial_layers(sagittal_t1_model)
+    freeze_model_initial_layers(axial_t2_model)
+    freeze_model_initial_layers(sagittal_t2stir_model)
+
+    trainable_params = sum(p.numel() for p in sagittal_t1_model.parameters() if p.requires_grad)
+
+    label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
+
+    criterion = nn.CrossEntropyLoss()
+
+    # _logger.log(logging.INFO, "Starting to train Sagittal T1")
+    losses_t1, val_losses_t1, acc_t1, val_acc_t1 = train_model_with_validation(sagittal_t1_model, optimizer_sagittal_t1,
+                                                                               scheduler_sagittal_t1,
+                                                                               criterion, trainloader_t1, valloader_t1,
+                                                                               model_desc="resnet50_lstm_t1",
+                                                                               train_loader_desc="Training Sagittal T1",
+                                                                               epochs=NUM_EPOCHS)
+    plt.plot(losses_t1, label="train")
+    plt.plot(val_losses_t1, label="test")
+    plt.legend(loc="center right")
+    plt.show()
+
+    plt.plot([e.item() for e in acc_t1], label="train")
+    plt.plot([e.item() for e in val_acc_t1], label="val")
+    plt.legend(loc="center right")
+    plt.show()
+
+    losses_t2, val_losses_t2, acc_t2, val_acc_t2 = train_model_with_validation(axial_t2_model, optimizer_axial_t2,
+                                                                               scheduler_axial_t2,
+                                                                               criterion, trainloader_t2, valloader_t2,
+                                                                               model_desc="resnet50_lstm_t2",
+                                                                               train_loader_desc="Training Axial T2",
+                                                                               epochs=NUM_EPOCHS)
+    plt.plot(losses_t2, label="train")
+    plt.plot(val_losses_t2, label="test")
+    plt.legend(loc="center right")
+    plt.show()
+
+    plt.plot([e.item() for e in acc_t2], label="train")
+    plt.plot([e.item() for e in val_acc_t2], label="val")
+    plt.legend(loc="center right")
+    plt.show()
+
+    losses_t2stir, val_losses_t2stir, acc_t2stir, val_acc_t2stir = train_model_with_validation(sagittal_t2stir_model,
+                                                                                               optimizer_sagittal_t2stir,
+                                                                                               scheduler_sagittal_t2stir,
+                                                                                               criterion,
+                                                                                               trainloader_t2stir,
+                                                                                               valloader_t2stir,
+                                                                                               model_desc="resnet50_lstm_t2stir",
+                                                                                               train_loader_desc="Training Sagittal T2/STIR",
+                                                                                               epochs=NUM_EPOCHS)
+    plt.plot(losses_t2stir, label="train")
+    plt.plot(val_losses_t2stir, label="test")
+    plt.legend(loc="center right")
+    plt.show()
+
+    plt.plot([e.item() for e in acc_t1], label="train")
+    plt.plot([e.item() for e in val_acc_t1], label="val")
+    plt.legend(loc="center right")
+    plt.show()
