@@ -116,7 +116,7 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
         epoch_validation_loss, epoch_validation_acc = model_validation_loss(model, val_loader, loss_fn)
 
         if len(epoch_validation_losses) == 0 or epoch_validation_loss < min(epoch_validation_losses):
-            torch.save(model, "C:/Users/Victor/Documents/python-doodles/models/" + model_desc + ".pt")
+            torch.save(model, "./models/" + model_desc + ".pt")
 
         epoch_validation_losses.append(epoch_validation_loss)
         epoch_losses.append(epoch_loss)
@@ -127,7 +127,7 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
 
 
 def train_model_for_series(data_subset_label: str, model_label: str):
-    data_basepath = "C://Users/Victor/Documents/python-doodles/data/rsna-2024-lumbar-spine-degenerative-classification/"
+    data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
     training_data = retrieve_training_data(data_basepath)
 
     transform_train = transforms.Compose([
@@ -142,8 +142,9 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                           data_subset_label,
                                                                                           transform_train,
                                                                                           transform_train,
-                                                                                          data_basepath + "train_images")
-    weights_path = '../models/resnet50-19c8e357.pth'
+                                                                                          data_basepath + "train_images",
+                                                                                          num_workers=4)
+    weights_path = './models/resnet50-19c8e357.pth'
     NUM_EPOCHS = 12
 
     model = CustomLSTM(resnet_weights=weights_path).to(device)
