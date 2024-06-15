@@ -7,12 +7,11 @@ from sklearn.model_selection import train_test_split
 import pandas as pd
 from tqdm import tqdm
 import logging
+from rsna_dataloader import *
 
 _logger = logging.getLogger(__name__)
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-from rsna_dataloader import *
+label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
 
 
 class CustomResNet(nn.Module):
@@ -123,8 +122,7 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
 
     return epoch_losses, epoch_validation_losses, epoch_accs, epoch_val_accs
 
-
-if __name__ == '__main__':
+def train():
     data_basepath = "C://Users/Victor/Documents/python-doodles/data/rsna-2024-lumbar-spine-degenerative-classification/"
     training_data = retrieve_training_data(data_basepath)
 
@@ -171,9 +169,6 @@ if __name__ == '__main__':
     freeze_model_initial_layers(sagittal_t2stir_model)
 
     trainable_params = sum(p.numel() for p in sagittal_t1_model.parameters() if p.requires_grad)
-
-    label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
-
     criterion = nn.CrossEntropyLoss()
 
     # _logger.log(logging.INFO, "Starting to train Sagittal T1")
@@ -227,3 +222,7 @@ if __name__ == '__main__':
     plt.plot([e.item() for e in val_acc_t1], label="val")
     plt.legend(loc="center right")
     plt.show()
+
+
+if __name__ == '__main__':
+    train()
