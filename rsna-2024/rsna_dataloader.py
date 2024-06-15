@@ -32,7 +32,9 @@ class CustomDataset(Dataset):
 class SeriesLevelDataset(Dataset):
     def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
         self.base_path = base_path
-        self.dataframe = dataframe[['study_id', "series_id", "severity"]].drop_duplicates()
+        self.dataframe = (dataframe[['study_id', "series_id", "severity"]]
+                          .drop_duplicates()
+                          .dropna())
         self.transform = transform
 
     def __len__(self):
