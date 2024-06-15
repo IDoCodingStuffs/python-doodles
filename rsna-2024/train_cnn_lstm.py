@@ -1,3 +1,5 @@
+import time
+
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
@@ -164,13 +166,13 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     plt.plot(val_losses, label="test")
     plt.legend(loc="center right")
     plt.title(data_subset_label)
-    plt.show()
+    plt.savefig(f'{model_label}_{time.time_ns() // 1000 // 1000}_loss.png')
 
     plt.plot([e.item() for e in acc], label="train")
     plt.plot([e.item() for e in val_acc], label="val")
     plt.title(data_subset_label)
     plt.legend(loc="center right")
-    plt.show()
+    plt.savefig(f'{model_label}_{time.time_ns() // 1000 // 1000}_acc.png')
 
     return model
 
