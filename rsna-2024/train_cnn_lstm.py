@@ -98,7 +98,7 @@ def dump_plots_for_loss_and_acc(losses, val_losses, acc, val_acc, data_subset_la
     plt.plot([e.item() for e in val_acc], label="val")
     plt.title(data_subset_label)
     plt.legend(loc="center right")
-    plt.savefig(f'./figures/{model_label}_{time.time_ns() // 1e9}_acc.png')
+    plt.savefig(f'./figures/{model_label}_{int(time.time_ns() // 1e9)}_acc.png')
     plt.close()
 
 
@@ -164,9 +164,10 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                           data_basepath + "train_images",
                                                                                           num_workers=4)
     weights_path = './models/resnet50-19c8e357.pth'
-    NUM_EPOCHS = 12
+    NUM_EPOCHS = 30
 
-    model = CustomLSTM(resnet_weights=weights_path).to(device)
+    # model = CustomLSTM(resnet_weights=weights_path).to(device)
+    model = CustomLSTM().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, NUM_EPOCHS, eta_min=23e-6)
 
