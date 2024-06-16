@@ -20,7 +20,7 @@ label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
 class CustomResNet(nn.Module):
     def __init__(self, pretrained_weights=None):
         super(CustomResNet, self).__init__()
-        self.model = models.resnet18(pretrained=True)
+        self.model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
         if pretrained_weights:
             self.model.load_state_dict(torch.load(pretrained_weights))
         num_ftrs = self.model.fc.in_features
