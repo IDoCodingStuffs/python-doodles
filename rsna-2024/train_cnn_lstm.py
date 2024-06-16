@@ -20,7 +20,7 @@ label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
 class CustomResNet(nn.Module):
     def __init__(self, pretrained_weights=None):
         super(CustomResNet, self).__init__()
-        self.model = models.resnet50(pretrained=False)
+        self.model = models.resnet18(pretrained=True)
         if pretrained_weights:
             self.model.load_state_dict(torch.load(pretrained_weights))
         num_ftrs = self.model.fc.in_features
@@ -114,6 +114,7 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
         epoch_acc = epoch_acc / len(train_loader.dataset)
 
         epoch_validation_loss, epoch_validation_acc = model_validation_loss(model, val_loader, loss_fn)
+        scheduler.step()
 
         if len(epoch_validation_losses) == 0 or epoch_validation_loss < min(epoch_validation_losses):
             torch.save(model, "./models/" + model_desc + ".pt")
@@ -148,7 +149,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     NUM_EPOCHS = 12
 
     model = CustomLSTM(resnet_weights=weights_path).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=23e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, NUM_EPOCHS, eta_min=23e-6)
 
     freeze_model_initial_layers(model)
@@ -168,12 +169,14 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     plt.legend(loc="center right")
     plt.title(data_subset_label)
     plt.savefig(f'{model_label}_{time.time_ns() // 1000 // 1000}_loss.png')
+    plt.close()
 
     plt.plot([e.item() for e in acc], label="train")
     plt.plot([e.item() for e in val_acc], label="val")
     plt.title(data_subset_label)
     plt.legend(loc="center right")
     plt.savefig(f'{model_label}_{time.time_ns() // 1000 // 1000}_acc.png')
+    plt.close()
 
     return model
 
