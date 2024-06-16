@@ -34,7 +34,7 @@ class CustomLSTM(nn.Module):
     hidden_size = 256
     num_layers = 2
 
-    def __init__(self, num_classes=3 * 5, drop_rate=0.2, resnet_weights=None):
+    def __init__(self, num_classes=3 * 5 * 5, drop_rate=0.2, resnet_weights=None):
         super(CustomLSTM, self).__init__()
         self.cnn = CustomResNet(pretrained_weights=resnet_weights)
         self.lstm = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers, batch_first=True, bidirectional=True)
@@ -250,7 +250,7 @@ def train_model_patient_level():
 
 
 def train():
-    # model_t2stir = train_model_for_series("Sagittal T2/STIR", "resnet18_lstm_t2stir")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "resnet18_lstm_t2stir")
     model_t1 = train_model_for_series("Sagittal T1", "resnet18_lstm_t1")
     model_t2 = train_model_for_series("Axial T2", "resnet18_lstm_t2")
 

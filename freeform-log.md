@@ -53,3 +53,5 @@ I also need to upgrade the model to patient level vs just series level to accomm
 
 ### 3 PM
 Let's start with disabling flip, rotation etc. augmentations and then enabling patient-level data loading. Then, I can figure how to set up the model for that.
+Or before all that, let's try expanding the output features first.
+While doing that, I discovered a bug with the label generation. Wonder if fixing it will help.

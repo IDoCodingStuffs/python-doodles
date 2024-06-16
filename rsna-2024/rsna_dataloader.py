@@ -12,7 +12,7 @@ import torchvision.transforms as transforms
 
 
 label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
-
+conditions = ["Left Neural Foraminal Narrowing", "Right Neural Foraminal Narrowing", "Left Subarticular Stenosis", "Right Subarticular Stenosis", "Spinal Canal Stenosis"]
 
 class CustomDataset(Dataset):
     def __init__(self, dataframe, transform=None):
@@ -36,16 +36,19 @@ class CustomDataset(Dataset):
 class SeriesLevelDataset(Dataset):
     def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
         self.base_path = base_path
-        self.dataframe = (dataframe[['study_id', "series_id", "severity", "level"]]
+        self.dataframe = (dataframe[['study_id', "series_id", "severity", "condition", "level"]]
                           .drop_duplicates())
-        self.labels = dict()
+        self.series = dataframe[['study_id', "series_id"]].drop_duplicates().reset_index(drop=True)
         self.levels = sorted(self.dataframe["level"].unique())
+        self.labels = dict()
         for name, group in self.dataframe.groupby(["study_id", "series_id"]):
             # !TODO: Refine this
-            label_indices = [-1 for e in self.levels]
+            # !TODO: Different studies have different conditions.
+            label_indices = [-1 for e in range(len(self.levels) * len(conditions))]
             for index, row in group.iterrows():
-                if row["severity"] in label_indices:
-                    label_indices[self.levels.index(row["level"])] = label_map[row["severity"]]
+                if row["severity"] in label_map and row["condition"] in conditions:
+                    label_index = self.levels.index(row["level"]) * len(conditions) + conditions.index(row["condition"])
+                    label_indices[label_index] = label_map[row["severity"]]
 
             self.labels[name] = []
 
@@ -57,7 +60,6 @@ class SeriesLevelDataset(Dataset):
                 else:
                     for i in range(3):
                         self.labels[name].append(1 if i == label else 0)
-            self.series = dataframe[['study_id', "series_id"]].drop_duplicates().reset_index(drop=True)
         self.transform = transform
 
     def __len__(self):
