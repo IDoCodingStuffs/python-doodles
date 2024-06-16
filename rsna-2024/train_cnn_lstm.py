@@ -180,7 +180,7 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
         epoch_accs.append(epoch_acc)
         epoch_val_accs.append(epoch_validation_acc)
 
-        dump_plots_for_loss_and_acc(epoch_losses, epoch_accs, epoch_validation_losses, epoch_val_accs, train_loader_desc, model_desc)
+        dump_plots_for_loss_and_acc(epoch_losses, epoch_validation_losses, epoch_accs, epoch_val_accs, train_loader_desc, model_desc)
 
     return epoch_losses, epoch_validation_losses, epoch_accs, epoch_val_accs
 
