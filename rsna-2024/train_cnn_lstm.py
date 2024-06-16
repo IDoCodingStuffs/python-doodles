@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 from torchvision import transforms
+from torchvision.transforms import v2
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
 import pandas as pd
@@ -157,6 +158,21 @@ def train_model_for_series(data_subset_label: str, model_label: str):
         transforms.Lambda(lambda x: (x * 255).astype(np.uint8)),  # Convert back to uint8 for PIL
         transforms.ToPILImage(),
         transforms.Resize((224, 224)),
+        transforms.RandomHorizontalFlip(p=0.3),
+        transforms.RandomVerticalFlip(p=0.3),
+        transforms.RandomRotation([0, 90]),
+        transforms.RandomChoice([
+            transforms.GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 0.2)),
+        ], p=0.25),
+        v2.RandomPhotometricDistort(p=0.3),
+        transforms.Grayscale(num_output_channels=3),
+        transforms.ToTensor(),
+    ])
+
+    transform_val = transforms.Compose([
+        transforms.Lambda(lambda x: (x * 255).astype(np.uint8)),  # Convert back to uint8 for PIL
+        transforms.ToPILImage(),
+        transforms.Resize((224, 224)),
         transforms.Grayscale(num_output_channels=3),
         transforms.ToTensor(),
     ])
@@ -164,7 +180,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     trainloader, valloader, len_train, len_val = create_series_level_datasets_and_loaders(training_data,
                                                                                           data_subset_label,
                                                                                           transform_train,
-                                                                                          transform_train,
+                                                                                          transform_val,
                                                                                           data_basepath + "train_images",
                                                                                           num_workers=4)
     weights_path = './models/resnet50-19c8e357.pth'
