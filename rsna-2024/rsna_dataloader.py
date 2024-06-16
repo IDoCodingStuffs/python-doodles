@@ -42,13 +42,16 @@ class SeriesLevelDataset(Dataset):
 
     def __getitem__(self, index):
         curr = self.dataframe.iloc[index]
-
+        image_paths = retrieve_image_paths(self.base_path, curr["study_id"], curr["series_id"])
+        image_paths = sorted(image_paths, key=lambda x: self._get_image_index(x))
         images = np.array([self.transform(load_dicom(image_path)) if self.transform else load_dicom(image_path)
-                           for image_path in retrieve_image_paths(self.base_path, curr["study_id"], curr["series_id"])])
+                           for image_path in image_paths])
         label = curr['severity']
 
         return images, label
 
+    def _get_image_index(self, image_path):
+        return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
 
 def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                 series_description: str,
