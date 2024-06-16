@@ -82,6 +82,7 @@ def model_validation_loss(model, val_loader, loss_fn):
 
         acc += torch.sum(torch.argmax(output) == labels).item()
 
+    total_loss = total_loss / len(val_loader.dataset)
     acc = acc / len(val_loader.dataset)
 
     return total_loss, acc
@@ -130,6 +131,7 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
             epoch_acc += torch.sum(torch.argmax(output) == labels).item()
 
         epoch_acc = epoch_acc / len(train_loader.dataset)
+        epoch_loss = epoch_loss / len(train_loader.dataset)
 
         epoch_validation_loss, epoch_validation_acc = model_validation_loss(model, val_loader, loss_fn)
         scheduler.step()
