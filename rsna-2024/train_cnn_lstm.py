@@ -32,19 +32,19 @@ class CustomResNet(nn.Module):
 
 
 class CustomLSTM(nn.Module):
-    hidden_size = 512
-    num_layers = 3
+    hidden_size = 128
+    num_layers = 2
 
-    def __init__(self, num_classes=3, drop_rate=0.3, resnet_weights=None):
+    def __init__(self, num_classes=3, drop_rate=0.2, resnet_weights=None):
         super(CustomLSTM, self).__init__()
-        self.resnet = CustomResNet(pretrained_weights=resnet_weights)
+        self.cnn = CustomResNet(pretrained_weights=resnet_weights)
         self.lstm = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers, batch_first=True)
         self.head = nn.Sequential(
-            nn.Linear(512, 256),
+            nn.Linear(128, 64),
             # nn.BatchNorm1d(256),
             nn.Dropout(drop_rate),
             nn.LeakyReLU(0.1),
-            nn.Linear(256, num_classes),
+            nn.Linear(64, num_classes),
         )
     def forward(self, x_3d):
         hidden = None
@@ -52,7 +52,7 @@ class CustomLSTM(nn.Module):
         # Iterate over each frame of a video in a video of batch * frames * channels * height * width
         for t in range(x_3d.size(1)):
             with torch.no_grad():
-                x = self.resnet(x_3d[:, t])
+                x = self.cnn(x_3d[:, t])
                 # Pass latent representation of frame through lstm and update hidden state
             out, hidden = self.lstm(x.unsqueeze(0), hidden)
 
@@ -63,9 +63,9 @@ class CustomLSTM(nn.Module):
 
 
 def freeze_model_initial_layers(model: CustomLSTM):
-    for param in model.resnet.model.parameters():
+    for param in model.cnn.model.parameters():
         param.requires_grad = False
-    for param in model.resnet.model.fc.parameters():
+    for param in model.cnn.model.fc.parameters():
         param.requires_grad = True
 
 
@@ -183,7 +183,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                           transform_train,
                                                                                           transform_val,
                                                                                           data_basepath + "train_images",
-                                                                                          num_workers=4)
+                                                                                          num_workers=4, batch_size=1)
     weights_path = './models/resnet50-19c8e357.pth'
     NUM_EPOCHS = 30
 

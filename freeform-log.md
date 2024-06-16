@@ -21,3 +21,10 @@ Let's also try the head architecture from the 2022 paper as well, sans the batch
 
 ### 6/15 8 PM
 Well it stil ldoes not do great after epoch 1. t2/stir Val acc stuck around .84 and ce loss around .72. Let's try with image augmentation
+Before:
+Training Sagittal T2/STIR:  9/30 [1:05:09<2:32:01, 434.38s/it]
+After: 1/30 [07:10<3:27:56, 430.24s/it]
+
+Seems the transforms have no impact on train time at least
+But the val loss and acc still not changing per epoch...
+Let's try a smaller LSTM to see if it is even training
