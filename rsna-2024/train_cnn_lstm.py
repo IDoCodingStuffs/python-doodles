@@ -15,7 +15,6 @@ from rsna_dataloader import *
 
 _logger = logging.getLogger(__name__)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
 
 
 class CustomResNet(nn.Module):
@@ -35,7 +34,7 @@ class CustomLSTM(nn.Module):
     hidden_size = 256
     num_layers = 2
 
-    def __init__(self, num_classes=3, drop_rate=0.2, resnet_weights=None):
+    def __init__(self, num_classes=3 * 5, drop_rate=0.2, resnet_weights=None):
         super(CustomLSTM, self).__init__()
         self.cnn = CustomResNet(pretrained_weights=resnet_weights)
         self.lstm = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers, batch_first=True, bidirectional=True)
@@ -111,15 +110,14 @@ def model_validation_loss(model, val_loader, loss_fn):
     model.eval()
     total_loss = 0
     acc = 0
-    for images, labels in val_loader:
-        labels = torch.tensor([label_map[label] for label in labels])
-        labels = labels.to(device)
+    for images, label in val_loader:
+        label = torch.tensor(label).to(device)
 
         output = model(images.to(device))
-        loss = loss_fn(output, nn.functional.one_hot(labels, 3).float())
+        loss = loss_fn(output, label)
         total_loss += loss.item()
 
-        acc += torch.sum(torch.argmax(output) == labels).item()
+        #acc += torch.sum(torch.argmax(output) == labels).item()
 
     total_loss = total_loss / len(val_loader.dataset)
     acc = acc / len(val_loader.dataset)
@@ -156,20 +154,19 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
         epoch_acc = 0
         model.train()
 
-        for images, labels in train_loader:
-            labels = torch.tensor([label_map[label] for label in labels])
-            labels = labels.to(device)
+        for images, label in train_loader:
+            label = torch.tensor(label).to(device)
 
             optimizer.zero_grad()
             output = model(images.to(device))
-            loss = loss_fn(output, nn.functional.one_hot(labels, 3).float())
+            loss = loss_fn(output, label)
             epoch_loss += loss.item()
             loss.backward()
             optimizer.step()
 
-            epoch_acc += torch.sum(torch.argmax(output) == labels).item()
+            #epoch_acc += torch.sum(torch.argmax(output) == labels).item()
 
-        epoch_acc = epoch_acc / len(train_loader.dataset)
+        #epoch_acc = epoch_acc / len(train_loader.dataset)
         epoch_loss = epoch_loss / len(train_loader.dataset)
 
         epoch_validation_loss, epoch_validation_acc = model_validation_loss(model, val_loader, loss_fn)

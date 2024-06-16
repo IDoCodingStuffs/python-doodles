@@ -31,3 +31,9 @@ Let's try a smaller LSTM to see if it is even training
 
 ### 6/15 10 PM
 Model still refuses to train... Gonna try BCEWithLogits loss before tearing everything down to start from a minimal model.
+Just realized... the severities are different per disc. No wonder it fails to train, duh.
+I need to change the output shape to account for all discs of interest.
+
+So I am outputting a concatenated one-hot encoding per each of the 5 discs of interests, scaled to sum up to 1. Let's see if this trains...
+It's seeming to work. For some reason training faster even [05:45<2:47:11, 345.92s/it]
+But the val loss is immediately 0 from the first epoch. I'll just let it run overnight, see what happens. But likely some other bug will pop up.
