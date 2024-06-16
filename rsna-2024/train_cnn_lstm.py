@@ -31,7 +31,7 @@ class CustomResNet(nn.Module):
 
 
 class CustomLSTM(nn.Module):
-    hidden_size = 256
+    hidden_size = 512
     num_layers = 3
 
     def __init__(self, num_classes=3, drop_rate=0.3, resnet_weights=None):
@@ -40,7 +40,7 @@ class CustomLSTM(nn.Module):
         self.lstm = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers, batch_first=True)
         self.head = nn.Sequential(
             nn.Linear(512, 256),
-            nn.BatchNorm1d(256),
+            # nn.BatchNorm1d(256),
             nn.Dropout(drop_rate),
             nn.LeakyReLU(0.1),
             nn.Linear(256, num_classes),
