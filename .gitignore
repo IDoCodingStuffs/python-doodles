@@ -8,4 +8,5 @@ data
 models
 __pycache__
 .idea
+figures
 foo.py

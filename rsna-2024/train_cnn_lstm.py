@@ -86,6 +86,22 @@ def model_validation_loss(model, val_loader, loss_fn):
     return total_loss, acc
 
 
+def dump_plots_for_loss_and_acc(losses, val_losses, acc, val_acc, data_subset_label, model_label):
+    plt.plot(losses, label="train")
+    plt.plot(val_losses, label="test")
+    plt.legend(loc="center right")
+    plt.title(data_subset_label)
+    plt.savefig(f'./figures/{model_label}_{time.time_ns() // 1e9}_loss.png')
+    plt.close()
+
+    plt.plot([e.item() for e in acc], label="train")
+    plt.plot([e.item() for e in val_acc], label="val")
+    plt.title(data_subset_label)
+    plt.legend(loc="center right")
+    plt.savefig(f'./figures/{model_label}_{time.time_ns() // 1e9}_acc.png')
+    plt.close()
+
+
 def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_loader, val_loader, train_loader_desc=None,
                                 model_desc="my_model", epochs=10):
     epoch_losses = []
@@ -124,6 +140,8 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
         epoch_accs.append(epoch_acc)
         epoch_val_accs.append(epoch_validation_acc)
 
+        dump_plots_for_loss_and_acc(epoch_losses, epoch_accs, epoch_validation_losses, epoch_val_accs, train_loader_desc, model_desc)
+
     return epoch_losses, epoch_validation_losses, epoch_accs, epoch_val_accs
 
 
@@ -155,28 +173,15 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     freeze_model_initial_layers(model)
     criterion = nn.CrossEntropyLoss()
 
-    losses, val_losses, acc, val_acc = train_model_with_validation(model,
-                                                                   optimizer,
-                                                                   scheduler,
-                                                                   criterion,
-                                                                   trainloader,
-                                                                   valloader,
-                                                                   model_desc=model_label,
-                                                                   train_loader_desc=f"Training {data_subset_label}",
-                                                                   epochs=NUM_EPOCHS)
-    plt.plot(losses, label="train")
-    plt.plot(val_losses, label="test")
-    plt.legend(loc="center right")
-    plt.title(data_subset_label)
-    plt.savefig(f'{model_label}_{time.time_ns() // 1000 // 1000}_loss.png')
-    plt.close()
-
-    plt.plot([e.item() for e in acc], label="train")
-    plt.plot([e.item() for e in val_acc], label="val")
-    plt.title(data_subset_label)
-    plt.legend(loc="center right")
-    plt.savefig(f'{model_label}_{time.time_ns() // 1000 // 1000}_acc.png')
-    plt.close()
+    train_model_with_validation(model,
+                                optimizer,
+                                scheduler,
+                                criterion,
+                                trainloader,
+                                valloader,
+                                model_desc=model_label,
+                                train_loader_desc=f"Training {data_subset_label}",
+                                epochs=NUM_EPOCHS)
 
     return model
 
@@ -185,6 +190,7 @@ def train():
     model_t2stir = train_model_for_series("Sagittal T2/STIR", "resnet50_lstm_t2stir")
     model_t2 = train_model_for_series("Axial T2", "resnet50_lstm_t2")
     model_t1 = train_model_for_series("Sagittal T1", "resnet50_lstm_t1")
+
 
 if __name__ == '__main__':
     train()

@@ -14,3 +14,5 @@ Lesson here: data loading is a suspect bottleneck for when GPU utilization fails
 
 ### 6/15 3 PM
 Apparently I had forgotten the scheduler step not to mention flushing the pyplot figure. Not seeing the model training, so going to try a higher starting lr, and actually add the scheduler stepping this time.
+
+This time will also use 40 epochs instead of 11. If it still does not start converging I must be missing something fundamental.
