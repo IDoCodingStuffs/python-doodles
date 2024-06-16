@@ -44,7 +44,8 @@ class SeriesLevelDataset(Dataset):
             # !TODO: Refine this
             label_indices = [-1 for e in self.levels]
             for index, row in group.iterrows():
-                label_indices[self.levels.index(row["level"])] = label_map[row["severity"]]
+                if row["severity"] in label_indices:
+                    label_indices[self.levels.index(row["level"])] = label_map[row["severity"]]
 
             self.labels[name] = []
 

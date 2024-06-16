@@ -37,7 +37,16 @@ I need to change the output shape to account for all discs of interest.
 
 So I am outputting a concatenated one-hot encoding per each of the 5 discs of interests, scaled to sum up to 1. Let's see if this trains...
 
-It's seeming to work. For some reason training faster even [05:45<2:47:11, 345.92s/it]
+It's seeming to work. For some reason training faster even [05:45<2:47:11, 345.92s/it]. I think it is because I moved the `tensor(np_array_input).to(device)` call out of the training loop, which makes obvious sense. Big lesson there.
 
-But the val loss is immediately 0 from the first epoch. I'll just let it run overnight, see what happens. But likely some other bug will pop up.
-Oh turns out I was plotting it wrong. Let's see if the fix will work.
+## 6/16
+
+### 10 AM
+Well I forgot nan handling so the other two models did not get to train. But the T2/STIR model seems to have trained somewhat even if very little. That or it is a false impression from changing the output feature vector size.
+
+Let's try training the other two and submitting to see. If it gets a bad score still, the next step will be setting up a proper local benchmark.
+
+### 12 PM
+I just realized... There is also a component for different conditions like stenosis, foraminal narrowing etc.
+Which means I need to increase the output feature vector size further. Subarticular stenosis and foraminal narrowing times per side, and also spinal canal narrowing. So 5 x 5 x 3 makes 75 output features.
+I also need to upgrade the model to patient level vs just series level to accommodate this.
