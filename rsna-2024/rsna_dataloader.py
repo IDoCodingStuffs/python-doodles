@@ -5,9 +5,13 @@ import pandas as pd
 
 import pydicom
 import torch
+import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 import torchvision.transforms as transforms
+
+
+label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
 
 
 class CustomDataset(Dataset):
@@ -32,21 +36,40 @@ class CustomDataset(Dataset):
 class SeriesLevelDataset(Dataset):
     def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
         self.base_path = base_path
-        self.dataframe = (dataframe[['study_id', "series_id", "severity"]]
-                          .drop_duplicates()
-                          .dropna())
+        self.dataframe = (dataframe[['study_id', "series_id", "severity", "level"]]
+                          .drop_duplicates())
+        self.labels = dict()
+        self.levels = sorted(self.dataframe["level"].unique())
+        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
+            # !TODO: Refine this
+            label_indices = [-1 for e in self.levels]
+            for index, row in group.iterrows():
+                label_indices[self.levels.index(row["level"])] = label_map[row["severity"]]
+
+            self.labels[name] = []
+
+            # 1 hot encode with uncertain for na
+            for label in label_indices:
+                if label == -1:
+                    for i in range(3):
+                        self.labels[name].append(1/3)
+                else:
+                    for i in range(3):
+                        self.labels[name].append(1 if i == label else 0)
+            self.series = dataframe[['study_id', "series_id"]].drop_duplicates().reset_index(drop=True)
         self.transform = transform
 
     def __len__(self):
-        return len(self.dataframe)
+        return len(self.series)
 
     def __getitem__(self, index):
-        curr = self.dataframe.iloc[index]
+        curr = self.series.iloc[index]
         image_paths = retrieve_image_paths(self.base_path, curr["study_id"], curr["series_id"])
         image_paths = sorted(image_paths, key=lambda x: self._get_image_index(x))
         images = np.array([self.transform(load_dicom(image_path)) if self.transform else load_dicom(image_path)
                            for image_path in image_paths])
-        label = curr['severity']
+        # Feature scaling here
+        label = np.array(self.labels[(curr["study_id"], curr["series_id"])]) / len(self.levels)
 
         return images, label
 
@@ -57,7 +80,7 @@ class SeriesLevelDataset(Dataset):
 class PatientLevelDataset(Dataset):
     def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
         self.base_path = base_path
-        self.dataframe = (dataframe[['study_id', "series_id", "severity"]]
+        self.dataframe = (dataframe[['study_id', "series_id", "severity", "level"]]
                           .drop_duplicates()
                           .dropna())
         self.transform = transform
@@ -72,6 +95,7 @@ class PatientLevelDataset(Dataset):
         image_paths = sorted(image_paths, key=lambda x: self._get_image_index(x))
         images = np.array([self.transform(load_dicom(image_path)) if self.transform else load_dicom(image_path)
                            for image_path in image_paths])
+
         label = curr['severity']
 
         return images, label
