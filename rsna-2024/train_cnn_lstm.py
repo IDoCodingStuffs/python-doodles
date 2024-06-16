@@ -181,6 +181,8 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
         epoch_val_accs.append(epoch_validation_acc)
 
         dump_plots_for_loss_and_acc(epoch_losses, epoch_validation_losses, epoch_accs, epoch_val_accs, train_loader_desc, model_desc)
+        print(f"Training Loss for epoch {epoch}: {epoch_loss:.4f}")
+        print(f"Validation Loss for epoch {epoch}: {epoch_validation_loss:.4f}")
 
     return epoch_losses, epoch_validation_losses, epoch_accs, epoch_val_accs
 
