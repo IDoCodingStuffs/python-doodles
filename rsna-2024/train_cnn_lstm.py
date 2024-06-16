@@ -188,9 +188,9 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "resnet50_lstm_t2stir")
-    model_t2 = train_model_for_series("Axial T2", "resnet50_lstm_t2")
-    model_t1 = train_model_for_series("Sagittal T1", "resnet50_lstm_t1")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "resnet18_lstm_t2stir")
+    model_t2 = train_model_for_series("Axial T2", "resnet18_lstm_t2")
+    model_t1 = train_model_for_series("Sagittal T1", "resnet18_lstm_t1")
 
 
 if __name__ == '__main__':
