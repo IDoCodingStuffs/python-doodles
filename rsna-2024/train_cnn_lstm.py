@@ -80,7 +80,7 @@ def model_validation_loss(model, val_loader, loss_fn):
         loss = loss_fn(output, labels)
         total_loss += loss.item()
 
-        acc += torch.sum(torch.argmax(output) == labels)
+        acc += torch.sum(torch.argmax(output) == labels).item()
 
     acc = acc / len(val_loader.dataset)
 
@@ -88,16 +88,16 @@ def model_validation_loss(model, val_loader, loss_fn):
 
 
 def dump_plots_for_loss_and_acc(losses, val_losses, acc, val_acc, data_subset_label, model_label):
-    plt.plot([e.item() for e in losses], label="train")
-    plt.plot([e.item() for e in val_losses], label="val")
+    plt.plot(losses, label="train")
+    plt.plot(val_losses, label="val")
     plt.legend(loc="center right")
     plt.title(data_subset_label)
     # plt.savefig(f'./figures/{model_label}_{time.time_ns() // 1e9}_loss.png')
     plt.savefig(f'./figures/{model_label}_loss.png')
     plt.close()
 
-    plt.plot([e.item() for e in acc], label="train")
-    plt.plot([e.item() for e in val_acc], label="val")
+    plt.plot(acc, label="train")
+    plt.plot(val_acc, label="val")
     plt.title(data_subset_label)
     plt.legend(loc="center right")
     plt.savefig(f'./figures/{model_label}_acc.png')
@@ -127,7 +127,7 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
             loss.backward()
             optimizer.step()
 
-            epoch_acc += torch.sum(torch.argmax(output) == labels)
+            epoch_acc += torch.sum(torch.argmax(output) == labels).item()
 
         epoch_acc = epoch_acc / len(train_loader.dataset)
 
