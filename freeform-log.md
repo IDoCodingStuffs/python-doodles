@@ -18,3 +18,6 @@ This time will also use 30 epochs instead of 11. If it still does not start conv
 Oh and also going to try resnet18 instead of resnet50. Features are not really that complex, right?
 
 Let's also try the head architecture from the 2022 paper as well, sans the batch normalization when it is per series
+
+### 6/15 8 PM
+Well it stil ldoes not do great after epoch 1. t2/stir Val acc stuck around .84 and ce loss around .72. Let's try with image augmentation

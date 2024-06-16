@@ -163,7 +163,8 @@ def train_model_for_series(data_subset_label: str, model_label: str):
         transforms.RandomRotation([0, 90]),
         transforms.RandomChoice([
             transforms.GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 0.2)),
-        ], p=0.25),
+            v2.Identity(),
+        ], p=[0.25, 0.75]),
         v2.RandomPhotometricDistort(p=0.3),
         transforms.Grayscale(num_output_channels=3),
         transforms.ToTensor(),
