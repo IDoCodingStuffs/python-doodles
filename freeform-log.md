@@ -50,3 +50,6 @@ Let's try training the other two and submitting to see. If it gets a bad score s
 I just realized... There is also a component for different conditions like stenosis, foraminal narrowing etc.
 Which means I need to increase the output feature vector size further. Subarticular stenosis and foraminal narrowing times per side, and also spinal canal narrowing. So 5 x 5 x 3 makes 75 output features.
 I also need to upgrade the model to patient level vs just series level to accommodate this.
+
+### 3 PM
+Let's start with disabling flip, rotation etc. augmentations and then enabling patient-level data loading. Then, I can figure how to set up the model for that.

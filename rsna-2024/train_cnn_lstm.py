@@ -195,9 +195,9 @@ def train_model_for_series(data_subset_label: str, model_label: str):
         transforms.Lambda(lambda x: (x * 255).astype(np.uint8)),  # Convert back to uint8 for PIL
         transforms.ToPILImage(),
         transforms.Resize((224, 224)),
-        transforms.RandomHorizontalFlip(p=0.3),
-        transforms.RandomVerticalFlip(p=0.3),
-        transforms.RandomRotation([0, 90]),
+        # transforms.RandomHorizontalFlip(p=0.3),
+        # transforms.RandomVerticalFlip(p=0.3),
+        # transforms.RandomRotation([0, 90]),
         transforms.RandomChoice([
             transforms.GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 0.2)),
             v2.Identity(),
