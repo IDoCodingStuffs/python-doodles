@@ -116,7 +116,7 @@ def model_validation_loss(model, val_loader, loss_fn):
         labels = labels.to(device)
 
         output = model(images.to(device))
-        loss = loss_fn(output, labels)
+        loss = loss_fn(output, nn.functional.one_hot(labels, 3).float())
         total_loss += loss.item()
 
         acc += torch.sum(torch.argmax(output) == labels).item()
@@ -162,7 +162,7 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
 
             optimizer.zero_grad()
             output = model(images.to(device))
-            loss = loss_fn(output, labels)
+            loss = loss_fn(output, nn.functional.one_hot(labels, 3).float())
             epoch_loss += loss.item()
             loss.backward()
             optimizer.step()
@@ -231,7 +231,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, NUM_EPOCHS, eta_min=23e-6)
 
     freeze_model_initial_layers(model)
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.BCEWithLogitsLoss()
 
     train_model_with_validation(model,
                                 optimizer,

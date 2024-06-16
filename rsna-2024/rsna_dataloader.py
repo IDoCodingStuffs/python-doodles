@@ -53,6 +53,33 @@ class SeriesLevelDataset(Dataset):
     def _get_image_index(self, image_path):
         return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
 
+
+class PatientLevelDataset(Dataset):
+    def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
+        self.base_path = base_path
+        self.dataframe = (dataframe[['study_id', "series_id", "severity"]]
+                          .drop_duplicates()
+                          .dropna())
+        self.transform = transform
+        raise NotImplementedError()
+
+    def __len__(self):
+        return len(self.dataframe)
+
+    def __getitem__(self, index):
+        curr = self.dataframe.iloc[index]
+        image_paths = retrieve_image_paths(self.base_path, curr["study_id"], curr["series_id"])
+        image_paths = sorted(image_paths, key=lambda x: self._get_image_index(x))
+        images = np.array([self.transform(load_dicom(image_path)) if self.transform else load_dicom(image_path)
+                           for image_path in image_paths])
+        label = curr['severity']
+
+        return images, label
+
+    def _get_image_index(self, image_path):
+        return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
+
+
 def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                 series_description: str,
                                 transform_train: transforms.Compose,

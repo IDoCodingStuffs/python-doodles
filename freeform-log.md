@@ -28,3 +28,6 @@ After: 1/30 [07:10<3:27:56, 430.24s/it]
 Seems the transforms have no impact on train time at least
 But the val loss and acc still not changing per epoch...
 Let's try a smaller LSTM to see if it is even training
+
+### 6/15 10 PM
+Model still refuses to train... Gonna try BCEWithLogits loss before tearing everything down to start from a minimal model.
