@@ -54,4 +54,7 @@ I also need to upgrade the model to patient level vs just series level to accomm
 ### 3 PM
 Let's start with disabling flip, rotation etc. augmentations and then enabling patient-level data loading. Then, I can figure how to set up the model for that.
 Or before all that, let's try expanding the output features first.
-While doing that, I discovered a bug with the label generation. Wonder if fixing it will help.
+While doing that, I discovered a bug with the label generation. No wonder the model was basically not training at all.
+That said, still not training despite fixing that bug. So I should have different features for different modalities then?
+
+So not all studies have all conditions. Which means I might need to use some ensembling on top of series level inference vs patient level inference.

@@ -34,7 +34,7 @@ class CustomLSTM(nn.Module):
     hidden_size = 256
     num_layers = 2
 
-    def __init__(self, num_classes=3 * 5 * 5, drop_rate=0.2, resnet_weights=None):
+    def __init__(self, num_classes=3 * 5, drop_rate=0.2, resnet_weights=None):
         super(CustomLSTM, self).__init__()
         self.cnn = CustomResNet(pretrained_weights=resnet_weights)
         self.lstm = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers, batch_first=True, bidirectional=True)
@@ -111,6 +111,7 @@ def model_validation_loss(model, val_loader, loss_fn):
     total_loss = 0
     acc = 0
     for images, label in val_loader:
+        # !TODO: Do this in the data loader
         label = torch.tensor(label).to(device)
 
         output = model(images.to(device))
@@ -155,6 +156,7 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
         model.train()
 
         for images, label in train_loader:
+            # !TODO: Do this in the data loader
             label = torch.tensor(label).to(device)
 
             optimizer.zero_grad()

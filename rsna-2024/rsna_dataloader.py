@@ -36,7 +36,9 @@ class CustomDataset(Dataset):
 class SeriesLevelDataset(Dataset):
     def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
         self.base_path = base_path
-        self.dataframe = (dataframe[['study_id', "series_id", "severity", "condition", "level"]]
+        # self.dataframe = (dataframe[['study_id', "series_id", "severity", "condition", "level"]]
+        #                   .drop_duplicates())
+        self.dataframe = (dataframe[['study_id', "series_id", "severity", "level"]]
                           .drop_duplicates())
         self.series = dataframe[['study_id', "series_id"]].drop_duplicates().reset_index(drop=True)
         self.levels = sorted(self.dataframe["level"].unique())
@@ -44,10 +46,12 @@ class SeriesLevelDataset(Dataset):
         for name, group in self.dataframe.groupby(["study_id", "series_id"]):
             # !TODO: Refine this
             # !TODO: Different studies have different conditions.
-            label_indices = [-1 for e in range(len(self.levels) * len(conditions))]
+            #label_indices = [-1 for e in range(len(self.levels) * len(conditions))]
+            label_indices = [-1 for e in range(len(self.levels))]
             for index, row in group.iterrows():
-                if row["severity"] in label_map and row["condition"] in conditions:
-                    label_index = self.levels.index(row["level"]) * len(conditions) + conditions.index(row["condition"])
+                if row["severity"] in label_map: # and row["condition"] in conditions:
+                    #label_index = self.levels.index(row["level"]) * len(conditions) + conditions.index(row["condition"])
+                    label_index = self.levels.index(row["level"])
                     label_indices[label_index] = label_map[row["severity"]]
 
             self.labels[name] = []
