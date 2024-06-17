@@ -82,3 +82,17 @@ L1Loss is not making much difference either. I should dump some sort of confusio
 Found a bug where I was dividing by the number of levels. Let's see if it trains with that fix.
 
 Well. Seems it is training now, finally. Might get a useful T2STIR model for sure, although I need to see what to do for the other two. Also need to figure how to make other loss functions play nice.
+
+## 6/16
+
+### 10 AM
+So today, I will look into adding an inference notebook with a confusion matrix to figure how well the model is actually training.
+
+And the answer is, not well at all. It seems the "mild" cases are overrepresented in data at least for t2/stir, so the model predicts everything as such. To mitigate, I will try oversampling the cases with moderate or severe conditions. If that fails, I will try some penalized loss.
+
+So the boost will need to be 10x for moderate and 20x for severe given this.
+> moderate,732
+normal_mild,8552
+severe,469
+
+And it will not be a trivial thing to do since there are multiple classes.

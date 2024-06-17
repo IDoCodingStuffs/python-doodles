@@ -139,6 +139,21 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     return train_loader, val_loader, len(train_df), len(val_df)
 
 
+def create_series_level_test_datasets_and_loaders(df: pd.DataFrame,
+                                series_description: str,
+                                transform_val: transforms.Compose,
+                                base_path: str,
+                                random_seed=42,
+                                batch_size=1):
+    filtered_df = df[df['series_description'] == series_description].reset_index(drop=True)
+
+    val_dataset = SeriesLevelDataset(base_path, filtered_df, transform_val)
+
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+    return val_loader
+
+
 def create_datasets_and_loaders(df: pd.DataFrame,
                                 series_description: str,
                                 transform_train: transforms.Compose,
