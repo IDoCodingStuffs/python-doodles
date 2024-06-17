@@ -8,9 +8,12 @@ from torchvision import transforms
 from torchvision.transforms import v2
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix
 import pandas as pd
 from tqdm import tqdm
 import logging
+import seaborn as sn
+
 from rsna_dataloader import *
 
 _logger = logging.getLogger(__name__)
@@ -18,13 +21,13 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class CustomResNet(nn.Module):
-    def __init__(self, pretrained_weights=None):
+    def __init__(self, out_features=512, pretrained_weights=None):
         super(CustomResNet, self).__init__()
         self.model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
         if pretrained_weights:
             self.model.load_state_dict(torch.load(pretrained_weights))
         num_ftrs = self.model.fc.in_features
-        self.model.fc = nn.Linear(in_features=num_ftrs, out_features=512)
+        self.model.fc = nn.Linear(in_features=num_ftrs, out_features=out_features)
 
     def forward(self, x):
         return self.model(x)
@@ -34,7 +37,7 @@ class CustomLSTM(nn.Module):
     hidden_size = 256
     num_layers = 2
 
-    def __init__(self, num_classes=3 * 5, drop_rate=0.2, resnet_weights=None):
+    def __init__(self, num_classes=5, drop_rate=0.2, resnet_weights=None):
         super(CustomLSTM, self).__init__()
         self.cnn = CustomResNet(pretrained_weights=resnet_weights)
         self.lstm = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers, batch_first=True, bidirectional=True)
@@ -50,9 +53,8 @@ class CustomLSTM(nn.Module):
 
         # Iterate over each frame of a video in a video of batch * frames * channels * height * width
         for t in range(x_3d.size(1)):
-            with torch.no_grad():
-                x = self.cnn(x_3d[:, t])
-                # Pass latent representation of frame through lstm and update hidden state
+            x = self.cnn(x_3d[:, t])
+            # Pass latent representation of frame through lstm and update hidden state
             out, hidden = self.lstm(x.unsqueeze(0), hidden)
 
             # Get the last hidden state (hidden is a tuple with both hidden and cell state in it)
@@ -106,10 +108,22 @@ def freeze_model_initial_layers(model: CustomLSTM):
         param.requires_grad = True
 
 
+def get_output_class(val):
+    if val <= 0.33:
+        return 0
+    elif val <= 0.66:
+        return 1
+    else:
+        return 2
+
 def model_validation_loss(model, val_loader, loss_fn):
     model.eval()
     total_loss = 0
     acc = 0
+
+    y_pred = []
+    y_true = []
+
     for images, label in val_loader:
         # !TODO: Do this in the data loader
         label = torch.tensor(label).to(device)
@@ -118,10 +132,20 @@ def model_validation_loss(model, val_loader, loss_fn):
         loss = loss_fn(output, label)
         total_loss += loss.item()
 
+        # y_pred.extend(output.detach().cpu().numpy())
+        # y_true.extend(label.cpu().numpy())
+
         #acc += torch.sum(torch.argmax(output) == labels).item()
 
     total_loss = total_loss / len(val_loader.dataset)
     acc = acc / len(val_loader.dataset)
+
+    # cf_matrix = confusion_matrix([[get_output_class(e_) for e_ in e] for e in y_true], [[get_output_class(e_) for e_ in e] for e in y_pred])
+    # df_cm = pd.DataFrame(cf_matrix / np.sum(cf_matrix, axis=1)[:, None], index=[i for i in range(len(y_pred[0]))],
+    #                      columns=[i for i in range(len(y_pred[0]))])
+    # plt.figure(figsize=(12, 7))
+    # sn.heatmap(df_cm, annot=True)
+    # plt.savefig(f'./figures/confusion.png')
 
     return total_loss, acc
 
@@ -156,6 +180,7 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
         model.train()
 
         for images, label in train_loader:
+            #break
             # !TODO: Do this in the data loader
             label = torch.tensor(label).to(device)
 
@@ -228,11 +253,13 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     # model = CustomLSTM(resnet_weights=weights_path).to(device)
     model = CustomLSTM().to(device)
+    # model = CustomResNet(out_features=3 * 5).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, NUM_EPOCHS, eta_min=23e-6)
 
     freeze_model_initial_layers(model)
-    criterion = nn.BCEWithLogitsLoss()
+    # criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.L1Loss()
 
     train_model_with_validation(model,
                                 optimizer,
@@ -253,8 +280,8 @@ def train_model_patient_level():
 
 def train():
     model_t2stir = train_model_for_series("Sagittal T2/STIR", "resnet18_lstm_t2stir")
-    model_t1 = train_model_for_series("Sagittal T1", "resnet18_lstm_t1")
-    model_t2 = train_model_for_series("Axial T2", "resnet18_lstm_t2")
+    # model_t1 = train_model_for_series("Sagittal T1", "resnet18_lstm_t1")
+    # model_t2 = train_model_for_series("Axial T2", "resnet18_lstm_t2")
 
 
 if __name__ == '__main__':

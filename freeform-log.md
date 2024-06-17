@@ -58,3 +58,27 @@ While doing that, I discovered a bug with the label generation. No wonder the mo
 That said, still not training despite fixing that bug. So I should have different features for different modalities then?
 
 So not all studies have all conditions. Which means I might need to use some ensembling on top of series level inference vs patient level inference.
+
+### 7 PM
+T2STIR model still not training. 
+I will go back to the resnet only model. If it overfits, then the problem is with the model. If not, then the problem is upstream. But before that, let me try removing the no_grad call wrapping the whole ResNet layer. Maybe the final FC is not getting trained that's what's up.
+
+Nope. Still not training.
+
+Even the starter notebook said this. So the lesson is, to pay better attention to the starting data.
+> Saggital T1 images map to Neural Foraminal Narrowing <br>
+Axial T2 images map to Subarticular Stenosis <br>
+Saggital T2/STIR map to Canal Stenosis <br>
+
+Let me try the approach here:
+https://visualstudiomagazine.com/articles/2021/10/04/ordinal-classification-pytorch.aspx
+
+Which says to map categories to target floats rather than one-hot encoded categories. And still not training.
+Next, let me try L1Loss and after, this other approach here: https://towardsdatascience.com/how-to-perform-ordinal-regression-classification-in-pytorch-361a2a095a99
+
+L1Loss is not making much difference either. I should dump some sort of confusion matrix before continuing on, to understand what's going on better
+
+### 10 PM
+Found a bug where I was dividing by the number of levels. Let's see if it trains with that fix.
+
+Well. Seems it is training now, finally. Might get a useful T2STIR model for sure, although I need to see what to do for the other two. Also need to figure how to make other loss functions play nice.

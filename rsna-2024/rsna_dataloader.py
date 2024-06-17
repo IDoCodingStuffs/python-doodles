@@ -45,9 +45,9 @@ class SeriesLevelDataset(Dataset):
         self.labels = dict()
         for name, group in self.dataframe.groupby(["study_id", "series_id"]):
             # !TODO: Refine this
-            # !TODO: Different studies have different conditions.
+            # !TODO: Better imputation
             #label_indices = [-1 for e in range(len(self.levels) * len(conditions))]
-            label_indices = [-1 for e in range(len(self.levels))]
+            label_indices = [0 for e in range(len(self.levels))]
             for index, row in group.iterrows():
                 if row["severity"] in label_map: # and row["condition"] in conditions:
                     #label_index = self.levels.index(row["level"]) * len(conditions) + conditions.index(row["condition"])
@@ -57,13 +57,17 @@ class SeriesLevelDataset(Dataset):
             self.labels[name] = []
 
             # 1 hot encode with uncertain for na
+            # for label in label_indices:
+            #     if label == -1:
+            #         for i in range(3):
+            #             self.labels[name].append(1/3)
+            #     else:
+            #         for i in range(3):
+            #             self.labels[name].append(1 if i == label else 0)
             for label in label_indices:
                 if label == -1:
-                    for i in range(3):
-                        self.labels[name].append(1/3)
-                else:
-                    for i in range(3):
-                        self.labels[name].append(1 if i == label else 0)
+                    raise ValueError()
+                self.labels[name].append(0.25 + 0.25 * label)
         self.transform = transform
 
     def __len__(self):
@@ -76,7 +80,7 @@ class SeriesLevelDataset(Dataset):
         images = np.array([self.transform(load_dicom(image_path)) if self.transform else load_dicom(image_path)
                            for image_path in image_paths])
         # Feature scaling here
-        label = np.array(self.labels[(curr["study_id"], curr["series_id"])]) / len(self.levels)
+        label = np.array(self.labels[(curr["study_id"], curr["series_id"])]) # / len(self.levels)
 
         return images, label
 
