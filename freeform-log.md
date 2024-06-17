@@ -109,4 +109,9 @@ Fixed a bug with device output being float32 and label being float64 (double). L
 MSELoss still not great. Everything gets predicted one class or another, horizontal line on confusion matrix. Let's see how KLDiv will do.
 
 ### 3 PM
-Well it was a bad idea. It is not a probability distribution after all. Back to feature engineering. 2 labels for 3 classes per level should do it?
+Well it was a bad idea. It is not a probability distribution after all. Back to feature engineering. 2 labels for 3 classes per level should do it? I also disabled oversampling, will focus on making the mode overfit first.
+
+Per https://discuss.pytorch.org/t/multi-label-classification-in-pytorch/905/45 one can apparently do multilabel classification with BCELoss too. So multi-hot encoding plus that and let's see if the model starts training.
+If not, I can try oversampling again to see if it helps.
+
+Getting weird large negative numbers for loss. Wonder what's up with that. Ah. Just a typo.

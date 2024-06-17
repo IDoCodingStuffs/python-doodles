@@ -257,9 +257,9 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, NUM_EPOCHS, eta_min=23e-6)
 
     freeze_model_initial_layers(model)
-    # criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.BCEWithLogitsLoss()
     # criterion = nn.L1Loss()
-    criterion = nn.MSELoss()
+    # criterion = nn.MSELoss()
 
     train_model_with_validation(model,
                                 optimizer,

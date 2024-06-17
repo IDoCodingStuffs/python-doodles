@@ -77,7 +77,7 @@ class SeriesLevelDataset(Dataset):
                 if label == -1:
                     raise ValueError()
                 self.labels[name].append(0 if label == 0 else 1)
-                self.labels[name].append(0 if label == 1 else 2)
+                self.labels[name].append(0 if label < 2 else 1)
 
         self.sampling_weights = []
         for index in range(len(self.series)):
@@ -85,7 +85,8 @@ class SeriesLevelDataset(Dataset):
             key = (curr["study_id"], curr["series_id"])
             # self.sampling_weights.append(1 + (np.sum(self.labels[key]) - len(self.levels) * 0.25) * 8)
             # Equal sampling
-            self.sampling_weights.append(1)
+            # self.sampling_weights.append(1)
+            self.sampling_weights.append(1 + (np.sum(self.labels[key])))
 
     def __len__(self):
         return len(self.series)
