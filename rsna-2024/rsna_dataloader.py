@@ -6,7 +6,7 @@ import pandas as pd
 import pydicom
 import torch
 import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from sklearn.model_selection import train_test_split
 import torchvision.transforms as transforms
 
@@ -40,6 +40,7 @@ class SeriesLevelDataset(Dataset):
         #                   .drop_duplicates())
         self.dataframe = (dataframe[['study_id', "series_id", "severity", "level"]]
                           .drop_duplicates())
+        self.transform = transform
         self.series = dataframe[['study_id', "series_id"]].drop_duplicates().reset_index(drop=True)
         self.levels = sorted(self.dataframe["level"].unique())
         self.labels = dict()
@@ -68,7 +69,12 @@ class SeriesLevelDataset(Dataset):
                 if label == -1:
                     raise ValueError()
                 self.labels[name].append(0.25 + 0.25 * label)
-        self.transform = transform
+
+        self.sampling_weights = []
+        for index in range(len(self.series)):
+            curr = self.series.iloc[index]
+            key = (curr["study_id"], curr["series_id"])
+            self.sampling_weights.append(1 + (np.sum(self.labels[key]) - len(self.levels) * 0.25) * 8)
 
     def __len__(self):
         return len(self.series)
@@ -133,7 +139,9 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     train_dataset = SeriesLevelDataset(base_path, train_df, transform_train)
     val_dataset = SeriesLevelDataset(base_path, val_df, transform_val)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    train_sampler = WeightedRandomSampler(weights=train_dataset.sampling_weights, num_samples=len(train_dataset), replacement=True)
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     return train_loader, val_loader, len(train_df), len(val_df)

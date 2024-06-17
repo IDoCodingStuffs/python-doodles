@@ -96,3 +96,7 @@ normal_mild,8552
 severe,469
 
 And it will not be a trivial thing to do since there are multiple classes.
+Let's try something silly like this first
+```python
+self.sampling_weights[key] = 1 + (np.sum(self.labels[key]) - len(self.levels) * 0.25) * 8
+```
