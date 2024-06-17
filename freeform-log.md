@@ -100,3 +100,5 @@ Let's try something silly like this first
 ```python
 self.sampling_weights[key] = 1 + (np.sum(self.labels[key]) - len(self.levels) * 0.25) * 8
 ```
+
+Well it is not training much better that way either. So I should try switching the feature encoding and loss functions.

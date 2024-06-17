@@ -126,7 +126,7 @@ def model_validation_loss(model, val_loader, loss_fn):
 
     for images, label in val_loader:
         # !TODO: Do this in the data loader
-        label = torch.tensor(label).to(device)
+        label = label.type(torch.FloatTensor).to(device)
 
         output = model(images.to(device))
         loss = loss_fn(output, label)
@@ -182,7 +182,7 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
         for images, label in train_loader:
             #break
             # !TODO: Do this in the data loader
-            label = torch.tensor(label).to(device)
+            label = label.type(torch.FloatTensor).to(device)
 
             optimizer.zero_grad()
             output = model(images.to(device))
@@ -259,7 +259,9 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     freeze_model_initial_layers(model)
     # criterion = nn.BCEWithLogitsLoss()
-    criterion = nn.L1Loss()
+    # criterion = nn.L1Loss()
+    # criterion = nn.BCELoss()
+    criterion = nn.MSELoss()
 
     train_model_with_validation(model,
                                 optimizer,
