@@ -102,3 +102,11 @@ self.sampling_weights[key] = 1 + (np.sum(self.labels[key]) - len(self.levels) * 
 ```
 
 Well it is not training much better that way either. So I should try switching the feature encoding and loss functions.
+
+### 1 PM
+Fixed a bug with device output being float32 and label being float64 (double). Let's see if fixing that and using MSE loss helps. Probably not though. Then I can also try KL Divergence loss
+
+MSELoss still not great. Everything gets predicted one class or another, horizontal line on confusion matrix. Let's see how KLDiv will do.
+
+### 3 PM
+Well it was a bad idea. It is not a probability distribution after all. Back to feature engineering. 2 labels for 3 classes per level should do it?

@@ -37,10 +37,11 @@ class CustomLSTM(nn.Module):
     hidden_size = 256
     num_layers = 2
 
-    def __init__(self, num_classes=5, drop_rate=0.2, resnet_weights=None):
+    def __init__(self, num_classes=5 * 2, drop_rate=0.2, resnet_weights=None):
         super(CustomLSTM, self).__init__()
         self.cnn = CustomResNet(pretrained_weights=resnet_weights)
-        self.lstm = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers, batch_first=True, bidirectional=True)
+        self.lstm = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers, batch_first=True,
+                            bidirectional=True)
         self.head = nn.Sequential(
             nn.Linear(256, 128),
             # nn.BatchNorm1d(256),
@@ -48,6 +49,7 @@ class CustomLSTM(nn.Module):
             nn.LeakyReLU(0.1),
             nn.Linear(128, num_classes),
         )
+
     def forward(self, x_3d):
         hidden = None
 
@@ -70,9 +72,12 @@ class CustomTriLSTM(nn.Module):
     def __init__(self, num_classes=3, drop_rate=0.2, resnet_weights=None):
         super(CustomTriLSTM, self).__init__()
         self.cnn = CustomResNet(pretrained_weights=resnet_weights)
-        self.lstm_t1 = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers, batch_first=True, bidirectional=True)
-        self.lstm_t2 = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers, batch_first=True, bidirectional=True)
-        self.lstm_t2stir = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers, batch_first=True, bidirectional=True)
+        self.lstm_t1 = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers,
+                               batch_first=True, bidirectional=True)
+        self.lstm_t2 = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers,
+                               batch_first=True, bidirectional=True)
+        self.lstm_t2stir = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers,
+                                   batch_first=True, bidirectional=True)
         self.head = nn.Sequential(
             nn.Linear(256, 128),
             # nn.BatchNorm1d(256),
@@ -80,6 +85,7 @@ class CustomTriLSTM(nn.Module):
             nn.LeakyReLU(0.1),
             nn.Linear(128, num_classes),
         )
+
     def forward(self, x_3d, series_label):
         hidden = None
 
@@ -108,14 +114,6 @@ def freeze_model_initial_layers(model: CustomLSTM):
         param.requires_grad = True
 
 
-def get_output_class(val):
-    if val <= 0.33:
-        return 0
-    elif val <= 0.66:
-        return 1
-    else:
-        return 2
-
 def model_validation_loss(model, val_loader, loss_fn):
     model.eval()
     total_loss = 0
@@ -135,7 +133,7 @@ def model_validation_loss(model, val_loader, loss_fn):
         # y_pred.extend(output.detach().cpu().numpy())
         # y_true.extend(label.cpu().numpy())
 
-        #acc += torch.sum(torch.argmax(output) == labels).item()
+        # acc += torch.sum(torch.argmax(output) == labels).item()
 
     total_loss = total_loss / len(val_loader.dataset)
     acc = acc / len(val_loader.dataset)
@@ -180,20 +178,20 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
         model.train()
 
         for images, label in train_loader:
-            #break
+            # break
             # !TODO: Do this in the data loader
             label = label.type(torch.FloatTensor).to(device)
 
             optimizer.zero_grad()
             output = model(images.to(device))
             loss = loss_fn(output, label)
-            epoch_loss += loss.item()
+            epoch_loss += loss.detach().item()
             loss.backward()
             optimizer.step()
 
-            #epoch_acc += torch.sum(torch.argmax(output) == labels).item()
+            # epoch_acc += torch.sum(torch.argmax(output) == labels).item()
 
-        #epoch_acc = epoch_acc / len(train_loader.dataset)
+        # epoch_acc = epoch_acc / len(train_loader.dataset)
         epoch_loss = epoch_loss / len(train_loader.dataset)
 
         epoch_validation_loss, epoch_validation_acc = model_validation_loss(model, val_loader, loss_fn)
@@ -207,7 +205,8 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fn, train_load
         epoch_accs.append(epoch_acc)
         epoch_val_accs.append(epoch_validation_acc)
 
-        dump_plots_for_loss_and_acc(epoch_losses, epoch_validation_losses, epoch_accs, epoch_val_accs, train_loader_desc, model_desc)
+        dump_plots_for_loss_and_acc(epoch_losses, epoch_validation_losses, epoch_accs, epoch_val_accs,
+                                    train_loader_desc, model_desc)
         print(f"Training Loss for epoch {epoch}: {epoch_loss:.4f}")
         print(f"Validation Loss for epoch {epoch}: {epoch_validation_loss:.4f}")
 
@@ -260,7 +259,6 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     freeze_model_initial_layers(model)
     # criterion = nn.BCEWithLogitsLoss()
     # criterion = nn.L1Loss()
-    # criterion = nn.BCELoss()
     criterion = nn.MSELoss()
 
     train_model_with_validation(model,
