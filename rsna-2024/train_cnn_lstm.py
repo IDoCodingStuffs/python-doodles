@@ -23,11 +23,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class CustomResNet(nn.Module):
     def __init__(self, out_features=512, pretrained_weights=None):
         super(CustomResNet, self).__init__()
-        self.model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+        self.model = models.resnet34(weights=models.ResNet34_Weights.DEFAULT)
         if pretrained_weights:
             self.model.load_state_dict(torch.load(pretrained_weights))
         num_ftrs = self.model.fc.in_features
         self.model.fc = nn.Linear(in_features=num_ftrs, out_features=out_features)
+        torch.nn.init.xavier_uniform(self.model.fc.weight)
 
     def forward(self, x):
         return self.model(x)
