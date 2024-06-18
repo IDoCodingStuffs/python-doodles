@@ -115,3 +115,9 @@ Per https://discuss.pytorch.org/t/multi-label-classification-in-pytorch/905/45 o
 If not, I can try oversampling again to see if it helps.
 
 Getting weird large negative numbers for loss. Wonder what's up with that. Ah. Just a typo.
+
+### 4 PM
+I should try multi-label soft margin loss actually. BCE is not appropriate at all, this is a multilabel classification problem after all.
+
+### 5 PM 
+No help from that. I noticed my outputs are all almost exactly the same. So found this SO link that might help: https://stackoverflow.com/questions/74200607/all-predicted-values-of-lstm-model-is-almost-same

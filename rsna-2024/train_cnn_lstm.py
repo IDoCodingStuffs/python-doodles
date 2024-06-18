@@ -34,20 +34,27 @@ class CustomResNet(nn.Module):
 
 
 class CustomLSTM(nn.Module):
-    hidden_size = 256
-    num_layers = 2
+    hidden_size = 512
+    num_layers = 3
 
     def __init__(self, num_classes=5 * 2, drop_rate=0.2, resnet_weights=None):
         super(CustomLSTM, self).__init__()
         self.cnn = CustomResNet(pretrained_weights=resnet_weights)
-        self.lstm = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers, batch_first=True,
+        self.lstm = nn.LSTM(input_size=512,
+                            hidden_size=self.hidden_size,
+                            dropout=drop_rate,
+                            num_layers=self.num_layers,
+                            batch_first=True,
                             bidirectional=True)
         self.head = nn.Sequential(
-            nn.Linear(256, 128),
-            # nn.BatchNorm1d(256),
+            nn.Linear(512, 256),
+            # nn.BatchNorm1d(128),
             nn.Dropout(drop_rate),
             nn.LeakyReLU(0.1),
-            nn.Linear(128, num_classes),
+            nn.Linear(256, 128),
+            nn.Dropout(drop_rate),
+            nn.LeakyReLU(0.1),
+            nn.Linear(128, out_features=num_classes),
         )
 
     def forward(self, x_3d):
@@ -58,48 +65,6 @@ class CustomLSTM(nn.Module):
             x = self.cnn(x_3d[:, t])
             # Pass latent representation of frame through lstm and update hidden state
             out, hidden = self.lstm(x.unsqueeze(0), hidden)
-
-            # Get the last hidden state (hidden is a tuple with both hidden and cell state in it)
-        x = self.head(hidden[0][-1])
-
-        return x
-
-
-class CustomTriLSTM(nn.Module):
-    hidden_size = 256
-    num_layers = 2
-
-    def __init__(self, num_classes=3, drop_rate=0.2, resnet_weights=None):
-        super(CustomTriLSTM, self).__init__()
-        self.cnn = CustomResNet(pretrained_weights=resnet_weights)
-        self.lstm_t1 = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers,
-                               batch_first=True, bidirectional=True)
-        self.lstm_t2 = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers,
-                               batch_first=True, bidirectional=True)
-        self.lstm_t2stir = nn.LSTM(input_size=512, hidden_size=self.hidden_size, num_layers=self.num_layers,
-                                   batch_first=True, bidirectional=True)
-        self.head = nn.Sequential(
-            nn.Linear(256, 128),
-            # nn.BatchNorm1d(256),
-            nn.Dropout(drop_rate),
-            nn.LeakyReLU(0.1),
-            nn.Linear(128, num_classes),
-        )
-
-    def forward(self, x_3d, series_label):
-        hidden = None
-
-        # Iterate over each frame of a video in a video of batch * frames * channels * height * width
-        for t in range(x_3d.size(1)):
-            with torch.no_grad():
-                x = self.cnn(x_3d[:, t])
-                # Pass latent representation of frame through lstm and update hidden state
-            if series_label == "t1":
-                out, hidden = self.lstm_t1(x.unsqueeze(0), hidden)
-            elif series_label == "t2":
-                out, hidden = self.lstm_t2(x.unsqueeze(0), hidden)
-            elif series_label == "t2stir":
-                out, hidden = self.lstm_t2stir(x.unsqueeze(0), hidden)
 
             # Get the last hidden state (hidden is a tuple with both hidden and cell state in it)
         x = self.head(hidden[0][-1])
@@ -243,7 +208,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     trainloader, valloader, len_train, len_val = create_series_level_datasets_and_loaders(training_data,
                                                                                           data_subset_label,
-                                                                                          transform_train,
+                                                                                          transform_val, # Try overfitting first
                                                                                           transform_val,
                                                                                           data_basepath + "train_images",
                                                                                           num_workers=4, batch_size=1)
@@ -253,13 +218,16 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     # model = CustomLSTM(resnet_weights=weights_path).to(device)
     model = CustomLSTM().to(device)
     # model = CustomResNet(out_features=3 * 5).to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=2e-4)
+    optimizer = torch.optim.Adagrad(model.parameters(), lr=1)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, NUM_EPOCHS, eta_min=23e-6)
 
     freeze_model_initial_layers(model)
-    criterion = nn.BCEWithLogitsLoss()
+    # criterion = nn.BCEWithLogitsLoss()
     # criterion = nn.L1Loss()
-    # criterion = nn.MSELoss()
+    criterion = nn.MSELoss()
+    # criterion = nn.MultiLabelSoftMarginLoss()
+    # criterion = nn.NLLLoss()
 
     train_model_with_validation(model,
                                 optimizer,
