@@ -21,10 +21,10 @@ _logger = logging.getLogger(__name__)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class CustomResNet(nn.Module):
+class Backbone(nn.Module):
     def __init__(self, out_features=512, pretrained_weights=None):
-        super(CustomResNet, self).__init__()
-        self.model = models.resnet34(weights=models.ResNet34_Weights.DEFAULT)
+        super(Backbone, self).__init__()
+        self.model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
         if pretrained_weights:
             self.model.load_state_dict(torch.load(pretrained_weights))
         num_ftrs = self.model.fc.in_features
@@ -59,7 +59,7 @@ class CustomLSTM(nn.Module):
 
     def __init__(self, num_classes=3, num_levels=5, drop_rate=0.2, resnet_weights=None):
         super(CustomLSTM, self).__init__()
-        self.cnn = CustomResNet(pretrained_weights=resnet_weights)
+        self.cnn = Backbone(pretrained_weights=resnet_weights)
         self.lstm = nn.LSTM(input_size=512, hidden_size=self.hidden_size, dropout=drop_rate, num_layers=self.num_layers,
                             batch_first=True,
                             bidirectional=True)
@@ -206,7 +206,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                           transform_val,
                                                                                           data_basepath + "train_images",
                                                                                           num_workers=4, batch_size=1)
-    weights_path = './models/resnet50-19c8e357.pth'
+
     NUM_EPOCHS = 40
 
     model = CustomLSTM().to(device)
