@@ -63,7 +63,7 @@ class RNSAModel2_5D(nn.Module):
         self.temporal = nn.LSTM(input_size=512, hidden_size=self.hidden_size, dropout=drop_rate, num_layers=self.num_layers,
                                 batch_first=True,
                                 bidirectional=True)
-        self.heads = [FCHead().to(device) for i in range(num_levels)]
+        self.head = FCHead(num_classes=num_levels)
 
     def forward(self, x_3d):
         hidden = None
@@ -76,7 +76,7 @@ class RNSAModel2_5D(nn.Module):
 
             # Get the last hidden state (hidden is a tuple with both hidden and cell state in it)
 
-        return [head(hidden[0][-1]) for head in self.heads]
+        return self.head(hidden[0][-1])
 
 
 def freeze_model_backbone(model: RNSAModel2_5D):
@@ -91,7 +91,7 @@ def unfreeze_model_backbone(model: RNSAModel2_5D):
         param.requires_grad = True
 
 
-def model_validation_loss(model, val_loader, loss_fns):
+def model_validation_loss(model, val_loader, loss_fn):
     model.eval()
     total_loss = 0
 
@@ -100,11 +100,10 @@ def model_validation_loss(model, val_loader, loss_fns):
         label = label.type(torch.FloatTensor).to(device)
 
         output = model(images.to(device))
-        for index, loss_fn in enumerate(loss_fns):
-            loss = loss_fn(output[index].squeeze(0), label.squeeze(0)[index])
-            total_loss += loss.item()
+        loss = loss_fn(output, label)
+        total_loss += loss.item()
 
-    total_loss = total_loss / len(val_loader.dataset) / len(loss_fns)
+    total_loss = total_loss / len(val_loader.dataset)
 
     return total_loss
 
@@ -119,7 +118,7 @@ def dump_plots_for_loss_and_acc(losses, val_losses, data_subset_label, model_lab
     plt.close()
 
 
-def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_loader, val_loader, train_loader_desc=None,
+def train_model_with_validation(model, optimizers, schedulers, loss_fn, train_loader, val_loader, train_loader_desc=None,
                                 model_desc="my_model", epochs=10):
     epoch_losses = []
     epoch_validation_losses = []
@@ -142,17 +141,16 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
 
             output = model(images.to(device))
 
-            for index, loss_fn in enumerate(loss_fns):
-                loss = loss_fn(output[index].squeeze(0), label.squeeze(0)[index])
-                epoch_loss += loss.detach().item()
-                loss.backward(retain_graph=True)
+            loss = loss_fn(output, label)
+            epoch_loss += loss.detach().item()
+            loss.backward(retain_graph=True)
 
             for optimizer in optimizers:
                 optimizer.step()
 
-        epoch_loss = epoch_loss / len(train_loader.dataset) / len(loss_fns)
+        epoch_loss = epoch_loss / len(train_loader.dataset)
 
-        epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns)
+        epoch_validation_loss = model_validation_loss(model, val_loader, loss_fn)
 
         for scheduler in schedulers:
             scheduler.step()
@@ -165,8 +163,8 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
 
         dump_plots_for_loss_and_acc(epoch_losses, epoch_validation_losses,
                                     train_loader_desc, model_desc)
-        print(f"Training Loss for epoch {epoch}: {epoch_loss:.4f}")
-        print(f"Validation Loss for epoch {epoch}: {epoch_validation_loss:.4f}")
+        print(f"Training Loss for epoch {epoch}: {epoch_loss:.6f}")
+        print(f"Validation Loss for epoch {epoch}: {epoch_validation_loss:.6f}")
 
     return epoch_losses, epoch_validation_losses
 
@@ -210,20 +208,23 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     NUM_EPOCHS = 40
 
     model = RNSAModel2_5D().to(device)
-    optimizers = [torch.optim.Adam(model.temporal.parameters(), lr=1e-4),
+    optimizers = [torch.optim.Adam(model.head.parameters(), lr=1e-3),
+                  torch.optim.Adam(model.temporal.parameters(), lr=1e-4),
                   torch.optim.Adam(model.backbone.parameters(), lr=2e-5)]
 
-    optimizers.extend([torch.optim.Adam(head.parameters(), lr=1e-3) for head in model.heads])
+    schedulers = [
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=5e-5),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=2e-6),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=5e-7),
+        ]
 
-    schedulers = [torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=2e-5),
-                  torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=2e-6)]
 
-    criteria = [nn.BCEWithLogitsLoss() for i in range(5)]
+    criterion = nn.HuberLoss()
 
     train_model_with_validation(model,
                                 optimizers,
                                 schedulers,
-                                criteria,
+                                criterion,
                                 trainloader,
                                 valloader,
                                 model_desc=model_label,

@@ -136,3 +136,6 @@ I will also look into the ideas from this post such as FocalLoss: https://www.ka
 
 ### 9 AM
 It turned out the detail I was missing was a very obvious one -- the CNN backbone needs training too! So I will try the multihot approach from last night, but will start training the backbone at epoch 10. Let's see what it looks like when I return from work.
+
+### 12 PM
+Actually... I should use a smaller resnet and also use a single head basic model first. Overfit first, expand and optimize later. I want to see if the 2.5D model backbone can even learn features without preprocessing first.
