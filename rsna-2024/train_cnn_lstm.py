@@ -34,27 +34,22 @@ class CustomResNet(nn.Module):
 
 
 class CustomLSTM(nn.Module):
-    hidden_size = 512
+    hidden_size = 256
     num_layers = 3
 
     def __init__(self, num_classes=5 * 2, drop_rate=0.2, resnet_weights=None):
         super(CustomLSTM, self).__init__()
         self.cnn = CustomResNet(pretrained_weights=resnet_weights)
-        self.lstm = nn.LSTM(input_size=512,
-                            hidden_size=self.hidden_size,
-                            dropout=drop_rate,
-                            num_layers=self.num_layers,
-                            batch_first=True,
+        self.lstm = nn.LSTM(input_size=512, hidden_size=self.hidden_size, dropout=drop_rate, num_layers=self.num_layers, batch_first=True,
                             bidirectional=True)
         self.head = nn.Sequential(
-            nn.Linear(512, 256),
-            # nn.BatchNorm1d(128),
-            nn.Dropout(drop_rate),
-            nn.LeakyReLU(0.1),
             nn.Linear(256, 128),
+            # nn.BatchNorm1d(256),
             nn.Dropout(drop_rate),
             nn.LeakyReLU(0.1),
-            nn.Linear(128, out_features=num_classes),
+            nn.Linear(128, 128),
+            nn.LeakyReLU(0.1),
+            nn.Linear(128, num_classes),
         )
 
     def forward(self, x_3d):
@@ -213,13 +208,13 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                           data_basepath + "train_images",
                                                                                           num_workers=4, batch_size=1)
     weights_path = './models/resnet50-19c8e357.pth'
-    NUM_EPOCHS = 30
+    NUM_EPOCHS = 40
 
     # model = CustomLSTM(resnet_weights=weights_path).to(device)
     model = CustomLSTM().to(device)
     # model = CustomResNet(out_features=3 * 5).to(device)
-    # optimizer = torch.optim.Adam(model.parameters(), lr=2e-4)
-    optimizer = torch.optim.Adagrad(model.parameters(), lr=1)
+    # optimizer = torch.optim.Adagrad(model.parameters(), lr=1)
+    optimizer = torch.optim.Adam(model.parameters(), lr=2e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, NUM_EPOCHS, eta_min=23e-6)
 
     freeze_model_initial_layers(model)
