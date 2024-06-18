@@ -131,3 +131,8 @@ Might also involve the encoder CNN layer not being sufficiently fine-tuned or ev
 ### 7 PM
 Here is another idea: one fully connected head per level. Each has one label, and then I can call CrossEntropyLoss on each separately.
 I will also look into the ideas from this post such as FocalLoss: https://www.kaggle.com/code/iafoss/pretrained-resnet34-with-rgby-0-460-public-lb
+
+## 6/18
+
+### 9 AM
+It turned out the detail I was missing was a very obvious one -- the CNN backbone needs training too! So I will try the multihot approach from last night, but will start training the backbone at epoch 10. Let's see what it looks like when I return from work.

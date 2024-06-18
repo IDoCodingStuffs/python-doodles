@@ -13,6 +13,7 @@ import pandas as pd
 from tqdm import tqdm
 import logging
 import seaborn as sn
+from itertools import chain
 
 from rsna_dataloader import *
 
@@ -209,7 +210,11 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     NUM_EPOCHS = 40
 
     model = CustomLSTM().to(device)
-    optimizers = [torch.optim.Adam(model.parameters(), lr=5e-4), torch.optim.Adam(model.parameters(), lr=2e-5)]
+    optimizers = [torch.optim.Adam(model.lstm.parameters(), lr=1e-4),
+                  torch.optim.Adam(model.cnn.parameters(), lr=2e-5)]
+
+    optimizers.extend([torch.optim.Adam(head.parameters(), lr=1e-3) for head in model.heads])
+
     schedulers = [torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=2e-5),
                   torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=2e-6)]
 
