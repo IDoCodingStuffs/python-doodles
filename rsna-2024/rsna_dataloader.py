@@ -10,9 +10,10 @@ from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from sklearn.model_selection import train_test_split
 import torchvision.transforms as transforms
 
-
 label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
-conditions = ["Left Neural Foraminal Narrowing", "Right Neural Foraminal Narrowing", "Left Subarticular Stenosis", "Right Subarticular Stenosis", "Spinal Canal Stenosis"]
+conditions = ["Left Neural Foraminal Narrowing", "Right Neural Foraminal Narrowing", "Left Subarticular Stenosis",
+              "Right Subarticular Stenosis", "Spinal Canal Stenosis"]
+
 
 class CustomDataset(Dataset):
     def __init__(self, dataframe, transform=None):
@@ -47,33 +48,17 @@ class SeriesLevelDataset(Dataset):
         for name, group in self.dataframe.groupby(["study_id", "series_id"]):
             # !TODO: Refine this
             # !TODO: Better imputation
-            #label_indices = [-1 for e in range(len(self.levels) * len(conditions))]
+            # label_indices = [-1 for e in range(len(self.levels) * len(conditions))]
             label_indices = [0 for e in range(len(self.levels))]
             for index, row in group.iterrows():
-                if row["severity"] in label_map: # and row["condition"] in conditions:
-                    #label_index = self.levels.index(row["level"]) * len(conditions) + conditions.index(row["condition"])
+                if row["severity"] in label_map:  # and row["condition"] in conditions:
+                    # label_index = self.levels.index(row["level"]) * len(conditions) + conditions.index(row["condition"])
                     label_index = self.levels.index(row["level"])
                     label_indices[label_index] = label_map[row["severity"]]
 
-            self.labels[name] = []
             # self.labels[name] = label_indices
-
-            # 1 hot encode
-            # for label in label_indices:
-            #     self.labels[name].append([0 if label != i else 1 for i in range(3)])
-
-            # Split 0.33 - 0.66 for each level
-            for label in label_indices:
-                if label == -1:
-                    raise ValueError()
-                self.labels[name].append(0.25 + 0.25 * label)
-
-            # Multihot encoding
-            # for label in label_indices:
-            #     if label == -1:
-            #         raise ValueError()
-            #     self.labels[name].append(0 if label == 0 else 1)
-            #     self.labels[name].append(0 if label < 2 else 1)
+            self.labels[name] = []
+            self._continuous_labels(label_indices, name)
 
         self.sampling_weights = []
         for index in range(len(self.series)):
@@ -97,50 +82,40 @@ class SeriesLevelDataset(Dataset):
         images = np.array([self.transform(load_dicom(image_path)) if self.transform else load_dicom(image_path)
                            for image_path in image_paths])
         # Feature scaling here
-        label = np.array(self.labels[(curr["study_id"], curr["series_id"])]) # / len(self.levels)
+        label = np.array(self.labels[(curr["study_id"], curr["series_id"])])  # / len(self.levels)
 
         return images, label
 
     def _get_image_index(self, image_path):
         return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
 
+    def _one_hot_labels(self, label_indices, name):
+        for label in label_indices:
+            self.labels[name].append([0 if label != i else 1 for i in range(3)])
 
-class PatientLevelDataset(Dataset):
-    def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
-        self.base_path = base_path
-        self.dataframe = (dataframe[['study_id', "series_id", "severity", "level"]]
-                          .drop_duplicates()
-                          .dropna())
-        self.transform = transform
-        raise NotImplementedError()
+    def _continuous_labels(self, label_indices, name):
+        for label in label_indices:
+            if label == -1:
+                raise ValueError()
+            self.labels[name].append(0.25 + 0.25 * label)
 
-    def __len__(self):
-        return len(self.dataframe)
-
-    def __getitem__(self, index):
-        curr = self.dataframe.iloc[index]
-        image_paths = retrieve_image_paths(self.base_path, curr["study_id"], curr["series_id"])
-        image_paths = sorted(image_paths, key=lambda x: self._get_image_index(x))
-        images = np.array([self.transform(load_dicom(image_path)) if self.transform else load_dicom(image_path)
-                           for image_path in image_paths])
-
-        label = curr['severity']
-
-        return images, label
-
-    def _get_image_index(self, image_path):
-        return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
+    def _multihot_labels(self, label_indices, name):
+        for label in label_indices:
+            if label == -1:
+                raise ValueError()
+            self.labels[name].append(0 if label == 0 else 1)
+            self.labels[name].append(0 if label < 2 else 1)
 
 
 def create_series_level_datasets_and_loaders(df: pd.DataFrame,
-                                series_description: str,
-                                transform_train: transforms.Compose,
-                                transform_val: transforms.Compose,
-                                base_path: str,
-                                split_factor=0.2,
-                                random_seed=42,
-                                batch_size=1,
-                                num_workers=0):
+                                             series_description: str,
+                                             transform_train: transforms.Compose,
+                                             transform_val: transforms.Compose,
+                                             base_path: str,
+                                             split_factor=0.2,
+                                             random_seed=42,
+                                             batch_size=1,
+                                             num_workers=0):
     filtered_df = df[df['series_description'] == series_description]
 
     train_df, val_df = train_test_split(filtered_df, test_size=split_factor, random_state=random_seed)
@@ -150,7 +125,8 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     train_dataset = SeriesLevelDataset(base_path, train_df, transform_train)
     val_dataset = SeriesLevelDataset(base_path, val_df, transform_val)
 
-    train_sampler = WeightedRandomSampler(weights=train_dataset.sampling_weights, num_samples=len(train_dataset), replacement=True)
+    train_sampler = WeightedRandomSampler(weights=train_dataset.sampling_weights, num_samples=len(train_dataset),
+                                          replacement=True)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
@@ -159,11 +135,11 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
 
 
 def create_series_level_test_datasets_and_loaders(df: pd.DataFrame,
-                                series_description: str,
-                                transform_val: transforms.Compose,
-                                base_path: str,
-                                random_seed=42,
-                                batch_size=1):
+                                                  series_description: str,
+                                                  transform_val: transforms.Compose,
+                                                  base_path: str,
+                                                  random_seed=42,
+                                                  batch_size=1):
     filtered_df = df[df['series_description'] == series_description].reset_index(drop=True)
 
     val_dataset = SeriesLevelDataset(base_path, filtered_df, transform_val)
