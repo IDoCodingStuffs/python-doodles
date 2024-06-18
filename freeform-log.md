@@ -126,5 +126,7 @@ No help from that. I noticed my outputs are all almost exactly the same. So foun
 Let me try initializing the model with Kaiming weights. The SO post did not help much, so I will shrink the model back.
 
 Or what if, the feature is just hard to learn (which it is) and that is why the output keeps being the same? Maybe my assumption that it should immediately start learning is wrong.
-Might also involve the encoder CNN layer not being sufficiently fine tuned or even appropriate.
-Given these two things, I will let it run a few hours and see if it starts training at some point.
+Might also involve the encoder CNN layer not being sufficiently fine-tuned or even appropriate.
+
+### 7 PM
+Here is another idea: one fully connected head per level. Each has one label, and then I can call CrossEntropyLoss on each separately.

@@ -56,15 +56,11 @@ class SeriesLevelDataset(Dataset):
                     label_indices[label_index] = label_map[row["severity"]]
 
             self.labels[name] = []
+            # self.labels[name] = label_indices
 
-            # 1 hot encode with uncertain for na
-            # for label in label_indices:
-            #     if label == -1:
-            #         for i in range(3):
-            #             self.labels[name].append(1/3)
-            #     else:
-            #         for i in range(3):
-            #             self.labels[name].append(1 if i == label else 0)
+            # 1 hot encode
+            for label in label_indices:
+                self.labels[name].append([0 if label != i else 1 for i in range(3)])
 
             # Split 0.33 - 0.66 for each level
             # for label in label_indices:
@@ -72,12 +68,12 @@ class SeriesLevelDataset(Dataset):
             #         raise ValueError()
             #     self.labels[name].append(0.25 + 0.25 * label)
 
-            # One-hot-like encoding
-            for label in label_indices:
-                if label == -1:
-                    raise ValueError()
-                self.labels[name].append(0 if label == 0 else 1)
-                self.labels[name].append(0 if label < 2 else 1)
+            # Multihot encoding
+            # for label in label_indices:
+            #     if label == -1:
+            #         raise ValueError()
+            #     self.labels[name].append(0 if label == 0 else 1)
+            #     self.labels[name].append(0 if label < 2 else 1)
 
         self.sampling_weights = []
         for index in range(len(self.series)):
@@ -86,7 +82,10 @@ class SeriesLevelDataset(Dataset):
             # self.sampling_weights.append(1 + (np.sum(self.labels[key]) - len(self.levels) * 0.25) * 8)
             # Equal sampling
             # self.sampling_weights.append(1)
-            self.sampling_weights.append(1 + (np.sum(self.labels[key])))
+            # Multi-hot encoded weights
+            # self.sampling_weights.append(1 + (np.sum(self.labels[key])))
+            # One-hot encoded weights
+            self.sampling_weights.append(2 ** np.argmax(self.labels[key]))
 
     def __len__(self):
         return len(self.series)
