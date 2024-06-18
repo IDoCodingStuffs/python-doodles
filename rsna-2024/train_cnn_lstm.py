@@ -51,7 +51,7 @@ class FCHead(nn.Module):
 
 class CustomLSTM(nn.Module):
     hidden_size = 256
-    num_layers = 3
+    num_layers = 2
 
     def __init__(self, num_classes=3, num_levels=5, drop_rate=0.2, resnet_weights=None):
         super(CustomLSTM, self).__init__()
