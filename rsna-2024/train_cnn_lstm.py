@@ -142,6 +142,8 @@ def train_model_with_validation(model, optimizers, scheduler, loss_fn, train_loa
     epoch_losses = []
     epoch_validation_losses = []
 
+    freeze_model_initial_layers(model)
+
     for epoch in tqdm(range(epochs), desc=train_loader_desc):
         epoch_loss = 0
         model.train()
