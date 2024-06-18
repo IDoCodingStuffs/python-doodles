@@ -130,3 +130,4 @@ Might also involve the encoder CNN layer not being sufficiently fine-tuned or ev
 
 ### 7 PM
 Here is another idea: one fully connected head per level. Each has one label, and then I can call CrossEntropyLoss on each separately.
+I will also look into the ideas from this post such as FocalLoss: https://www.kaggle.com/code/iafoss/pretrained-resnet34-with-rgby-0-460-public-lb
