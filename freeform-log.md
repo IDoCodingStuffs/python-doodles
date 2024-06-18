@@ -139,3 +139,6 @@ It turned out the detail I was missing was a very obvious one -- the CNN backbon
 
 ### 12 PM
 Actually... I should use a smaller resnet and also use a single head basic model first. Overfit first, expand and optimize later. I want to see if the 2.5D model backbone can even learn features without preprocessing first.
+
+### 4 PM
+Not training as of epoch 22. Need to fix a mistake I had made with the continuous labels, then try multi-hot single tensor 
