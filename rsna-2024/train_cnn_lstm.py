@@ -84,6 +84,31 @@ def freeze_model_initial_layers(model: CustomLSTM):
     for param in model.cnn.model.fc.parameters():
         param.requires_grad = True
 
+def unfreeze_model_initial_layers(model: CustomLSTM):
+    for param in model.cnn.model.parameters():
+        param.requires_grad = True
+
+
+# Taken from https://www.kaggle.com/code/iafoss/pretrained-resnet34-with-rgby-0-460-public-lb
+class FocalLoss(nn.Module):
+    def __init__(self, gamma=2):
+        super().__init__()
+        self.gamma = gamma
+
+    def forward(self, input, target):
+        if not (target.size() == input.size()):
+            raise ValueError("Target size ({}) must be the same as input size ({})"
+                             .format(target.size(), input.size()))
+
+        max_val = (-input).clamp(min=0)
+        loss = input - input * target + max_val + \
+               ((-max_val).exp() + (-input - max_val).exp()).log()
+
+        invprobs = F.logsigmoid(-input * (target * 2.0 - 1.0))
+        loss = (invprobs * self.gamma).exp() * loss
+
+        return loss.sum(dim=1).mean()
+
 
 def model_validation_loss(model, val_loader, loss_fns):
     model.eval()
@@ -113,7 +138,7 @@ def dump_plots_for_loss_and_acc(losses, val_losses, data_subset_label, model_lab
     plt.close()
 
 
-def train_model_with_validation(model, optimizer, scheduler, loss_fns, train_loader, val_loader, train_loader_desc=None,
+def train_model_with_validation(model, optimizers, scheduler, loss_fns, train_loader, val_loader, train_loader_desc=None,
                                 model_desc="my_model", epochs=10):
     epoch_losses = []
     epoch_validation_losses = []
@@ -122,11 +147,15 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fns, train_loa
         epoch_loss = 0
         model.train()
 
+        if epoch >= epochs - 25:
+            unfreeze_model_initial_layers(model)
+
         for images, label in train_loader:
             # !TODO: Do this in the data loader
             label = label.type(torch.FloatTensor).to(device)
 
-            optimizer.zero_grad()
+            for optimizer in optimizers:
+                optimizer.zero_grad()
             output = model(images.to(device))
 
             for index, loss_fn in enumerate(loss_fns):
@@ -134,7 +163,8 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fns, train_loa
                 epoch_loss += loss.detach().item()
                 loss.backward(retain_graph=True)
 
-            optimizer.step()
+            for optimizer in optimizers:
+                optimizer.step()
 
         epoch_loss = epoch_loss / len(train_loader.dataset) / 5
 
@@ -194,15 +224,15 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     NUM_EPOCHS = 40
 
     model = CustomLSTM().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=2e-4)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, NUM_EPOCHS, eta_min=23e-6)
-
-    freeze_model_initial_layers(model)
+    optimizers = [torch.optim.Adam(model.lstm.parameters(), lr=2e-4), torch.optim.Adam(model.cnn.parameters(), lr=2e-5)]
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=23e-6)
 
     criteria = [nn.BCEWithLogitsLoss() for i in range(5)]
+    # criteria = [FocalLoss() for i in range(5)]
+
 
     train_model_with_validation(model,
-                                optimizer,
+                                optimizers,
                                 scheduler,
                                 criteria,
                                 trainloader,
