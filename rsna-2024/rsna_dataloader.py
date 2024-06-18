@@ -66,7 +66,7 @@ class SeriesLevelDataset(Dataset):
             for label in label_indices:
                 if label == -1:
                     raise ValueError()
-                self.labels[name].append(0.25 + 0.25 * label)
+                self.labels[name].append(0.16 + 0.33 * label)
 
             # Multihot encoding
             # for label in label_indices:
