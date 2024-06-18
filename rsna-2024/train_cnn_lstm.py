@@ -199,7 +199,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     freeze_model_initial_layers(model)
 
-    criteria = [nn.CrossEntropyLoss() for i in range(5)]
+    criteria = [nn.BCEWithLogitsLoss() for i in range(5)]
 
     train_model_with_validation(model,
                                 optimizer,
