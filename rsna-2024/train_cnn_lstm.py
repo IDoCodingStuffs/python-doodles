@@ -42,9 +42,6 @@ class FCHead(nn.Module):
             # nn.BatchNorm1d(256),
             nn.Dropout(drop_rate),
             nn.LeakyReLU(0.1),
-            nn.Linear(128, 128),
-            nn.Dropout(drop_rate),
-            nn.LeakyReLU(0.1),
             nn.Linear(128, num_classes),
         )
 
@@ -62,7 +59,8 @@ class CustomLSTM(nn.Module):
         self.lstm = nn.LSTM(input_size=512, hidden_size=self.hidden_size, dropout=drop_rate, num_layers=self.num_layers,
                             batch_first=True,
                             bidirectional=True)
-        self.heads = [FCHead().to(device) for i in range(num_levels)]
+        # self.heads = [FCHead().to(device) for i in range(num_levels)]
+        self.head = FCHead(num_classes=num_classes)
 
     def forward(self, x_3d):
         hidden = None
@@ -75,7 +73,8 @@ class CustomLSTM(nn.Module):
 
             # Get the last hidden state (hidden is a tuple with both hidden and cell state in it)
 
-        return [head(hidden[0][-1]) for head in self.heads]
+        # return [head(hidden[0][-1]) for head in self.heads]
+        return self.head(hidden[0][-1])
 
 
 def freeze_model_initial_layers(model: CustomLSTM):
@@ -83,6 +82,7 @@ def freeze_model_initial_layers(model: CustomLSTM):
         param.requires_grad = False
     for param in model.cnn.model.fc.parameters():
         param.requires_grad = True
+
 
 def unfreeze_model_initial_layers(model: CustomLSTM):
     for param in model.cnn.model.parameters():
@@ -110,7 +110,7 @@ class FocalLoss(nn.Module):
         return loss.sum(dim=1).mean()
 
 
-def model_validation_loss(model, val_loader, loss_fns):
+def model_validation_loss(model, val_loader, loss_fn):
     model.eval()
     total_loss = 0
 
@@ -119,11 +119,10 @@ def model_validation_loss(model, val_loader, loss_fns):
         label = label.type(torch.FloatTensor).to(device)
 
         output = model(images.to(device))
-        for index, loss_fn in enumerate(loss_fns):
-            loss = loss_fn(output[index].squeeze(0), label.squeeze(0)[index])
-            total_loss += loss.item()
+        loss = loss_fn(output, label)
+        total_loss += loss.item()
 
-    total_loss = total_loss / len(val_loader.dataset) / len(loss_fns)
+    total_loss = total_loss / len(val_loader.dataset)
 
     return total_loss
 
@@ -138,7 +137,7 @@ def dump_plots_for_loss_and_acc(losses, val_losses, data_subset_label, model_lab
     plt.close()
 
 
-def train_model_with_validation(model, optimizers, scheduler, loss_fns, train_loader, val_loader, train_loader_desc=None,
+def train_model_with_validation(model, optimizers, scheduler, loss_fn, train_loader, val_loader, train_loader_desc=None,
                                 model_desc="my_model", epochs=10):
     epoch_losses = []
     epoch_validation_losses = []
@@ -147,7 +146,7 @@ def train_model_with_validation(model, optimizers, scheduler, loss_fns, train_lo
         epoch_loss = 0
         model.train()
 
-        if epoch >= epochs - 25:
+        if epoch >= epochs - 30:
             unfreeze_model_initial_layers(model)
 
         for images, label in train_loader:
@@ -158,17 +157,16 @@ def train_model_with_validation(model, optimizers, scheduler, loss_fns, train_lo
                 optimizer.zero_grad()
             output = model(images.to(device))
 
-            for index, loss_fn in enumerate(loss_fns):
-                loss = loss_fn(output[index].squeeze(0), label.squeeze(0)[index])
-                epoch_loss += loss.detach().item()
-                loss.backward(retain_graph=True)
+            loss = loss_fn(output, label)
+            epoch_loss += loss.detach().item()
+            loss.backward(retain_graph=True)
 
             for optimizer in optimizers:
                 optimizer.step()
 
-        epoch_loss = epoch_loss / len(train_loader.dataset) / 5
+        epoch_loss = epoch_loss / len(train_loader.dataset)
 
-        epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns)
+        epoch_validation_loss = model_validation_loss(model, val_loader, loss_fn)
         scheduler.step()
 
         if len(epoch_validation_losses) == 0 or epoch_validation_loss < min(epoch_validation_losses):
@@ -223,18 +221,17 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     weights_path = './models/resnet50-19c8e357.pth'
     NUM_EPOCHS = 40
 
-    model = CustomLSTM().to(device)
+    model = CustomLSTM(num_classes=5).to(device)
     optimizers = [torch.optim.Adam(model.lstm.parameters(), lr=2e-4), torch.optim.Adam(model.cnn.parameters(), lr=2e-5)]
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=23e-6)
 
-    criteria = [nn.BCEWithLogitsLoss() for i in range(5)]
+    criterion = nn.MSELoss()
     # criteria = [FocalLoss() for i in range(5)]
-
 
     train_model_with_validation(model,
                                 optimizers,
                                 scheduler,
-                                criteria,
+                                criterion,
                                 trainloader,
                                 valloader,
                                 model_desc=model_label,

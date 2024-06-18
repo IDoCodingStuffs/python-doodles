@@ -59,14 +59,14 @@ class SeriesLevelDataset(Dataset):
             # self.labels[name] = label_indices
 
             # 1 hot encode
-            for label in label_indices:
-                self.labels[name].append([0 if label != i else 1 for i in range(3)])
+            # for label in label_indices:
+            #     self.labels[name].append([0 if label != i else 1 for i in range(3)])
 
             # Split 0.33 - 0.66 for each level
-            # for label in label_indices:
-            #     if label == -1:
-            #         raise ValueError()
-            #     self.labels[name].append(0.25 + 0.25 * label)
+            for label in label_indices:
+                if label == -1:
+                    raise ValueError()
+                self.labels[name].append(0.25 + 0.25 * label)
 
             # Multihot encoding
             # for label in label_indices:
@@ -79,13 +79,13 @@ class SeriesLevelDataset(Dataset):
         for index in range(len(self.series)):
             curr = self.series.iloc[index]
             key = (curr["study_id"], curr["series_id"])
-            # self.sampling_weights.append(1 + (np.sum(self.labels[key]) - len(self.levels) * 0.25) * 8)
+            self.sampling_weights.append(1 + (np.sum(self.labels[key]) - len(self.levels) * 0.25) * 8)
             # Equal sampling
             # self.sampling_weights.append(1)
             # Multi-hot encoded weights
-            # self.sampling_weights.append(1 + (np.sum(self.labels[key])))
+            # self.sampling_weights.append(1 + 2 ** (np.sum(self.labels[key])))
             # One-hot encoded weights
-            self.sampling_weights.append(2 ** np.argmax(self.labels[key]))
+            # self.sampling_weights.append(2 ** np.argmax(self.labels[key]))
 
     def __len__(self):
         return len(self.series)
