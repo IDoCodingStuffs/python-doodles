@@ -78,10 +78,15 @@ class CustomLSTM(nn.Module):
         return [head(hidden[0][-1]) for head in self.heads]
 
 
-def freeze_model_initial_layers(model: CustomLSTM):
+def freeze_model_backbone(model: CustomLSTM):
     for param in model.cnn.model.parameters():
         param.requires_grad = False
     for param in model.cnn.model.fc.parameters():
+        param.requires_grad = True
+
+
+def unfreeze_model_backbone(model: CustomLSTM):
+    for param in model.cnn.model.parameters():
         param.requires_grad = True
 
 
@@ -113,20 +118,27 @@ def dump_plots_for_loss_and_acc(losses, val_losses, data_subset_label, model_lab
     plt.close()
 
 
-def train_model_with_validation(model, optimizer, scheduler, loss_fns, train_loader, val_loader, train_loader_desc=None,
+def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_loader, val_loader, train_loader_desc=None,
                                 model_desc="my_model", epochs=10):
     epoch_losses = []
     epoch_validation_losses = []
+
+    freeze_model_backbone(model)
 
     for epoch in tqdm(range(epochs), desc=train_loader_desc):
         epoch_loss = 0
         model.train()
 
+        if epoch >= 10:
+            unfreeze_model_backbone(model)
+
         for images, label in train_loader:
             # !TODO: Do this in the data loader
             label = label.type(torch.FloatTensor).to(device)
 
-            optimizer.zero_grad()
+            for optimizer in optimizers:
+                optimizer.zero_grad()
+
             output = model(images.to(device))
 
             for index, loss_fn in enumerate(loss_fns):
@@ -134,12 +146,15 @@ def train_model_with_validation(model, optimizer, scheduler, loss_fns, train_loa
                 epoch_loss += loss.detach().item()
                 loss.backward(retain_graph=True)
 
-            optimizer.step()
+            for optimizer in optimizers:
+                optimizer.step()
 
         epoch_loss = epoch_loss / len(train_loader.dataset) / 5
 
         epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns)
-        scheduler.step()
+
+        for scheduler in schedulers:
+            scheduler.step()
 
         if len(epoch_validation_losses) == 0 or epoch_validation_loss < min(epoch_validation_losses):
             torch.save(model, "./models/" + model_desc + ".pt")
@@ -194,16 +209,15 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     NUM_EPOCHS = 40
 
     model = CustomLSTM().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=2e-4)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, NUM_EPOCHS, eta_min=23e-6)
-
-    freeze_model_initial_layers(model)
+    optimizers = [torch.optim.Adam(model.parameters(), lr=5e-4), torch.optim.Adam(model.parameters(), lr=2e-5)]
+    schedulers = [torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=2e-5),
+                  torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=2e-6)]
 
     criteria = [nn.BCEWithLogitsLoss() for i in range(5)]
 
     train_model_with_validation(model,
-                                optimizer,
-                                scheduler,
+                                optimizers,
+                                schedulers,
                                 criteria,
                                 trainloader,
                                 valloader,
