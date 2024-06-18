@@ -53,16 +53,16 @@ class FCHead(nn.Module):
         return self.model(x)
 
 
-class CustomLSTM(nn.Module):
+class RNSAModel2_5D(nn.Module):
     hidden_size = 256
     num_layers = 3
 
     def __init__(self, num_classes=3, num_levels=5, drop_rate=0.2, resnet_weights=None):
-        super(CustomLSTM, self).__init__()
-        self.cnn = Backbone(pretrained_weights=resnet_weights)
-        self.lstm = nn.LSTM(input_size=512, hidden_size=self.hidden_size, dropout=drop_rate, num_layers=self.num_layers,
-                            batch_first=True,
-                            bidirectional=True)
+        super(RNSAModel2_5D, self).__init__()
+        self.backbone = Backbone(pretrained_weights=resnet_weights)
+        self.temporal = nn.LSTM(input_size=512, hidden_size=self.hidden_size, dropout=drop_rate, num_layers=self.num_layers,
+                                batch_first=True,
+                                bidirectional=True)
         self.heads = [FCHead().to(device) for i in range(num_levels)]
 
     def forward(self, x_3d):
@@ -70,24 +70,24 @@ class CustomLSTM(nn.Module):
 
         # Iterate over each frame of a video in a video of batch * frames * channels * height * width
         for t in range(x_3d.size(1)):
-            x = self.cnn(x_3d[:, t])
+            x = self.backbone(x_3d[:, t])
             # Pass latent representation of frame through lstm and update hidden state
-            out, hidden = self.lstm(x.unsqueeze(0), hidden)
+            out, hidden = self.temporal(x.unsqueeze(0), hidden)
 
             # Get the last hidden state (hidden is a tuple with both hidden and cell state in it)
 
         return [head(hidden[0][-1]) for head in self.heads]
 
 
-def freeze_model_backbone(model: CustomLSTM):
-    for param in model.cnn.model.parameters():
+def freeze_model_backbone(model: RNSAModel2_5D):
+    for param in model.backbone.model.parameters():
         param.requires_grad = False
-    for param in model.cnn.model.fc.parameters():
+    for param in model.backbone.model.fc.parameters():
         param.requires_grad = True
 
 
-def unfreeze_model_backbone(model: CustomLSTM):
-    for param in model.cnn.model.parameters():
+def unfreeze_model_backbone(model: RNSAModel2_5D):
+    for param in model.backbone.model.parameters():
         param.requires_grad = True
 
 
@@ -209,9 +209,9 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     NUM_EPOCHS = 40
 
-    model = CustomLSTM().to(device)
-    optimizers = [torch.optim.Adam(model.lstm.parameters(), lr=1e-4),
-                  torch.optim.Adam(model.cnn.parameters(), lr=2e-5)]
+    model = RNSAModel2_5D().to(device)
+    optimizers = [torch.optim.Adam(model.temporal.parameters(), lr=1e-4),
+                  torch.optim.Adam(model.backbone.parameters(), lr=2e-5)]
 
     optimizers.extend([torch.optim.Adam(head.parameters(), lr=1e-3) for head in model.heads])
 
