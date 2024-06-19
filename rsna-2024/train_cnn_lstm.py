@@ -79,9 +79,9 @@ class RNSAModel2_5D(nn.Module):
     hidden_size = 256
     num_layers = 3
 
-    def __init__(self, num_classes=2, num_levels=5, drop_rate=0.2, resnet_weights=None):
+    def __init__(self, num_classes=2, num_levels=5, drop_rate=0.2, pretrained_weights=None):
         super(RNSAModel2_5D, self).__init__()
-        self.backbone = UNetBackbone(pretrained_weights=resnet_weights)
+        self.backbone = UNetBackbone(pretrained_weights=pretrained_weights)
         self.temporal = nn.LSTM(input_size=512, hidden_size=self.hidden_size, dropout=drop_rate, num_layers=self.num_layers,
                                 batch_first=True,
                                 bidirectional=True)
@@ -260,9 +260,9 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "resnet18_lstm_t2stir")
-    # model_t1 = train_model_for_series("Sagittal T1", "resnet18_lstm_t1")
-    # model_t2 = train_model_for_series("Axial T2", "resnet18_lstm_t2")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "unet_lstm_t2stir")
+    # model_t1 = train_model_for_series("Sagittal T1", "unet_lstm_t1")
+    # model_t2 = train_model_for_series("Axial T2", "unet_lstm_t2")
 
 
 if __name__ == '__main__':
