@@ -33,6 +33,43 @@ class CustomDataset(Dataset):
         return image, label
 
 
+class CoordinateDataset(Dataset):
+    def __init__(self, dataframe, transform=None):
+        self.dataframe = dataframe
+        self.dataframe = (dataframe[['study_id', "series_id", "level", "x", "y", "image_path"]]
+                          .drop_duplicates())
+        self.transform = transform
+
+        self.series = dataframe[['study_id', "series_id"]].drop_duplicates().reset_index(drop=True)
+        self.levels = sorted(self.dataframe["level"].unique())
+        self.labels = dict()
+        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
+            # !TODO: Refine this
+            labels = [0 for e in range(len(self.levels) * 2)]
+            for index, row in group.iterrows():
+                level_index = self.levels.index(row["level"])
+                label_indices = (level_index * 2, level_index * 2 + 1)
+                labels[label_indices[0]] = row["x"]
+                labels[label_indices[1]] = row["y"]
+
+            self.labels[name] = torch.tensor(labels)
+
+
+    def __len__(self):
+        return len(self.dataframe)
+
+    def __getitem__(self, index):
+        image_path = self.dataframe['image_path'][index]
+        image = load_dicom(image_path)
+        curr_series = self.dataframe[["study_id", "series_id"]].iloc[index]
+        label = self.labels[(curr_series["study_id"], curr_series["series_id"])]
+
+        if self.transform:
+            image = self.transform(image)
+
+        return image, label
+
+
 class SeriesLevelDataset(Dataset):
     def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
         self.base_path = base_path
@@ -142,35 +179,6 @@ class SeriesLevelCoordinateDataset(Dataset):
     def _get_image_index(self, image_path):
         return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
 
-
-
-class PatientLevelDataset(Dataset):
-    def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
-        self.base_path = base_path
-        self.dataframe = (dataframe[['study_id', "series_id", "severity", "level"]]
-                          .drop_duplicates()
-                          .dropna())
-        self.transform = transform
-        raise NotImplementedError()
-
-    def __len__(self):
-        return len(self.dataframe)
-
-    def __getitem__(self, index):
-        curr = self.dataframe.iloc[index]
-        image_paths = retrieve_image_paths(self.base_path, curr["study_id"], curr["series_id"])
-        image_paths = sorted(image_paths, key=lambda x: self._get_image_index(x))
-        images = np.array([self.transform(load_dicom(image_path)) if self.transform else load_dicom(image_path)
-                           for image_path in image_paths])
-
-        label = curr['severity']
-
-        return images, label
-
-    def _get_image_index(self, image_path):
-        return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
-
-
 # !TODO: Avoid duplication
 def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                 series_description: str,
@@ -235,6 +243,30 @@ def create_series_level_test_datasets_and_loaders(df: pd.DataFrame,
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
     return val_loader
+
+
+def create_coordinate_datasets_and_loaders(df: pd.DataFrame,
+                                series_description: str,
+                                transform_train: transforms.Compose,
+                                transform_val: transforms.Compose,
+                                base_path: str,
+                                split_factor=0.2,
+                                random_seed=42,
+                                num_workers=0,
+                                batch_size=8):
+    filtered_df = df[df['series_description'] == series_description]
+
+    train_df, val_df = train_test_split(filtered_df, test_size=split_factor, random_state=random_seed)
+    train_df = train_df.reset_index(drop=True)
+    val_df = val_df.reset_index(drop=True)
+
+    train_dataset = CoordinateDataset(train_df, transform_train)
+    val_dataset = CoordinateDataset(val_df, transform_val)
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+
+    return train_loader, val_loader, len(train_df), len(val_df)
 
 
 def create_datasets_and_loaders(df: pd.DataFrame,

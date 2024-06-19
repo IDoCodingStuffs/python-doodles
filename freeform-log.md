@@ -164,3 +164,8 @@ Okay, so ResNet with an output of 2x5 coordinates. MSELoss, should be straightfo
 ### 1 PM
 Well I realized I needed a temporal element still. Training will still be time-consuming and I really want a CNN only approach, but let's see if it at least manages to train
 
+### 2 PM
+I have a feeling there is a bug with that LSTM setup and it does not learn that great. I should just try a regular CNN first.
+
+### 4 PM
+Finally! The CNN overfits. I finally have a fucking baseline to go off of.
