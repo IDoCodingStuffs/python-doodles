@@ -171,6 +171,7 @@ class PatientLevelDataset(Dataset):
         return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
 
 
+# !TODO: Avoid duplication
 def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                 series_description: str,
                                 transform_train: transforms.Compose,
@@ -192,6 +193,30 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     train_sampler = WeightedRandomSampler(weights=train_dataset.sampling_weights, num_samples=len(train_dataset), replacement=True)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler, num_workers=num_workers)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+
+    return train_loader, val_loader, len(train_df), len(val_df)
+
+
+def create_series_level_coordinate_datasets_and_loaders(df: pd.DataFrame,
+                                series_description: str,
+                                transform_train: transforms.Compose,
+                                transform_val: transforms.Compose,
+                                base_path: str,
+                                split_factor=0.2,
+                                random_seed=42,
+                                batch_size=1,
+                                num_workers=0):
+    filtered_df = df[df['series_description'] == series_description]
+
+    train_df, val_df = train_test_split(filtered_df, test_size=split_factor, random_state=random_seed)
+    train_df = train_df.reset_index(drop=True)
+    val_df = val_df.reset_index(drop=True)
+
+    train_dataset = SeriesLevelCoordinateDataset(base_path, train_df, transform_train)
+    val_dataset = SeriesLevelCoordinateDataset(base_path, val_df, transform_val)
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     return train_loader, val_loader, len(train_df), len(val_df)
