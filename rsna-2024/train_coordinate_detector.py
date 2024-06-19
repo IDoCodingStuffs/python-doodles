@@ -16,7 +16,7 @@ class CoordinateDetectorBackbone(nn.Module):
         self.model.classifier = nn.Identity()
 
     def forward(self, x):
-        return self.model(x)
+        return self.model(x)[0]
 
 
 class FCHead(nn.Module):
@@ -55,7 +55,7 @@ class CoordinateDetector2_5D(nn.Module):
         for t in range(x_3d.size(1)):
             x = self.backbone(x_3d[:, t])
             # Pass latent representation of frame through lstm and update hidden state
-            out, hidden = self.temporal(x.unsqueeze(0), hidden)
+            out, hidden = self.temporal(x.squeeze((2,3)), hidden)
 
             # Get the last hidden state (hidden is a tuple with both hidden and cell state in it)
 
@@ -97,7 +97,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                                      # Try overfitting first
                                                                                                      transform_val,
                                                                                                      data_basepath + "train_images",
-                                                                                                     num_workers=4,
+                                                                                                     num_workers=0,
                                                                                                      batch_size=1)
 
     NUM_EPOCHS = 40
