@@ -157,3 +157,6 @@ After hours of trying to figure the memory issue with UNet, I gave up and found 
 I also just realized... ResNet input size is 224x224, but the features are likely to get lost that way. 
 So what I need to do instead is having a landmark detector first. Then crop around the landmarks per spinal joint.
 And *then* train and/or infer on those cropped images.
+
+### 12 PM
+Okay, so ResNet with an output of 2x5 coordinates. MSELoss, should be straightforward. Hell if it does not overfit I know nothing.
