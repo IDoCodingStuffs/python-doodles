@@ -37,7 +37,8 @@ class CoordinateDataset(Dataset):
     def __init__(self, dataframe, transform=None):
         self.dataframe = dataframe
         self.dataframe = (dataframe[['study_id', "series_id", "level", "x", "y", "image_path"]]
-                          .drop_duplicates())
+                          .drop_duplicates()
+                          .dropna())
         self.transform = transform
 
         self.series = dataframe[['study_id', "series_id"]].drop_duplicates().reset_index(drop=True)
