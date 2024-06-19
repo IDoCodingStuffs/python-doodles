@@ -72,9 +72,9 @@ class RNSAModel2_5D(nn.Module):
 
         # Iterate over each frame of a video in a video of batch * frames * channels * height * width
         for t in range(x_3d.size(1)):
-            x = self.backbone(x_3d[:, t])
+            x = self.backbone(x_3d[:, t])[0]
             # Pass latent representation of frame through lstm and update hidden state
-            out, hidden = self.temporal(x.unsqueeze(0), hidden)
+            out, hidden = self.temporal(x.squeeze((2, 3)), hidden)
 
             # Get the last hidden state (hidden is a tuple with both hidden and cell state in it)
 
