@@ -103,7 +103,7 @@ def model_validation_loss(model, val_loader, loss_fn):
         label = label.type(torch.FloatTensor).to(device)
 
         output = model(images.to(device))
-        loss = loss_fn(output, label)
+        loss = loss_fn(output.unsqueeze(0), label)
         total_loss += loss.item()
 
     total_loss = total_loss / len(val_loader.dataset)
@@ -145,7 +145,7 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fn, train_lo
 
             output = model(images.to(device))
 
-            loss = loss_fn(output, label)
+            loss = loss_fn(output.unsqueeze(0), label)
             epoch_loss += loss.detach().item()
             loss.backward(retain_graph=True)
 
@@ -207,7 +207,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                           # Try overfitting first
                                                                                           transform_val,
                                                                                           data_basepath + "train_images",
-                                                                                          num_workers=4, batch_size=1)
+                                                                                          num_workers=0, batch_size=1)
 
     NUM_EPOCHS = 40
 
