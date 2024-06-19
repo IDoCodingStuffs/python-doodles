@@ -155,12 +155,12 @@ def train_model_per_image(data_subset_label: str, model_label: str):
         transforms.Resize((224, 224)),
         # transforms.RandomHorizontalFlip(p=0.3),
         # transforms.RandomVerticalFlip(p=0.3),
-        # transforms.RandomRotation([0, 90]),
+        transforms.RandomRotation([-30, 30]),
         transforms.RandomChoice([
             transforms.GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 0.2)),
             v2.Identity(),
         ], p=[0.25, 0.75]),
-        v2.RandomPhotometricDistort(p=0.3),
+        v2.RandomPhotometricDistort(p=0.2),
         transforms.Grayscale(num_output_channels=3),
         transforms.ToTensor(),
     ])
@@ -175,8 +175,7 @@ def train_model_per_image(data_subset_label: str, model_label: str):
 
     trainloader, valloader, len_train, len_val = create_coordinate_datasets_and_loaders(training_data,
                                                                                         data_subset_label,
-                                                                                        transform_val,
-                                                                                        # Try overfitting first
+                                                                                        transform_train,
                                                                                         transform_val,
                                                                                         data_basepath + "train_images",
                                                                                         num_workers=4,
@@ -186,11 +185,11 @@ def train_model_per_image(data_subset_label: str, model_label: str):
 
     model = CoordinateDetector2D().to(device)
     optimizers = [
-        torch.optim.Adam(model.parameters(), lr=1e-3),
+        torch.optim.Adam(model.parameters(), lr=5e-4),
     ]
 
     schedulers = [
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=5e-5),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-5),
     ]
 
     criterion = nn.MSELoss()
