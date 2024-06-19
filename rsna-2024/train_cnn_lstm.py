@@ -37,7 +37,7 @@ class ResnetBackbone(nn.Module):
 
 
 class ConvToFC(nn.Module):
-    def __init__(self, in_channels=1, in_dims=512, out_dims=1):
+    def __init__(self, in_channels=1, in_dims=512, out_dims=512):
         super(ConvToFC, self).__init__()
         self.conv = nn.Conv2d(in_channels, 1, kernel_size=(in_dims, 1))
         self.relu = nn.ReLU(inplace=True)
@@ -49,11 +49,9 @@ class ConvToFC(nn.Module):
 class UNetBackbone(nn.Module):
     def __init__(self, out_features=512, pretrained_weights=None):
         super(UNetBackbone, self).__init__()
-        self.model = Unet(num_pool_layers=4, drop_prob=0.05, in_chans=3, out_chans=1)
+        self.model = Unet(num_pool_layers=4, drop_prob=0.05, in_chans=1, out_chans=1)
         if pretrained_weights:
             self.model.load_state_dict(torch.load(pretrained_weights))
-        self.fc = ConvToFC()
-        torch.nn.init.xavier_uniform(self.model.fc.weight)
 
     def forward(self, x):
         return self.model(x)
@@ -83,7 +81,7 @@ class RNSAModel2_5D(nn.Module):
 
     def __init__(self, num_classes=2, num_levels=5, drop_rate=0.2, resnet_weights=None):
         super(RNSAModel2_5D, self).__init__()
-        self.backbone = ResnetBackbone(pretrained_weights=resnet_weights)
+        self.backbone = UNetBackbone(pretrained_weights=resnet_weights)
         self.temporal = nn.LSTM(input_size=512, hidden_size=self.hidden_size, dropout=drop_rate, num_layers=self.num_layers,
                                 batch_first=True,
                                 bidirectional=True)
@@ -97,7 +95,8 @@ class RNSAModel2_5D(nn.Module):
         for t in range(x_3d.size(1)):
             x = self.backbone(x_3d[:, t])
             # Pass latent representation of frame through lstm and update hidden state
-            out, hidden = self.temporal(x.unsqueeze(0), hidden)
+            # out, hidden = self.temporal(x.unsqueeze(0), hidden)
+            out, hidden = self.temporal(x.squeeze(0), hidden)
 
             # Get the last hidden state (hidden is a tuple with both hidden and cell state in it)
 
@@ -108,8 +107,8 @@ class RNSAModel2_5D(nn.Module):
 def freeze_model_backbone(model: RNSAModel2_5D):
     for param in model.backbone.model.parameters():
         param.requires_grad = False
-    for param in model.backbone.model.fc.parameters():
-        param.requires_grad = True
+    # for param in model.backbone.fc.parameters():
+    #     param.requires_grad = True
 
 
 def unfreeze_model_backbone(model: RNSAModel2_5D):
@@ -219,8 +218,8 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     transform_val = transforms.Compose([
         transforms.Lambda(lambda x: (x * 255).astype(np.uint8)),  # Convert back to uint8 for PIL
         transforms.ToPILImage(),
-        transforms.Resize((224, 224)),
-        transforms.Grayscale(num_output_channels=3),
+        transforms.Resize((512, 512)),
+        transforms.Grayscale(num_output_channels=1),
         transforms.ToTensor(),
     ])
 
