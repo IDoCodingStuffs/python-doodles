@@ -151,3 +151,9 @@ Still no signs of loss going down. Let me try training the backbone immediately,
 
 ### 11 PM
 After hours of trying to figure the memory issue with UNet, I gave up and found a pretrained model for brain MRIs. I will use that. And the thing took 200 epochs apparently ?! Guess I should be more patient.
+
+## 6/19
+### 12 AM
+I also just realized... ResNet input size is 224x224, but the features are likely to get lost that way. 
+So what I need to do instead is having a landmark detector first. Then crop around the landmarks per spinal joint.
+And *then* train and/or infer on those cropped images.
