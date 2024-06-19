@@ -36,6 +36,16 @@ class ResnetBackbone(nn.Module):
         return self.model(x)
 
 
+class ConvToFC(nn.Module):
+    def __init__(self, in_channels=1, in_dims=512, out_dims=512):
+        super(ConvToFC, self).__init__()
+        self.conv = nn.Conv2d(in_channels, 1, kernel_size=(in_dims, 1))
+        self.relu = nn.ReLU(inplace=True)
+        self.fc = nn.Linear(in_dims, out_dims)
+    def forward(self, x):
+        return self.fc(self.relu(self.conv(x)))
+
+
 class UNetBackbone(nn.Module):
     def __init__(self, out_features=512, pretrained_weights=None):
         super(UNetBackbone, self).__init__()
