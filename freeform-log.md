@@ -169,3 +169,4 @@ I have a feeling there is a bug with that LSTM setup and it does not learn that 
 
 ### 4 PM
 Finally! The CNN overfits. I finally have a fucking baseline to go off of.
+Let's try adding some image augmentations, dropping the nulls from input, and see what happens.

@@ -155,7 +155,7 @@ def train_model_per_image(data_subset_label: str, model_label: str):
         transforms.Resize((224, 224)),
         # transforms.RandomHorizontalFlip(p=0.3),
         # transforms.RandomVerticalFlip(p=0.3),
-        transforms.RandomRotation([-30, 30]),
+        # transforms.RandomRotation([-30, 30]),
         transforms.RandomChoice([
             transforms.GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 0.2)),
             v2.Identity(),
