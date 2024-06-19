@@ -226,11 +226,11 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     model = RNSAModel2_5D().to(device)
     optimizers = [torch.optim.Adam(model.head.parameters(), lr=1e-3),
                   torch.optim.Adam(model.temporal.parameters(), lr=5e-4),
-                  torch.optim.Adam(model.backbone.parameters(), lr=1e-4)]
+                  torch.optim.Adam(model.backbone.parameters(), lr=5e-4)]
 
     schedulers = [
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=5e-5),
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=2e-6),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-5),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-6),
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=5e-7),
         ]
 
