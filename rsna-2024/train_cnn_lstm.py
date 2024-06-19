@@ -132,8 +132,7 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fn, train_lo
         epoch_loss = 0
         model.train()
 
-        # if epoch >= 10:
-        if epoch >= 0:
+        if epoch >= 10:
             unfreeze_model_backbone(model)
 
         for images, label in train_loader:
@@ -207,9 +206,9 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                           # Try overfitting first
                                                                                           transform_val,
                                                                                           data_basepath + "train_images",
-                                                                                          num_workers=0, batch_size=1)
+                                                                                          num_workers=4, batch_size=1)
 
-    NUM_EPOCHS = 40
+    NUM_EPOCHS = 60
 
     model = RNSAModel2_5D().to(device)
     optimizers = [torch.optim.Adam(model.head.parameters(), lr=1e-3),
