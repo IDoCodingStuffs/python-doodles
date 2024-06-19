@@ -63,7 +63,15 @@ class CoordinateDataset(Dataset):
         image_path = self.dataframe['image_path'][index]
         image = load_dicom(image_path)
         curr_series = self.dataframe[["study_id", "series_id"]].iloc[index]
+
         label = self.labels[(curr_series["study_id"], curr_series["series_id"])]
+
+        # !TODO: Refactor
+        for i in range(0, len(label), 2):
+            label[i] *= image.shape[0] / 224
+
+        for i in range(1, len(label), 2):
+            label[i] *= image.shape[1] / 224
 
         if self.transform:
             image = self.transform(image)
