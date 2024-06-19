@@ -160,3 +160,7 @@ And *then* train and/or infer on those cropped images.
 
 ### 12 PM
 Okay, so ResNet with an output of 2x5 coordinates. MSELoss, should be straightforward. Hell if it does not overfit I know nothing.
+
+### 1 PM
+Well I realized I needed a temporal element still. Training will still be time-consuming and I really want a CNN only approach, but let's see if it at least manages to train
+

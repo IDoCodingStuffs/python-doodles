@@ -75,9 +75,8 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fn, train_lo
         epoch_loss = 0
         model.train()
 
-        # if epoch >= 10:
-        # if epoch >= 0:
-        #     unfreeze_model_backbone(model)
+        if epoch >= 10:
+            unfreeze_model_backbone(model)
 
         for images, label in train_loader:
             # !TODO: Do this in the data loader
