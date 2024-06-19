@@ -39,7 +39,7 @@ class ResnetBackbone(nn.Module):
 class UNetBackbone(nn.Module):
     def __init__(self, out_features=512, pretrained_weights=None):
         super(UNetBackbone, self).__init__()
-        self.model = Unet(num_pool_layers=4, drop_prob=0.05, in_chans=1, out_chans=1)
+        self.model = Unet(num_pool_layers=4, drop_prob=0.1, in_chans=1, out_chans=1, chans=256)
         if pretrained_weights:
             self.model.load_state_dict(torch.load(pretrained_weights))
 
@@ -223,7 +223,8 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     NUM_EPOCHS = 40
 
-    model = RNSAModel2_5D().to(device)
+    pretrained_weights = "./models/knee_mc_leaderboard_state_dict.pt"
+    model = RNSAModel2_5D(pretrained_weights=pretrained_weights).to(device)
     optimizers = [torch.optim.Adam(model.head.parameters(), lr=1e-3),
                   torch.optim.Adam(model.temporal.parameters(), lr=5e-4),
                   torch.optim.Adam(model.backbone.parameters(), lr=5e-4)]

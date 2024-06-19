@@ -151,3 +151,7 @@ Still no signs of loss going down. Let me try training the backbone immediately,
 
 ### 8 PM
 It's gotta be ResNet pretrained features being so different from MRI images. I need to find some pretrained UNet backbone. I wonder what things will look like if I just train a UNet backbone directly.
+
+### 9 PM
+For some reason trying to load the UNet model makes memory usage blow up. Must be too many layers or something? Weird.
+Will try to retrain a pretrained knee model. Knees, spines, same thing amirite?
