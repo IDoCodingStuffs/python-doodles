@@ -104,6 +104,46 @@ class SeriesLevelDataset(Dataset):
         return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
 
 
+# !TODO: Use inheritance
+class SeriesLevelCoordinateDataset(Dataset):
+    def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
+        self.base_path = base_path
+        self.dataframe = (dataframe[['study_id', "series_id", "x", "y", "level"]]
+                          .drop_duplicates())
+        self.transform = transform
+        self.series = dataframe[['study_id', "series_id"]].drop_duplicates().reset_index(drop=True)
+        self.levels = sorted(self.dataframe["level"].unique())
+        self.labels = dict()
+        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
+            # !TODO: Refine this
+            labels = [0 for e in range(len(self.levels) * 2)]
+            for index, row in group.iterrows():
+                level_index = self.levels.index(row["level"])
+                label_indices = (level_index * 2, level_index * 2 + 1)
+                labels[label_indices[0]] = row["x"]
+                labels[label_indices[1]] = row["y"]
+
+            self.labels[name] = labels
+
+    def __len__(self):
+        return len(self.series)
+
+    def __getitem__(self, index):
+        curr = self.series.iloc[index]
+        image_paths = retrieve_image_paths(self.base_path, curr["study_id"], curr["series_id"])
+        image_paths = sorted(image_paths, key=lambda x: self._get_image_index(x))
+        images = np.array([self.transform(load_dicom(image_path)) if self.transform else load_dicom(image_path)
+                           for image_path in image_paths])
+
+        label = self.labels[(curr["study_id"], curr["series_id"])]
+
+        return images, label
+
+    def _get_image_index(self, image_path):
+        return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
+
+
+
 class PatientLevelDataset(Dataset):
     def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
         self.base_path = base_path

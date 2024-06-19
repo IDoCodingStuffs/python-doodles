@@ -64,6 +64,7 @@ class RNSAModel2_5D(nn.Module):
         x = self.head(hidden[0][-1])
         return self.activation(x)
 
+
 def train_model_for_series(data_subset_label: str, model_label: str):
     data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
     training_data = retrieve_training_data(data_basepath)
@@ -98,7 +99,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                           # Try overfitting first
                                                                                           transform_val,
                                                                                           data_basepath + "train_images",
-                                                                                          num_workers=4, batch_size=1)
+                                                                                          num_workers=0, batch_size=1)
 
     NUM_EPOCHS = 40
 
