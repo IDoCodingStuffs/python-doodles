@@ -178,7 +178,7 @@ def train_model_per_image(data_subset_label: str, model_label: str):
                                                                                         transform_train,
                                                                                         transform_val,
                                                                                         data_basepath + "train_images",
-                                                                                        num_workers=4,
+                                                                                        num_workers=0,
                                                                                         batch_size=1)
 
     NUM_EPOCHS = 40

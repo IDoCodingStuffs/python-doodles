@@ -68,10 +68,10 @@ class CoordinateDataset(Dataset):
 
         # !TODO: Refactor
         for i in range(0, len(label), 2):
-            label[i] *= image.shape[0] / 224
+            label[i] *= 224 / image.shape[0]
 
         for i in range(1, len(label), 2):
-            label[i] *= image.shape[1] / 224
+            label[i] *= 224 / image.shape[1]
 
         if self.transform:
             image = self.transform(image)
