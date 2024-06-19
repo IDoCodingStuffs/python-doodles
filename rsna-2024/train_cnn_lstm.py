@@ -64,6 +64,7 @@ class RNSAModel2_5D(nn.Module):
                                 batch_first=True,
                                 bidirectional=True)
         self.head = FCHead(num_classes=num_levels * num_classes)
+        self.activation = nn.Sigmoid()
 
     def forward(self, x_3d):
         hidden = None
@@ -76,7 +77,8 @@ class RNSAModel2_5D(nn.Module):
 
             # Get the last hidden state (hidden is a tuple with both hidden and cell state in it)
 
-        return self.head(hidden[0][-1])
+        x = self.head(hidden[0][-1])
+        return self.activation(x)
 
 
 def freeze_model_backbone(model: RNSAModel2_5D):
@@ -218,7 +220,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=5e-7),
         ]
 
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = nn.BCELoss()
 
     train_model_with_validation(model,
                                 optimizers,

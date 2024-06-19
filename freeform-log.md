@@ -142,3 +142,6 @@ Actually... I should use a smaller resnet and also use a single head basic model
 
 ### 4 PM
 Not training as of epoch 22. Need to fix a mistake I had made with the continuous labels, then try multi-hot single tensor 
+
+### 6 PM
+Just realized I should use BCELoss instead of BCEWithLogits loss for multi-hot. The loss gets wacky with small numbers.
