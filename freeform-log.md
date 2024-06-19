@@ -145,3 +145,6 @@ Not training as of epoch 22. Need to fix a mistake I had made with the continuou
 
 ### 6 PM
 Just realized I should use BCELoss instead of BCEWithLogits loss for multi-hot. The loss gets wacky with small numbers.
+
+### 7 PM
+Still no signs of loss going down. Let me try training the backbone immediately, with higher lr.

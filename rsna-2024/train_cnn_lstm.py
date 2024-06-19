@@ -21,9 +21,9 @@ _logger = logging.getLogger(__name__)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class Backbone(nn.Module):
+class ResnetBackbone(nn.Module):
     def __init__(self, out_features=512, pretrained_weights=None):
-        super(Backbone, self).__init__()
+        super(ResnetBackbone, self).__init__()
         self.model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
         if pretrained_weights:
             self.model.load_state_dict(torch.load(pretrained_weights))
@@ -59,7 +59,7 @@ class RNSAModel2_5D(nn.Module):
 
     def __init__(self, num_classes=2, num_levels=5, drop_rate=0.2, resnet_weights=None):
         super(RNSAModel2_5D, self).__init__()
-        self.backbone = Backbone(pretrained_weights=resnet_weights)
+        self.backbone = ResnetBackbone(pretrained_weights=resnet_weights)
         self.temporal = nn.LSTM(input_size=512, hidden_size=self.hidden_size, dropout=drop_rate, num_layers=self.num_layers,
                                 batch_first=True,
                                 bidirectional=True)
@@ -131,7 +131,8 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fn, train_lo
         epoch_loss = 0
         model.train()
 
-        if epoch >= 10:
+        # if epoch >= 10:
+        if epoch >= 0:
             unfreeze_model_backbone(model)
 
         for images, label in train_loader:
@@ -211,8 +212,8 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     model = RNSAModel2_5D().to(device)
     optimizers = [torch.optim.Adam(model.head.parameters(), lr=1e-3),
-                  torch.optim.Adam(model.temporal.parameters(), lr=1e-4),
-                  torch.optim.Adam(model.backbone.parameters(), lr=2e-5)]
+                  torch.optim.Adam(model.temporal.parameters(), lr=5e-4),
+                  torch.optim.Adam(model.backbone.parameters(), lr=1e-4)]
 
     schedulers = [
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=5e-5),
