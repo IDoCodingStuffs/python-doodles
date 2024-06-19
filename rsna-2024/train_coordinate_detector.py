@@ -15,11 +15,11 @@ class ResnetCoordinateDetector(nn.Module):
             self.model.load_state_dict(torch.load(pretrained_weights))
         self.model.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(in_features=2048, out_features=out_features),
+            nn.Linear(in_features=512, out_features=out_features),
         )
 
     def forward(self, x):
-        return self.model(x)
+        return self.model(x.squeeze(0))[0]
 
 
 def train_model_for_series(data_subset_label: str, model_label: str):
@@ -56,7 +56,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                                      # Try overfitting first
                                                                                                      transform_val,
                                                                                                      data_basepath + "train_images",
-                                                                                                     num_workers=4,
+                                                                                                     num_workers=0,
                                                                                                      batch_size=1)
 
     NUM_EPOCHS = 40

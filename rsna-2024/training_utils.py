@@ -22,6 +22,7 @@ _logger = logging.getLogger(__name__)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+# !TODO: Optional
 def freeze_model_backbone(model: nn.Module):
     for param in model.backbone.model.parameters():
         param.requires_grad = False
@@ -29,6 +30,7 @@ def freeze_model_backbone(model: nn.Module):
     #     param.requires_grad = True
 
 
+# !TODO: Optional
 def unfreeze_model_backbone(model: nn.Module):
     for param in model.backbone.model.parameters():
         param.requires_grad = True
@@ -67,15 +69,15 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fn, train_lo
     epoch_losses = []
     epoch_validation_losses = []
 
-    freeze_model_backbone(model)
+    # freeze_model_backbone(model)
 
     for epoch in tqdm(range(epochs), desc=train_loader_desc):
         epoch_loss = 0
         model.train()
 
         # if epoch >= 10:
-        if epoch >= 0:
-            unfreeze_model_backbone(model)
+        # if epoch >= 0:
+        #     unfreeze_model_backbone(model)
 
         for images, label in train_loader:
             # !TODO: Do this in the data loader

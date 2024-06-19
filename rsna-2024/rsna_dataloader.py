@@ -123,7 +123,7 @@ class SeriesLevelCoordinateDataset(Dataset):
                 labels[label_indices[0]] = row["x"]
                 labels[label_indices[1]] = row["y"]
 
-            self.labels[name] = labels
+            self.labels[name] = torch.tensor(labels)
 
     def __len__(self):
         return len(self.series)
