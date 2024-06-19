@@ -14,6 +14,7 @@ from tqdm import tqdm
 import logging
 import seaborn as sn
 from itertools import chain
+from transformers import AutoImageProcessor, AutoModelForImageClassification
 
 from rsna_dataloader import *
 
@@ -22,14 +23,15 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class ResnetBackbone(nn.Module):
+    pretrained_path = "./models/resnet18_brainmri_model.safetensors"
+
     def __init__(self, out_features=512, pretrained_weights=None):
         super(ResnetBackbone, self).__init__()
-        self.model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+        # self.model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+        self.model = AutoModelForImageClassification.from_pretrained("BehradG/resnet-18-MRI-Brain", torchscript=True)
         if pretrained_weights:
             self.model.load_state_dict(torch.load(pretrained_weights))
-        num_ftrs = self.model.fc.in_features
-        self.model.fc = nn.Linear(in_features=num_ftrs, out_features=out_features)
-        torch.nn.init.xavier_uniform(self.model.fc.weight)
+        self.model.classifier = nn.Identity()
 
     def forward(self, x):
         return self.model(x)
@@ -56,7 +58,6 @@ class FCHead(nn.Module):
 class RNSAModel2_5D(nn.Module):
     hidden_size = 256
     num_layers = 3
-
     def __init__(self, num_classes=2, num_levels=5, drop_rate=0.2, resnet_weights=None):
         super(RNSAModel2_5D, self).__init__()
         self.backbone = ResnetBackbone(pretrained_weights=resnet_weights)
@@ -84,8 +85,8 @@ class RNSAModel2_5D(nn.Module):
 def freeze_model_backbone(model: RNSAModel2_5D):
     for param in model.backbone.model.parameters():
         param.requires_grad = False
-    for param in model.backbone.model.fc.parameters():
-        param.requires_grad = True
+    # for param in model.backbone.model.fc.parameters():
+    #     param.requires_grad = True
 
 
 def unfreeze_model_backbone(model: RNSAModel2_5D):

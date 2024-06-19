@@ -148,3 +148,6 @@ Just realized I should use BCELoss instead of BCEWithLogits loss for multi-hot. 
 
 ### 7 PM
 Still no signs of loss going down. Let me try training the backbone immediately, with higher lr.
+
+### 11 PM
+After hours of trying to figure the memory issue with UNet, I gave up and found a pretrained model for brain MRIs. I will use that. And the thing took 200 epochs apparently ?! Guess I should be more patient.
