@@ -14,6 +14,7 @@ from tqdm import tqdm
 import logging
 import seaborn as sn
 from itertools import chain
+from fastmri.models.unet import Unet
 
 from rsna_dataloader import *
 
@@ -29,6 +30,29 @@ class ResnetBackbone(nn.Module):
             self.model.load_state_dict(torch.load(pretrained_weights))
         num_ftrs = self.model.fc.in_features
         self.model.fc = nn.Linear(in_features=num_ftrs, out_features=out_features)
+        torch.nn.init.xavier_uniform(self.model.fc.weight)
+
+    def forward(self, x):
+        return self.model(x)
+
+
+class ConvToFC(nn.Module):
+    def __init__(self, in_channels=1, in_dims=512, out_dims=1):
+        super(ConvToFC, self).__init__()
+        self.conv = nn.Conv2d(in_channels, 1, kernel_size=(in_dims, 1))
+        self.relu = nn.ReLU(inplace=True)
+        self.fc = nn.Linear(in_dims, out_dims)
+    def forward(self, x):
+        return self.fc(self.relu(self.conv(x)))
+
+
+class UNetBackbone(nn.Module):
+    def __init__(self, out_features=512, pretrained_weights=None):
+        super(UNetBackbone, self).__init__()
+        self.model = Unet(num_pool_layers=4, drop_prob=0.05, in_chans=3, out_chans=1)
+        if pretrained_weights:
+            self.model.load_state_dict(torch.load(pretrained_weights))
+        self.fc = ConvToFC()
         torch.nn.init.xavier_uniform(self.model.fc.weight)
 
     def forward(self, x):
@@ -206,7 +230,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                           # Try overfitting first
                                                                                           transform_val,
                                                                                           data_basepath + "train_images",
-                                                                                          num_workers=4, batch_size=1)
+                                                                                          num_workers=0, batch_size=1)
 
     NUM_EPOCHS = 40
 
