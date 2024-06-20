@@ -206,3 +206,9 @@ I can also try getting more aggressive with the Gaussian blur. And try to add mo
 ### 12 PM
 The trick here can be handy to use the same transform on label: https://discuss.pytorch.org/t/use-a-subset-of-composed-transforms-with-same-random-seed/47550
 I can kinda hack it initially with a single-pixel image, and later use something more proper to transform the label vector
+
+### 1 PM
+This too can be interesting: https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html
+Might have to get more elaborate with the coordinate regression
+This as well https://python.plainenglish.io/single-object-detection-with-pytorch-step-by-step-96430358ae9d
+Which describes IOU based loss, which might be better than just Huber loss across the full set of points
