@@ -212,3 +212,6 @@ This too can be interesting: https://pytorch.org/tutorials/intermediate/torchvis
 Might have to get more elaborate with the coordinate regression
 This as well https://python.plainenglish.io/single-object-detection-with-pytorch-step-by-step-96430358ae9d
 Which describes IOU based loss, which might be better than just Huber loss across the full set of points
+
+### 2 PM
+So the M1 Pro laptop takes 20 minutes per epoch, but my 4090 setup takes just 2. Good investment.
