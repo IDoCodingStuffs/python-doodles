@@ -186,3 +186,6 @@ After fixing that, finally getting the slope going downwards. Sweet. I will even
 Next thing will be figuring how to clean and then impute the rows with missing joint coords.
 
 Ooh just realized, I should do the train-test split by study ids. So that I am not ending up with blank levels within same series.
+
+### 9 PM
+Well something is still off, the labels are still offset. But I will figure it out later, at least it is way better than how it was yesterday.

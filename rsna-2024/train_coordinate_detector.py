@@ -150,7 +150,7 @@ def train_model_per_image(data_subset_label: str, model_label: str):
     training_data = retrieve_training_data(data_basepath)
 
     transform_train = transforms.Compose([
-        transforms.Lambda(lambda x: (x * 255).astype(np.uint8)),  # Convert back to uint8 for PIL
+        transforms.Lambda(lambda x: (x * 255).astype(np.uint8)),
         transforms.ToPILImage(),
         transforms.Resize((224, 224)),
         transforms.RandomChoice([
@@ -162,13 +162,12 @@ def train_model_per_image(data_subset_label: str, model_label: str):
             transforms.GaussianBlur(kernel_size=1, sigma=(1, 3)),
             v2.Identity(),
         ], p=[0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.4]),
-        # v2.RandomPhotometricDistort(p=0.2),
         transforms.Grayscale(num_output_channels=3),
         transforms.ToTensor(),
     ])
 
     transform_val = transforms.Compose([
-        transforms.Lambda(lambda x: (x * 255).astype(np.uint8)),  # Convert back to uint8 for PIL
+        transforms.Lambda(lambda x: (x * 255).astype(np.uint8)),
         transforms.ToPILImage(),
         transforms.Resize((224, 224)),
         transforms.Grayscale(num_output_channels=3),
