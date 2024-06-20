@@ -8,18 +8,18 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class CoordinateDetector2D(nn.Module):
     def __init__(self, out_features=10, pretrained_weights=None):
         super(CoordinateDetector2D, self).__init__()
-        self.model = AutoModelForImageClassification.from_pretrained("BehradG/resnet-18-MRI-Brain", torchscript=True)
-        # self.model = models.resnet18()
+        # self.model = AutoModelForImageClassification.from_pretrained("BehradG/resnet-18-MRI-Brain", torchscript=True)
+        self.model = models.resnet34()
         if pretrained_weights:
             self.model.load_state_dict(torch.load(pretrained_weights))
-        self.model.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(in_features=512, out_features=out_features),
-        )
-        # self.model.fc = nn.Linear(in_features=512, out_features=out_features)
+        # self.model.classifier = nn.Sequential(
+        #     nn.Flatten(),
+        #     nn.Linear(in_features=512, out_features=out_features),
+        # )
+        self.model.fc = nn.Linear(in_features=512, out_features=out_features)
 
     def forward(self, x):
-        return self.model(x)[0]
+        return self.model(x) #[0]
 
 
 def train_model_per_image(data_subset_label: str, model_label: str):
@@ -30,15 +30,15 @@ def train_model_per_image(data_subset_label: str, model_label: str):
         transforms.Lambda(lambda x: (x * 255).astype(np.uint8)),
         transforms.ToPILImage(),
         transforms.Resize((224, 224)),
-        transforms.RandomChoice([
-            transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 0.2)),
-            transforms.GaussianBlur(kernel_size=3, sigma=(0.5, 2)),
-            transforms.GaussianBlur(kernel_size=3, sigma=(1, 3)),
-            transforms.GaussianBlur(kernel_size=1, sigma=(0.1, 0.2)),
-            transforms.GaussianBlur(kernel_size=1, sigma=(0.5, 2)),
-            transforms.GaussianBlur(kernel_size=1, sigma=(1, 3)),
-            v2.Identity(),
-        ], p=[0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.4]),
+        # transforms.RandomChoice([
+        #     transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 0.2)),
+        #     transforms.GaussianBlur(kernel_size=3, sigma=(0.5, 2)),
+        #     transforms.GaussianBlur(kernel_size=3, sigma=(1, 3)),
+        #     transforms.GaussianBlur(kernel_size=1, sigma=(0.1, 0.2)),
+        #     transforms.GaussianBlur(kernel_size=1, sigma=(0.5, 2)),
+        #     transforms.GaussianBlur(kernel_size=1, sigma=(1, 3)),
+        #     v2.Identity(),
+        # ], p=[0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.4]),
         transforms.Grayscale(num_output_channels=3),
         transforms.ToTensor(),
     ])
@@ -70,7 +70,7 @@ def train_model_per_image(data_subset_label: str, model_label: str):
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=5e-6),
     ]
 
-    criterion = nn.MSELoss()
+    criterion = nn.HuberLoss()
 
     train_model_with_validation(model,
                                 optimizers,
@@ -86,7 +86,7 @@ def train_model_per_image(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_per_image("Sagittal T2/STIR", "resnet18_cnn_coordinates_t2stir")
+    model_t2stir = train_model_per_image("Sagittal T2/STIR", "resnet34_cnn_coordinates_t2stir")
 
 
 if __name__ == "__main__":

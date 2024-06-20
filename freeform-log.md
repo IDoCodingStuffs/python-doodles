@@ -193,3 +193,11 @@ Well something is still off, the labels are still offset. But I will figure it o
 ### 10 PM
 Just realized it is because I was flipping the x and y coordinates while resizing. So ridiculous lol.
 After fixing that, the model is converging real fast and well.
+
+## 6/20
+### 7 AM
+That said the model performance is not that amazing. I should figure something else, but I will take a break for the rest of the week.
+One last thing -- let me disable the gaussian blur and try Huber loss. If it still does not get the ordering of the vertebrae, I will take that break.
+
+### 9 AM
+Doing somewhat better. Val loss still does not go down but at least the labels are not all over the place. Let me try ResNet34 and if that does not work, add an auxiliary loss function to keep things neat.
