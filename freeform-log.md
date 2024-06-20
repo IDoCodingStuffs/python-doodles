@@ -189,3 +189,7 @@ Ooh just realized, I should do the train-test split by study ids. So that I am n
 
 ### 9 PM
 Well something is still off, the labels are still offset. But I will figure it out later, at least it is way better than how it was yesterday.
+
+### 10 PM
+Just realized it is because I was flipping the x and y coordinates while resizing. So ridiculous lol.
+After fixing that, the model is converging real fast and well.
