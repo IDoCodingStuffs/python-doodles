@@ -180,3 +180,7 @@ It looks like simply dropping null is not sufficient to clean the data from the 
 I need to figure that one out.
 
 Yeah same image gets multiple labels or something. I am not passing those right.
+
+### 7 PM
+After fixing that, finally getting the slope going downwards. Sweet. I will even have my backbone trained this way, so 2 birds. 
+Next thing will be figuring how to clean and then impute the rows with missing joint coords.
