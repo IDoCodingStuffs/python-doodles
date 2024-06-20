@@ -63,7 +63,7 @@ class CoordinateDataset(Dataset):
         if self.transform:
             image = self.transform(image)
 
-        return image, label
+        return image, torch.tensor(label)
 
     def _get_coords_given_image_path(self, image_path):
         subset = self.coords[(self.coords["image_path"] == image_path)]
