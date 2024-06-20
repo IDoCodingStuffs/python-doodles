@@ -102,7 +102,8 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fn, train_lo
             scheduler.step()
 
         if epoch % 5 == 0 or epoch_validation_loss < min(epoch_validation_losses):
-            torch.save(model, "./models/" + model_desc + "_" + str(epoch) + ".pt")
+            os.makedirs(f'./models/{model_desc}', exist_ok=True)
+            torch.save(model, f'./models/{model_desc}/{model_desc}' + "_" + str(epoch) + ".pt")
 
         epoch_validation_losses.append(epoch_validation_loss)
         epoch_losses.append(epoch_loss)
