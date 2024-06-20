@@ -202,3 +202,7 @@ One last thing -- let me disable the gaussian blur and try Huber loss. If it sti
 ### 9 AM
 Doing somewhat better. Val loss still does not go down but at least the labels are not all over the place. Let me try ResNet34 and if that does not work, add an auxiliary loss function to keep things neat.
 I can also try getting more aggressive with the Gaussian blur. And try to add more transforms, assuming I can propagate it to the labels.
+
+### 12 PM
+The trick here can be handy to use the same transform on label: https://discuss.pytorch.org/t/use-a-subset-of-composed-transforms-with-same-random-seed/47550
+I can kinda hack it initially with a single-pixel image, and later use something more proper to transform the label vector
