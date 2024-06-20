@@ -218,3 +218,4 @@ So the M1 Pro laptop takes 20 minutes per epoch, but my 4090 setup takes just 2.
 
 ### 3 PM
 Gonna try with mean IOU loss instead of Huber. Let's see if it helps.
+Ooh better yet, let me try combined loss.

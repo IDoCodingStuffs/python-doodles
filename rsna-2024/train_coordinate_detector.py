@@ -79,13 +79,12 @@ def train_model_per_image(data_subset_label: str, model_label: str):
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=5e-6),
     ]
 
-    # criterion = nn.HuberLoss()
-    criterion = iou_loss_for_label
+    criteria = [nn.HuberLoss(), iou_loss_for_label]
 
     train_model_with_validation(model,
                                 optimizers,
                                 schedulers,
-                                criterion,
+                                criteria,
                                 trainloader,
                                 valloader,
                                 model_desc=model_label,
