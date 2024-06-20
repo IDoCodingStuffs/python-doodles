@@ -174,3 +174,9 @@ Oh shit, I need to scale the labels by image resize. Need to do it in the datase
 
 ### 5 PM
 Well it stops fitting after a certain point. I guess I should double check the coordinates are all there for all levels, not too many are dropped, and if all else fails, figure how to prevent UNet from blowing up so that I can train it as the backbone instead.
+
+### 6 PM
+It looks like simply dropping null is not sufficient to clean the data from the faulty labels. They also seem to be getting misplaced.
+I need to figure that one out.
+
+Yeah same image gets multiple labels or something. I am not passing those right.

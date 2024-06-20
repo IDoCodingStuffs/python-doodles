@@ -156,10 +156,10 @@ def train_model_per_image(data_subset_label: str, model_label: str):
         # transforms.RandomHorizontalFlip(p=0.3),
         # transforms.RandomVerticalFlip(p=0.3),
         # transforms.RandomRotation([-30, 30]),
-        # transforms.RandomChoice([
-        #     transforms.GaussianBlur(kernel_size=(5, 5), sigma=(0.1, 0.2)),
-        #     v2.Identity(),
-        # ], p=[0.25, 0.75]),
+        transforms.RandomChoice([
+            transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 0.2)),
+            v2.Identity(),
+        ], p=[0.25, 0.75]),
         # v2.RandomPhotometricDistort(p=0.2),
         transforms.Grayscale(num_output_channels=3),
         transforms.ToTensor(),

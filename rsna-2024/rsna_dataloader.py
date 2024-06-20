@@ -39,22 +39,10 @@ class CoordinateDataset(Dataset):
         self.dataframe = (dataframe[['study_id', "series_id", "level", "x", "y", "image_path"]]
                           .drop_duplicates()
                           .dropna())
+        self.coords = dataframe[["image_path", "level", "x", "y"]].drop_duplicates().dropna()
         self.transform = transform
 
-        self.series = dataframe[['study_id', "series_id"]].drop_duplicates().reset_index(drop=True)
         self.levels = sorted(self.dataframe["level"].unique())
-        self.labels = dict()
-        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
-            # !TODO: Refine this
-            labels = [0 for e in range(len(self.levels) * 2)]
-            for index, row in group.iterrows():
-                level_index = self.levels.index(row["level"])
-                label_indices = (level_index * 2, level_index * 2 + 1)
-                labels[label_indices[0]] = row["x"]
-                labels[label_indices[1]] = row["y"]
-
-            self.labels[name] = torch.tensor(labels)
-
 
     def __len__(self):
         return len(self.dataframe)
@@ -62,9 +50,8 @@ class CoordinateDataset(Dataset):
     def __getitem__(self, index):
         image_path = self.dataframe['image_path'][index]
         image = load_dicom(image_path)
-        curr_series = self.dataframe[["study_id", "series_id"]].iloc[index]
 
-        label = self.labels[(curr_series["study_id"], curr_series["series_id"])]
+        label = self._get_coords_given_image_path(image_path)
 
         # !TODO: Refactor
         for i in range(0, len(label), 2):
@@ -78,6 +65,16 @@ class CoordinateDataset(Dataset):
 
         return image, label
 
+    def _get_coords_given_image_path(self, image_path):
+        subset = self.coords[(self.coords["image_path"] == image_path)]
+        subset = subset.sort_values(by="level")
+
+        ret = [0 for i in range(len(self.levels) * 2)]
+        for index, row in subset.iterrows():
+            ret[self.levels.index(row["level"]) * 2] = row["x"]
+            ret[self.levels.index(row["level"]) * 2 + 1] = row["y"]
+
+        return ret
 
 class SeriesLevelDataset(Dataset):
     def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
