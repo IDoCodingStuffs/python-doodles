@@ -201,3 +201,4 @@ One last thing -- let me disable the gaussian blur and try Huber loss. If it sti
 
 ### 9 AM
 Doing somewhat better. Val loss still does not go down but at least the labels are not all over the place. Let me try ResNet34 and if that does not work, add an auxiliary loss function to keep things neat.
+I can also try getting more aggressive with the Gaussian blur. And try to add more transforms, assuming I can propagate it to the labels.
