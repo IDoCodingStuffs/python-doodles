@@ -24,11 +24,12 @@ class CoordinateDetector2D(nn.Module):
         return self.model(x)  # [0]
 
 
-def iou_loss_for_label(inferred, target):
-    inferred_boxes = get_bounding_boxes_for_label(inferred[0]).reshape(-1, 4)
-    target_boxes = get_bounding_boxes_for_label(target[0]).reshape(-1, 4)
+class IOU_loss_for_label(nn.Module):
+    def forward(self, inferred, target):
+        inferred_boxes = get_bounding_boxes_for_label(inferred[0]).reshape(-1, 4)
+        target_boxes = get_bounding_boxes_for_label(target[0]).reshape(-1, 4)
 
-    return distance_box_iou_loss(inferred_boxes, target_boxes, reduction='mean')
+        return distance_box_iou_loss(inferred_boxes, target_boxes, reduction='mean')
 
 
 def train_model_per_image(data_subset_label: str, model_label: str):
@@ -79,7 +80,7 @@ def train_model_per_image(data_subset_label: str, model_label: str):
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=5e-6),
     ]
 
-    criteria = [nn.HuberLoss(), iou_loss_for_label]
+    criteria = [nn.HuberLoss().to("cuda"), IOU_loss_for_label().to("cuda")]
 
     train_model_with_validation(model,
                                 optimizers,
