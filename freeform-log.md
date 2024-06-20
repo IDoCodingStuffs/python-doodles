@@ -171,3 +171,6 @@ I have a feeling there is a bug with that LSTM setup and it does not learn that 
 Finally! The CNN overfits. I finally have a fucking baseline to go off of.
 Let's try adding some image augmentations, dropping the nulls from input, and see what happens...
 Oh shit, I need to scale the labels by image resize. Need to do it in the dataset impl.
+
+### 5 PM
+Well it stops fitting after a certain point. I guess I should double check the coordinates are all there for all levels, not too many are dropped, and if all else fails, figure how to prevent UNet from blowing up so that I can train it as the backbone instead.
