@@ -39,16 +39,18 @@ class CoordinateDataset(Dataset):
         self.dataframe = (dataframe[['study_id', "series_id", "level", "x", "y", "image_path"]]
                           .drop_duplicates()
                           .dropna())
+        self.levels = sorted(self.dataframe["level"].unique())
         self.coords = dataframe[["image_path", "level", "x", "y"]].drop_duplicates().dropna()
+        self.coords = self.coords.groupby('image_path').filter(lambda x: len(x) == len(self.levels)).reset_index(drop=True)
+
         self.transform = transform
 
-        self.levels = sorted(self.dataframe["level"].unique())
 
     def __len__(self):
-        return len(self.dataframe)
+        return len(self.coords)
 
     def __getitem__(self, index):
-        image_path = self.dataframe['image_path'][index]
+        image_path = self.coords['image_path'][index]
         image = load_dicom(image_path)
 
         label = self._get_coords_given_image_path(image_path)
@@ -262,9 +264,10 @@ def create_coordinate_datasets_and_loaders(df: pd.DataFrame,
                                 batch_size=8):
     filtered_df = df[df['series_description'] == series_description]
 
-    train_df, val_df = train_test_split(filtered_df, test_size=split_factor, random_state=random_seed)
-    train_df = train_df.reset_index(drop=True)
-    val_df = val_df.reset_index(drop=True)
+    # Split by study ids
+    train_study_ids, val_study_ids = train_test_split(filtered_df['study_id'].unique(), test_size=split_factor, random_state=random_seed)
+    train_df = filtered_df[filtered_df["study_id"].isin(train_study_ids)].reset_index(drop=True)
+    val_df = filtered_df[filtered_df["study_id"].isin(val_study_ids)].reset_index(drop=True)
 
     train_dataset = CoordinateDataset(train_df, transform_train)
     val_dataset = CoordinateDataset(val_df, transform_val)

@@ -184,3 +184,5 @@ Yeah same image gets multiple labels or something. I am not passing those right.
 ### 7 PM
 After fixing that, finally getting the slope going downwards. Sweet. I will even have my backbone trained this way, so 2 birds. 
 Next thing will be figuring how to clean and then impute the rows with missing joint coords.
+
+Ooh just realized, I should do the train-test split by study ids. So that I am not ending up with blank levels within same series.
