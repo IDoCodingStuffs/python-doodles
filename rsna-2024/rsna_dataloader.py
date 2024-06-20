@@ -235,7 +235,7 @@ def create_series_level_coordinate_datasets_and_loaders(df: pd.DataFrame,
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
-    return train_loader, val_loader, len(train_df), len(val_df)
+    return train_loader, val_loader, train_dataset, val_dataset
 
 
 def create_series_level_test_datasets_and_loaders(df: pd.DataFrame,
@@ -275,7 +275,7 @@ def create_coordinate_datasets_and_loaders(df: pd.DataFrame,
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
-    return train_loader, val_loader, len(train_df), len(val_df)
+    return train_loader, val_loader, train_dataset, val_dataset
 
 
 def create_datasets_and_loaders(df: pd.DataFrame,
@@ -297,7 +297,7 @@ def create_datasets_and_loaders(df: pd.DataFrame,
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    return train_loader, val_loader, len(train_df), len(val_df)
+    return train_loader, val_loader, train_dataset, val_dataset
 
 
 def retrieve_image_paths(base_path, study_id, series_id):
