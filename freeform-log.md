@@ -215,3 +215,6 @@ Which describes IOU based loss, which might be better than just Huber loss acros
 
 ### 2 PM
 So the M1 Pro laptop takes 20 minutes per epoch, but my 4090 setup takes just 2. Good investment.
+
+### 3 PM
+Gonna try with mean IOU loss instead of Huber. Let's see if it helps.

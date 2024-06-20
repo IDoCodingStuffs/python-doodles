@@ -1,6 +1,8 @@
 from training_utils import *
 from rsna_dataloader import *
 
+from torchvision.ops import distance_box_iou_loss
+
 _logger = logging.getLogger(__name__)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -19,7 +21,14 @@ class CoordinateDetector2D(nn.Module):
         self.model.fc = nn.Linear(in_features=512, out_features=out_features)
 
     def forward(self, x):
-        return self.model(x) #[0]
+        return self.model(x)  # [0]
+
+
+def iou_loss_for_label(inferred, target):
+    inferred_boxes = get_bounding_boxes_for_label(inferred[0]).reshape(-1, 4)
+    target_boxes = get_bounding_boxes_for_label(target[0]).reshape(-1, 4)
+
+    return distance_box_iou_loss(inferred_boxes, target_boxes, reduction='mean')
 
 
 def train_model_per_image(data_subset_label: str, model_label: str):
@@ -56,7 +65,7 @@ def train_model_per_image(data_subset_label: str, model_label: str):
                                                                                         transform_train,
                                                                                         transform_val,
                                                                                         data_basepath + "train_images",
-                                                                                        num_workers=4,
+                                                                                        num_workers=0,
                                                                                         batch_size=1)
 
     NUM_EPOCHS = 40
@@ -70,7 +79,8 @@ def train_model_per_image(data_subset_label: str, model_label: str):
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=5e-6),
     ]
 
-    criterion = nn.HuberLoss()
+    # criterion = nn.HuberLoss()
+    criterion = iou_loss_for_label
 
     train_model_with_validation(model,
                                 optimizers,
