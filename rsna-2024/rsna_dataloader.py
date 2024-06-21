@@ -26,6 +26,8 @@ class PerImageDataset(Dataset):
         self.transform = transform
         self.label = (dataframe[["image_path", "level", "severity"]]
                       .groupby("image_path")
+                      # !TODO: Unhardcode
+                      .filter(lambda x: len(x) == 5)
                       .agg({"image_path": "unique",
                             "level": lambda x: ",".join(x),
                             "severity": lambda x: ",".join(x)})
@@ -61,6 +63,7 @@ class PerImageDataset(Dataset):
     def _multi_hot_encode(self, label):
         ret = []
         for l in label:
+            # !TODO: Unhardcode
             for i in range(1, 3):
                 ret.append(1 if i <= l else 0)
         return ret
