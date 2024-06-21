@@ -23,7 +23,7 @@ CONFIG = dict(
     p_rand_order_v1=0.2,
     lr=1e-3,
 
-    out_dim=3,
+    out_dim=10,
     epochs=15,
     batch_size=8,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
@@ -58,6 +58,7 @@ class TimmModel(nn.Module):
             nn.Dropout(CONFIG["drop_rate_last"]),
             nn.LeakyReLU(0.1),
             nn.Linear(256, CONFIG["out_dim"]),
+            nn.Softmax(),
         )
 
     def forward(self, x):
@@ -94,7 +95,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=5e-7),
     ]
 
-    criteria = [nn.CrossEntropyLoss(),]
+    criteria = [nn.BCELoss(),]
 
     train_model_with_validation(model,
                                 optimizers,

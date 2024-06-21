@@ -42,7 +42,7 @@ def model_validation_loss(model, val_loader, loss_fns):
 
     for images, label in val_loader:
         # !TODO: Do this in the data loader
-        label = label.type(torch.LongTensor).to(device)
+        label = label.to(device)
 
         output = model(images.to(device))
         loss = sum([loss_fn(output, label) for loss_fn in loss_fns])
@@ -80,8 +80,8 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
 
         for images, label in train_loader:
             # !TODO: Do this in the data loader
-            # label = label.type(torch.FloatTensor).to(device)
-            label = label.type(torch.LongTensor).to(device)
+            label = label.to(device)
+            # label = label.type(torch.LongTensor).to(device)
 
             for optimizer in optimizers:
                 optimizer.zero_grad()
@@ -89,7 +89,7 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
             output = model(images.to(device))
 
             loss = sum([loss_fn(output, label) for loss_fn in loss_fns])
-            epoch_loss += loss.detach().item()
+            epoch_loss += loss.cpu().item()
             loss.backward(retain_graph=True)
 
             for optimizer in optimizers:
