@@ -249,3 +249,5 @@ Trying multi-head model again, one per level. Maybe it will overfit successfully
 
 ### 4 PM 
 Well it is definitely picking up something. Trying 100 epochs, significant gains by 25. I have high hopes from this one.
+
+Turns out it does not like flips. Let's omit those, the orientation does not change in GT anyway. I might reintroduce hflips only though.

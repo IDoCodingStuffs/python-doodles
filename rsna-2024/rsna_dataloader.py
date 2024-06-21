@@ -254,8 +254,8 @@ class TrainingTransform(nn.Module):
         image = self.to_pil(image)
         image = self.resize(image)
         image = self.grayscale(image)
-        image = self.hflip(image)
-        image = self.vflip(image)
+        # image = self.hflip(image)
+        # image = self.vflip(image)
         image = self.gaussian_blur(image)
         image = self.to_tensor(image)
 
