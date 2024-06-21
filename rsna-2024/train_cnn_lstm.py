@@ -79,23 +79,23 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                              data_subset_label,
                                                                              transform_train,
                                                                              transform_val,
-                                                                             num_workers=8
-                                                                             )
+                                                                             num_workers=4,
+                                                                             batch_size=16)
 
-    NUM_EPOCHS = 100
+    NUM_EPOCHS = 40
 
     model = TimmModel(backbone=CONFIG["backbone"]).to(device)
     optimizers = [torch.optim.Adam(model.head.parameters(), lr=1e-3),
-                  torch.optim.Adam(model.lstm.parameters(), lr=1e-3),
-                  torch.optim.Adam(model.encoder.parameters(), lr=1e-3)]
+                  torch.optim.Adam(model.lstm.parameters(), lr=5e-4),
+                  torch.optim.Adam(model.encoder.parameters(), lr=1e-4)]
 
     schedulers = [
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-4),
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=1e-4),
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=1e-4),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=5e-5),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=2e-6),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=5e-7),
     ]
 
-    criteria = [nn.CrossEntropyLoss(),]
+    criteria = [nn.BCELoss(),]
 
     train_model_with_validation(model,
                                 optimizers,
