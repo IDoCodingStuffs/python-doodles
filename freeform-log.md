@@ -218,4 +218,7 @@ So the M1 Pro laptop takes 20 minutes per epoch, but my 4090 setup takes just 2.
 
 ### 3 PM
 Gonna try with mean IOU loss instead of Huber. Let's see if it helps.
-Ooh better yet, let me try combined loss.
+Ooh better yet, let me try combined loss. And TIL, you can put loss in CUDA.
+
+### 5 PM
+Well that was a fiasco, the model convergence is awful. I wonder what will standalone distance IOU will look like.

@@ -356,8 +356,8 @@ def get_bounding_boxes_for_label(label, box_offset_from_center=5):
     for i in range(0, len(label), 2):
         curr = []
         curr.append(label[i]-offset)
-        curr.append(label[i]+offset)
         curr.append(label[i+1]-offset)
+        curr.append(label[i]+offset)
         curr.append(label[i+1]+offset)
         ret.append(torch.cat([e.reshape(1) for e in curr]))
 
