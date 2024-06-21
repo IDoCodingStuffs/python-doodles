@@ -38,7 +38,7 @@ class PerImageDataset(Dataset):
         return len(self.label)
 
     def __getitem__(self, index):
-        image_path = self.label['image_path'][index][0]
+        image_path = self.label['image_path'].iloc[index][0]
         image = load_dicom(image_path)
 
         if self.transform:

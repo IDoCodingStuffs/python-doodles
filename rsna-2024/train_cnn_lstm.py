@@ -79,7 +79,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                              data_subset_label,
                                                                              transform_train,
                                                                              transform_val,
-                                                                             num_workers=0,
+                                                                             num_workers=4,
                                                                              batch_size=16)
 
     NUM_EPOCHS = 40

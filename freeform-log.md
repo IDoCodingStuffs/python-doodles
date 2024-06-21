@@ -240,3 +240,6 @@ Manage to have it at least start running. Trains pretty fast with batch size 16.
 ## 6/21
 ### 1 PM
 Okay time to try labeling all levels. If it trains with just 3 labels, it should train with more ideally.
+
+### 2 PM
+Finished adding multihot labels but now it is training suspiciously fast. Like 15 mins for the whole net. And loss goes down only 10% or even less.
