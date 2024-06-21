@@ -243,3 +243,4 @@ Okay time to try labeling all levels. If it trains with just 3 labels, it should
 
 ### 2 PM
 Finished adding multihot labels but now it is training suspiciously fast. Like 15 mins for the whole net. And loss goes down only 10% or even less.
+Ok I must try to make it overfit first before trying to hyperparam graduate student descent. Higher lr, more epochs, just get it to run for a while.
