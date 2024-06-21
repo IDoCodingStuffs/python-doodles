@@ -225,3 +225,8 @@ Well that was a fiasco, the model convergence is awful. I wonder what will stand
 
 ### 7 PM
 Answer is, somewhat better. But the validation loss refuses to go down, and inference snaps to wrong things. I figured how to add horizontal and vertical flips, so maybe that plus Gaussian blur will yield better results?
+
+### 8 PM
+I will let it train all the way but starting to feel like the model itself is just insufficient. 
+But I definitely met the initial part "overfit first, expand later". So time to try a UNet backbone instead.
+Afterwards, I can tack on the temporal components. Hoping I get to define the bar these upcoming 3 months... Man I really want to win this.
