@@ -55,7 +55,7 @@ class PerImageDataset(Dataset):
         label = row["severity"].values[0].split(",")
         label = [label_map[label[index]] for level, index in levels]
 
-        label = self._multi_hot_encode(label)
+        label = self._one_hot_encode_multihead(label)
 
         return torch.tensor(label).type(torch.FloatTensor)
 
@@ -67,6 +67,15 @@ class PerImageDataset(Dataset):
             for i in range(1, 3):
                 ret.append(1 if i <= l else 0)
         return ret
+
+    def _one_hot_encode_multihead(self, label):
+        ret = [[1 if i == l else 0 for i in range(3)] for l in label]
+        return ret
+
+    def _one_hot_encode_multihead(self, label):
+        ret = [[1 if i == l else 0 for i in range(3)] for l in label]
+        return ret
+
 
 class CoordinateDataset(Dataset):
     def __init__(self, dataframe, transform=None):

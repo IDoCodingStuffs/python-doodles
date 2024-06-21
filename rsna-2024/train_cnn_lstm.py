@@ -11,6 +11,7 @@ CONFIG = dict(
     load_kernel=None,
     load_last=True,
     n_folds=5,
+    n_levels=5,
     backbone="efficientnet_b0.ra_in1k",  # tf_efficientnetv2_s_in21ft1k
     img_size=(384, 384),
     n_slice_per_c=16,
@@ -23,7 +24,7 @@ CONFIG = dict(
     p_rand_order_v1=0.2,
     lr=1e-3,
 
-    out_dim=10,
+    out_dim=3,
     epochs=15,
     batch_size=8,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
@@ -52,21 +53,21 @@ class TimmModel(nn.Module):
             self.encoder.head.fc = nn.Identity()
 
         self.lstm = nn.LSTM(hdim, 256, num_layers=2, dropout=CONFIG["drop_rate"], bidirectional=True, batch_first=True)
-        self.head = nn.Sequential(
-            nn.Linear(512, 256),
-            nn.BatchNorm1d(256),
-            nn.Dropout(CONFIG["drop_rate_last"]),
-            nn.LeakyReLU(0.1),
-            nn.Linear(256, CONFIG["out_dim"]),
-            nn.Softmax(),
-        )
+        self.heads = nn.ModuleList([
+            nn.Sequential(
+                nn.Linear(512, 256),
+                nn.BatchNorm1d(256),
+                nn.Dropout(CONFIG["drop_rate_last"]),
+                nn.LeakyReLU(0.1),
+                nn.Linear(256, CONFIG["out_dim"]),
+                nn.Softmax(),
+            )
+        for i in range(CONFIG["n_levels"])])
 
     def forward(self, x):
         feat = self.encoder(x)
         feat, _ = self.lstm(feat)
-        feat = self.head(feat)
-        return feat
-
+        return torch.stack([head(feat) for head in self.heads], dim=1)
 
 def train_model_for_series(data_subset_label: str, model_label: str):
     data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
@@ -79,22 +80,24 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                              data_subset_label,
                                                                              transform_train,
                                                                              transform_val,
-                                                                             num_workers=4,
+                                                                             num_workers=0,
                                                                              batch_size=16)
 
     NUM_EPOCHS = 40
 
     model = TimmModel(backbone=CONFIG["backbone"]).to(device)
-    optimizers = [torch.optim.Adam(model.head.parameters(), lr=1e-3),
-                  torch.optim.Adam(model.lstm.parameters(), lr=5e-4),
-                  torch.optim.Adam(model.encoder.parameters(), lr=1e-4)]
+    optimizers = [
+                  torch.optim.Adam(model.lstm.parameters(), lr=1e-3),
+                  torch.optim.Adam(model.encoder.parameters(), lr=1e-3)]
+
+    head_optimizers = [torch.optim.Adam(head.parameters(), lr=1e-3) for head in model.heads]
+    optimizers.extend(head_optimizers)
 
     schedulers = [
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=5e-5),
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=2e-6),
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=5e-7),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-5),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=1e-5),
     ]
-
+    schedulers.extend([torch.optim.lr_scheduler.CosineAnnealingLR(head_optimizer, NUM_EPOCHS, eta_min=1e-5) for head_optimizer in head_optimizers])
     criteria = [nn.BCELoss(),]
 
     train_model_with_validation(model,
