@@ -66,7 +66,7 @@ class CoordinateDataset(Dataset):
             label[i] *= 224 / image.shape[0]
 
         if self.transform:
-            image = self.transform(image)
+            image, label = self.transform(image, label)
 
         return image, torch.tensor(label)
 
@@ -193,7 +193,7 @@ class SeriesLevelCoordinateDataset(Dataset):
 
 class TrainingTransform(nn.Module):
     def __init__(self):
-        super(ValidationTransform).__init__()
+        super(TrainingTransform, self).__init__()
 
         self.to_uint8 = transforms.Lambda(lambda x: (x * 255).astype(np.uint8))
         self.to_pil = transforms.ToPILImage()
@@ -238,7 +238,7 @@ class TrainingTransform(nn.Module):
 
 class ValidationTransform(nn.Module):
     def __init__(self):
-        super(ValidationTransform).__init__()
+        super(ValidationTransform, self).__init__()
 
         self.to_uint8 = transforms.Lambda(lambda x: (x * 255).astype(np.uint8))
         self.to_pil = transforms.ToPILImage()
