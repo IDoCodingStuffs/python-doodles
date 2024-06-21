@@ -15,7 +15,9 @@ import torchvision.transforms as transforms
 from torchvision.transforms import v2
 
 label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
-conditions = ["Left Neural Foraminal Narrowing", "Right Neural Foraminal Narrowing", "Left Subarticular Stenosis", "Right Subarticular Stenosis", "Spinal Canal Stenosis"]
+conditions = ["Left Neural Foraminal Narrowing", "Right Neural Foraminal Narrowing", "Left Subarticular Stenosis",
+              "Right Subarticular Stenosis", "Spinal Canal Stenosis"]
+
 
 class CustomDataset(Dataset):
     def __init__(self, dataframe, transform=None):
@@ -44,10 +46,10 @@ class CoordinateDataset(Dataset):
                           .dropna())
         self.levels = sorted(self.dataframe["level"].unique())
         self.coords = dataframe[["image_path", "level", "x", "y"]].drop_duplicates().dropna()
-        self.coords = self.coords.groupby('image_path').filter(lambda x: len(x) == len(self.levels)).reset_index(drop=True)
+        self.coords = self.coords.groupby('image_path').filter(lambda x: len(x) == len(self.levels)).reset_index(
+            drop=True)
 
         self.transform = transform
-
 
     def __len__(self):
         return len(self.coords)
@@ -58,17 +60,10 @@ class CoordinateDataset(Dataset):
 
         label = self._get_coords_given_image_path(image_path)
 
-        # !TODO: Refactor
-        for i in range(0, len(label), 2):
-            label[i] *= 224 / image.shape[1]
-
-        for i in range(1, len(label), 2):
-            label[i] *= 224 / image.shape[0]
-
         if self.transform:
             image, label = self.transform(image, label)
 
-        return image, torch.tensor(label)
+        return image, label
 
     def _get_coords_given_image_path(self, image_path):
         subset = self.coords[(self.coords["image_path"] == image_path)]
@@ -80,6 +75,7 @@ class CoordinateDataset(Dataset):
             ret[self.levels.index(row["level"]) * 2 + 1] = row["y"]
 
         return ret
+
 
 class SeriesLevelDataset(Dataset):
     def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
@@ -95,11 +91,11 @@ class SeriesLevelDataset(Dataset):
         for name, group in self.dataframe.groupby(["study_id", "series_id"]):
             # !TODO: Refine this
             # !TODO: Better imputation
-            #label_indices = [-1 for e in range(len(self.levels) * len(conditions))]
+            # label_indices = [-1 for e in range(len(self.levels) * len(conditions))]
             label_indices = [0 for e in range(len(self.levels))]
             for index, row in group.iterrows():
-                if row["severity"] in label_map: # and row["condition"] in conditions:
-                    #label_index = self.levels.index(row["level"]) * len(conditions) + conditions.index(row["condition"])
+                if row["severity"] in label_map:  # and row["condition"] in conditions:
+                    # label_index = self.levels.index(row["level"]) * len(conditions) + conditions.index(row["condition"])
                     label_index = self.levels.index(row["level"])
                     label_indices[label_index] = label_map[row["severity"]]
 
@@ -144,7 +140,7 @@ class SeriesLevelDataset(Dataset):
         images = np.array([self.transform(load_dicom(image_path)) if self.transform else load_dicom(image_path)
                            for image_path in image_paths])
         # Feature scaling here
-        label = np.array(self.labels[(curr["study_id"], curr["series_id"])]) # / len(self.levels)
+        label = np.array(self.labels[(curr["study_id"], curr["series_id"])])  # / len(self.levels)
 
         return images, label
 
@@ -192,13 +188,14 @@ class SeriesLevelCoordinateDataset(Dataset):
 
 
 class TrainingTransform(nn.Module):
-    def __init__(self):
+    def __init__(self, image_size=(224, 224)):
         super(TrainingTransform, self).__init__()
+        self.image_size = image_size
 
         self.to_uint8 = transforms.Lambda(lambda x: (x * 255).astype(np.uint8))
         self.to_pil = transforms.ToPILImage()
         # !TODO: Refactor image dims
-        self.resize = transforms.Resize((224, 224))
+        self.resize = transforms.Resize(self.image_size)
         self.hflip = transforms.RandomHorizontalFlip(p=1)
         self.vflip = transforms.RandomVerticalFlip(p=1)
 
@@ -214,60 +211,76 @@ class TrainingTransform(nn.Module):
         self.to_tensor = transforms.ToTensor()
 
     def forward(self, image, label):
-        # Resize
+        # !TODO: Refactor
+        for i in range(0, len(label), 2):
+            label[i] *= self.image_size[0] / image.shape[1]
+
+        for i in range(1, len(label), 2):
+            label[i] *= self.image_size[1] / image.shape[0]
+
         image = self.to_uint8(image)
         image = self.to_pil(image)
         image = self.resize(image)
         image = self.grayscale(image)
         image = self.gaussian_blur(image)
+
         # !TODO: Seed. Reproducibility!
         if random.random() > 0.5:
             image = self.hflip(image)
             for i in range(0, len(label), 2):
-                label[i] = 224 - label[i]
+                label[i] = self.image_size[0] - label[i]
 
         if random.random() > 0.5:
             image = self.vflip(image)
             for i in range(1, len(label), 2):
-                label[i] = 224 - label[i]
+                label[i] = self.image_size[1] - label[i]
 
         image = self.to_tensor(image)
+        label = torch.tensor(label)
 
         return image, label
 
 
 class ValidationTransform(nn.Module):
-    def __init__(self):
+    def __init__(self, image_size=(224, 224)):
         super(ValidationTransform, self).__init__()
+        self.image_size = image_size
 
         self.to_uint8 = transforms.Lambda(lambda x: (x * 255).astype(np.uint8))
         self.to_pil = transforms.ToPILImage()
-        self.resize = transforms.Resize((224, 224))
+        self.resize = transforms.Resize(image_size)
         self.grayscale = transforms.Grayscale(num_output_channels=3)
         self.to_tensor = transforms.ToTensor()
 
     def forward(self, image, label):
-        # Resize
+        # !TODO: Refactor
+        for i in range(0, len(label), 2):
+            label[i] *= self.image_size[0] / image.shape[1]
+
+        for i in range(1, len(label), 2):
+            label[i] *= self.image_size[1] / image.shape[0]
+
         image = self.to_uint8(image)
         image = self.to_pil(image)
         image = self.resize(image)
         image = self.grayscale(image)
+
         image = self.to_tensor(image)
+        label = torch.tensor(label)
 
         return image, label
 
 
-
 # !TODO: Avoid duplication
 def create_series_level_datasets_and_loaders(df: pd.DataFrame,
-                                series_description: str,
-                                transform_train: transforms.Compose,
-                                transform_val: transforms.Compose,
-                                base_path: str,
-                                split_factor=0.2,
-                                random_seed=42,
-                                batch_size=1,
-                                num_workers=0):
+                                             series_description: str,
+                                             transform_train: transforms.Compose,
+                                             transform_val: transforms.Compose,
+                                             base_path: str,
+                                             split_factor=0.2,
+                                             random_seed=42,
+                                             batch_size=1,
+                                             num_workers=0):
     filtered_df = df[df['series_description'] == series_description]
 
     train_df, val_df = train_test_split(filtered_df, test_size=split_factor, random_state=random_seed)
@@ -277,7 +290,8 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     train_dataset = SeriesLevelDataset(base_path, train_df, transform_train)
     val_dataset = SeriesLevelDataset(base_path, val_df, transform_val)
 
-    train_sampler = WeightedRandomSampler(weights=train_dataset.sampling_weights, num_samples=len(train_dataset), replacement=True)
+    train_sampler = WeightedRandomSampler(weights=train_dataset.sampling_weights, num_samples=len(train_dataset),
+                                          replacement=True)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
@@ -286,14 +300,14 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
 
 
 def create_series_level_coordinate_datasets_and_loaders(df: pd.DataFrame,
-                                series_description: str,
-                                transform_train: transforms.Compose,
-                                transform_val: transforms.Compose,
-                                base_path: str,
-                                split_factor=0.2,
-                                random_seed=42,
-                                batch_size=1,
-                                num_workers=0):
+                                                        series_description: str,
+                                                        transform_train: transforms.Compose,
+                                                        transform_val: transforms.Compose,
+                                                        base_path: str,
+                                                        split_factor=0.2,
+                                                        random_seed=42,
+                                                        batch_size=1,
+                                                        num_workers=0):
     filtered_df = df[df['series_description'] == series_description]
 
     train_df, val_df = train_test_split(filtered_df, test_size=split_factor, random_state=random_seed)
@@ -310,11 +324,11 @@ def create_series_level_coordinate_datasets_and_loaders(df: pd.DataFrame,
 
 
 def create_series_level_test_datasets_and_loaders(df: pd.DataFrame,
-                                series_description: str,
-                                transform_val: transforms.Compose,
-                                base_path: str,
-                                random_seed=42,
-                                batch_size=1):
+                                                  series_description: str,
+                                                  transform_val: transforms.Compose,
+                                                  base_path: str,
+                                                  random_seed=42,
+                                                  batch_size=1):
     filtered_df = df[df['series_description'] == series_description].reset_index(drop=True)
 
     val_dataset = SeriesLevelDataset(base_path, filtered_df, transform_val)
@@ -325,18 +339,19 @@ def create_series_level_test_datasets_and_loaders(df: pd.DataFrame,
 
 
 def create_coordinate_datasets_and_loaders(df: pd.DataFrame,
-                                series_description: str,
-                                transform_train: nn.Module,
-                                transform_val: nn.Module,
-                                base_path: str,
-                                split_factor=0.2,
-                                random_seed=42,
-                                num_workers=0,
-                                batch_size=8):
+                                           series_description: str,
+                                           transform_train: nn.Module,
+                                           transform_val: nn.Module,
+                                           base_path: str,
+                                           split_factor=0.2,
+                                           random_seed=42,
+                                           num_workers=0,
+                                           batch_size=8):
     filtered_df = df[df['series_description'] == series_description]
 
     # Split by study ids
-    train_study_ids, val_study_ids = train_test_split(filtered_df['study_id'].unique(), test_size=split_factor, random_state=random_seed)
+    train_study_ids, val_study_ids = train_test_split(filtered_df['study_id'].unique(), test_size=split_factor,
+                                                      random_state=random_seed)
     train_df = filtered_df[filtered_df["study_id"].isin(train_study_ids)].reset_index(drop=True)
     val_df = filtered_df[filtered_df["study_id"].isin(val_study_ids)].reset_index(drop=True)
 
@@ -426,10 +441,10 @@ def get_bounding_boxes_for_label(label, box_offset_from_center=5):
     ret = []
     for i in range(0, len(label), 2):
         curr = []
-        curr.append(label[i]-offset)
-        curr.append(label[i+1]-offset)
-        curr.append(label[i]+offset)
-        curr.append(label[i+1]+offset)
+        curr.append(label[i] - offset)
+        curr.append(label[i + 1] - offset)
+        curr.append(label[i] + offset)
+        curr.append(label[i + 1] + offset)
         ret.append(torch.cat([e.reshape(1) for e in curr]))
 
     return torch.cat(ret)
