@@ -243,3 +243,9 @@ Okay time to try labeling all levels. If it trains with just 3 labels, it should
 
 ### 2 PM
 Finished adding multihot labels but now it is training suspiciously fast. Like 15 mins for the whole net. And loss goes down only 10% or even less.
+
+### 3 PM
+Trying multi-head model again, one per level. Maybe it will overfit successfully?
+
+### 4 PM 
+Well it is definitely picking up something. Trying 100 epochs, significant gains by 25. I have high hopes from this one.

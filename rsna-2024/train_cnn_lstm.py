@@ -80,10 +80,10 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                              data_subset_label,
                                                                              transform_train,
                                                                              transform_val,
-                                                                             num_workers=0,
-                                                                             batch_size=16)
+                                                                             num_workers=16,
+                                                                             batch_size=8)
 
-    NUM_EPOCHS = 40
+    NUM_EPOCHS = 100
 
     model = TimmModel(backbone=CONFIG["backbone"]).to(device)
     optimizers = [
