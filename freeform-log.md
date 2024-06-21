@@ -230,3 +230,6 @@ Answer is, somewhat better. But the validation loss refuses to go down, and infe
 I will let it train all the way but starting to feel like the model itself is just insufficient. 
 But I definitely met the initial part "overfit first, expand later". So time to try a UNet backbone instead.
 Afterwards, I can tack on the temporal components. Hoping I get to define the bar these upcoming 3 months... Man I really want to win this.
+
+### 10 PM
+Well forget the UNet backbone. I will try to use that new public solution with 0.84 score. No need to reinvent the wheel, let me learn the timm model and make architecture changes later.
