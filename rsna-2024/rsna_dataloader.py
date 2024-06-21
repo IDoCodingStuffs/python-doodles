@@ -32,17 +32,17 @@ class PerImageDataset(Dataset):
     def __getitem__(self, index):
         image_path = self.dataframe['image_path'][index]
         image = load_dicom(image_path)  # Define this function to load your DICOM images
-        target = self.dataframe['target'][index]
+        target = self.label[index]
 
         if self.transform:
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-            image = self.transform(image=image)['image']
-            image = image.transpose(2, 0, 1).astype(np.float32) / 255.
+            image = self.transform(image)
 
         return image, torch.tensor(target).float()
 
     def get_labels(self):
         return self.label
+
 
 class CoordinateDataset(Dataset):
     def __init__(self, dataframe, transform=None):

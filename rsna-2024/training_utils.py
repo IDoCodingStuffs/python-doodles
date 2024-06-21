@@ -80,7 +80,8 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
 
         for images, label in train_loader:
             # !TODO: Do this in the data loader
-            label = label.type(torch.FloatTensor).to(device)
+            # label = label.type(torch.FloatTensor).to(device)
+            label = label.type(torch.LongTensor).to(device)
 
             for optimizer in optimizers:
                 optimizer.zero_grad()

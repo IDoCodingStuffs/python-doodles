@@ -71,15 +71,15 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
     training_data = retrieve_training_data(data_basepath)
 
-    transform_train = TrainingTransform(image_size=CONFIG["img_size"], num_channels=1)
-    transform_val = ValidationTransform(image_size=CONFIG["img_size"], num_channels=1)
+    transform_train = TrainingTransform(image_size=CONFIG["img_size"], num_channels=3)
+    transform_val = ValidationTransform(image_size=CONFIG["img_size"], num_channels=3)
 
     trainloader, valloader, len_train, len_val = create_datasets_and_loaders(training_data,
                                                                              data_subset_label,
                                                                              transform_train,
                                                                              transform_val,
                                                                              num_workers=0,
-                                                                             batch_size=1)
+                                                                             batch_size=16)
 
     NUM_EPOCHS = 40
 
@@ -94,12 +94,12 @@ def train_model_for_series(data_subset_label: str, model_label: str):
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=5e-7),
     ]
 
-    criterion = nn.BCELoss()
+    criteria = [nn.CrossEntropyLoss(),]
 
     train_model_with_validation(model,
                                 optimizers,
                                 schedulers,
-                                criterion,
+                                criteria,
                                 trainloader,
                                 valloader,
                                 model_desc=model_label,
