@@ -1,3 +1,5 @@
+import random
+
 import matplotlib.pyplot as plt
 import os
 import numpy as np
@@ -6,10 +8,11 @@ import pandas as pd
 import pydicom
 import torch
 import torch.nn.functional as F
+from torch import nn
 from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from sklearn.model_selection import train_test_split
 import torchvision.transforms as transforms
-
+from torchvision.transforms import v2
 
 label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
 conditions = ["Left Neural Foraminal Narrowing", "Right Neural Foraminal Narrowing", "Left Subarticular Stenosis", "Right Subarticular Stenosis", "Spinal Canal Stenosis"]
@@ -187,6 +190,74 @@ class SeriesLevelCoordinateDataset(Dataset):
     def _get_image_index(self, image_path):
         return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
 
+
+class TrainingTransform(nn.Module):
+    def __init__(self):
+        super(ValidationTransform).__init__()
+
+        self.to_uint8 = transforms.Lambda(lambda x: (x * 255).astype(np.uint8))
+        self.to_pil = transforms.ToPILImage()
+        # !TODO: Refactor image dims
+        self.resize = transforms.Resize((224, 224))
+        self.hflip = transforms.RandomHorizontalFlip(p=1)
+        self.vflip = transforms.RandomVerticalFlip(p=1)
+
+        self.gaussian_blur = transforms.RandomChoice([
+            transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 3)),
+            transforms.GaussianBlur(kernel_size=5, sigma=(0.1, 3)),
+            transforms.GaussianBlur(kernel_size=7, sigma=(0.1, 3)),
+            transforms.GaussianBlur(kernel_size=9, sigma=(0.1, 3)),
+            v2.Identity(),
+        ], p=[0.2, 0.2, 0.2, 0.2, 0.2])
+
+        self.grayscale = transforms.Grayscale(num_output_channels=3)
+        self.to_tensor = transforms.ToTensor()
+
+    def forward(self, image, label):
+        # Resize
+        image = self.to_uint8(image)
+        image = self.to_pil(image)
+        image = self.resize(image)
+        image = self.grayscale(image)
+        image = self.gaussian_blur(image)
+        # !TODO: Seed. Reproducibility!
+        if random.random() > 0.5:
+            image = self.hflip(image)
+            for i in range(0, len(label), 2):
+                label[i] = 224 - label[i]
+
+        if random.random() > 0.5:
+            image = self.vflip(image)
+            for i in range(1, len(label), 2):
+                label[i] = 224 - label[i]
+
+        image = self.to_tensor(image)
+
+        return image, label
+
+
+class ValidationTransform(nn.Module):
+    def __init__(self):
+        super(ValidationTransform).__init__()
+
+        self.to_uint8 = transforms.Lambda(lambda x: (x * 255).astype(np.uint8))
+        self.to_pil = transforms.ToPILImage()
+        self.resize = transforms.Resize((224, 224))
+        self.grayscale = transforms.Grayscale(num_output_channels=3)
+        self.to_tensor = transforms.ToTensor()
+
+    def forward(self, image, label):
+        # Resize
+        image = self.to_uint8(image)
+        image = self.to_pil(image)
+        image = self.resize(image)
+        image = self.grayscale(image)
+        image = self.to_tensor(image)
+
+        return image, label
+
+
+
 # !TODO: Avoid duplication
 def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                 series_description: str,
@@ -255,8 +326,8 @@ def create_series_level_test_datasets_and_loaders(df: pd.DataFrame,
 
 def create_coordinate_datasets_and_loaders(df: pd.DataFrame,
                                 series_description: str,
-                                transform_train: transforms.Compose,
-                                transform_val: transforms.Compose,
+                                transform_train: nn.Module,
+                                transform_val: nn.Module,
                                 base_path: str,
                                 split_factor=0.2,
                                 random_seed=42,

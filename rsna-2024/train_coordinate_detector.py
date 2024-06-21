@@ -36,30 +36,8 @@ def train_model_per_image(data_subset_label: str, model_label: str):
     data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
     training_data = retrieve_training_data(data_basepath)
 
-    transform_train = transforms.Compose([
-        transforms.Lambda(lambda x: (x * 255).astype(np.uint8)),
-        transforms.ToPILImage(),
-        transforms.Resize((224, 224)),
-        # transforms.RandomChoice([
-        #     transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 0.2)),
-        #     transforms.GaussianBlur(kernel_size=3, sigma=(0.5, 2)),
-        #     transforms.GaussianBlur(kernel_size=3, sigma=(1, 3)),
-        #     transforms.GaussianBlur(kernel_size=1, sigma=(0.1, 0.2)),
-        #     transforms.GaussianBlur(kernel_size=1, sigma=(0.5, 2)),
-        #     transforms.GaussianBlur(kernel_size=1, sigma=(1, 3)),
-        #     v2.Identity(),
-        # ], p=[0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.4]),
-        transforms.Grayscale(num_output_channels=3),
-        transforms.ToTensor(),
-    ])
-
-    transform_val = transforms.Compose([
-        transforms.Lambda(lambda x: (x * 255).astype(np.uint8)),
-        transforms.ToPILImage(),
-        transforms.Resize((224, 224)),
-        transforms.Grayscale(num_output_channels=3),
-        transforms.ToTensor(),
-    ])
+    transform_train = TrainingTransform()
+    transform_val = ValidationTransform()
 
     trainloader, valloader, len_train, len_val = create_coordinate_datasets_and_loaders(training_data,
                                                                                         data_subset_label,

@@ -222,3 +222,6 @@ Ooh better yet, let me try combined loss. And TIL, you can put loss in CUDA.
 
 ### 5 PM
 Well that was a fiasco, the model convergence is awful. I wonder what will standalone distance IOU will look like.
+
+### 7 PM
+Answer is, somewhat better. But the validation loss refuses to go down, and inference snaps to wrong things. I figured how to add horizontal and vertical flips, so maybe that plus Gaussian blur will yield better results?
