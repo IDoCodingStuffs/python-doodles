@@ -375,10 +375,9 @@ def create_datasets_and_loaders(df: pd.DataFrame,
                                 num_workers=0,
                                 batch_size=8):
     filtered_df = df[df['series_description'] == series_description]
-
-    train_df, val_df = train_test_split(filtered_df, test_size=split_factor, random_state=random_seed)
-    train_df = train_df.reset_index(drop=True)
-    val_df = val_df.reset_index(drop=True)
+    train_series, val_series = train_test_split(filtered_df["series_id"], test_size=split_factor, random_state=random_seed)
+    train_df = filtered_df[filtered_df["series_id"].isin(train_series)].reset_index(drop=True)
+    val_df = filtered_df[filtered_df["series_id"].isin(val_series)].reset_index(drop=True)
 
     train_dataset = PerImageDataset(train_df, transform_train)
     val_dataset = PerImageDataset(val_df, transform_val)
