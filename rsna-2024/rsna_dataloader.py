@@ -235,8 +235,8 @@ class TrainingTransform(nn.Module):
         self.to_pil = transforms.ToPILImage()
         # !TODO: Refactor image dims
         self.resize = transforms.Resize(self.image_size)
-        self.hflip = transforms.RandomHorizontalFlip(p=1)
-        self.vflip = transforms.RandomVerticalFlip(p=1)
+        self.hflip = transforms.RandomHorizontalFlip(p=0.5)
+        self.vflip = transforms.RandomVerticalFlip(p=0.5)
 
         self.gaussian_blur = transforms.RandomChoice([
             transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 3)),
@@ -254,6 +254,8 @@ class TrainingTransform(nn.Module):
         image = self.to_pil(image)
         image = self.resize(image)
         image = self.grayscale(image)
+        image = self.hflip(image)
+        image = self.vflip(image)
         image = self.gaussian_blur(image)
         image = self.to_tensor(image)
 
