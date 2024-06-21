@@ -300,6 +300,7 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     train_df = train_df.reset_index(drop=True)
     val_df = val_df.reset_index(drop=True)
 
+    random.seed(random_seed)
     train_dataset = SeriesLevelDataset(base_path, train_df, transform_train)
     val_dataset = SeriesLevelDataset(base_path, val_df, transform_val)
 

@@ -251,3 +251,6 @@ Trying multi-head model again, one per level. Maybe it will overfit successfully
 Well it is definitely picking up something. Trying 100 epochs, significant gains by 25. I have high hopes from this one.
 
 Turns out it does not like flips. Let's omit those, the orientation does not change in GT anyway. I might reintroduce hflips only though.
+
+### 5 PM
+So the loss that was going down before I accidentally stopped that run? It is not dropping after starting again. I might have to random seed fish I guess. But at least now I know it is possible.
