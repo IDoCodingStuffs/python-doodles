@@ -24,25 +24,46 @@ class PerImageDataset(Dataset):
     def __init__(self, dataframe, transform=None):
         self.dataframe = dataframe
         self.transform = transform
-        self.label = dataframe["severity"].apply(lambda x: label_map[x])
+        self.label = (dataframe[["image_path", "level", "severity"]]
+                      .groupby("image_path")
+                      .agg({"image_path": "unique",
+                            "level": lambda x: ",".join(x),
+                            "severity": lambda x: ",".join(x)})
+                      )
 
     def __len__(self):
         return len(self.dataframe)
 
     def __getitem__(self, index):
         image_path = self.dataframe['image_path'][index]
-        image = load_dicom(image_path)  # Define this function to load your DICOM images
-        target = self.label[index]
+        image = load_dicom(image_path)
+        # target = self.label[index]
 
         if self.transform:
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
             image = self.transform(image)
 
-        return image, torch.tensor(target).float()
+        return image, self.label_as_tensor(image_path)
 
-    def get_labels(self):
-        return self.label
+    def label_as_tensor(self, image_path):
+        row = self.label[self.label["image_path"] == image_path]
+        levels = row["level"].str.split(",").values[0]
+        levels = sorted([(val, index) for index, val in enumerate(levels)])
 
+        label = row["severity"].values[0].split(",")
+        label = [label_map[label[index]] for level, index in levels]
+
+        label = self._multi_hot_encode(label)
+
+        return torch.tensor(label).type(torch.FloatTensor)
+
+
+    def _multi_hot_encode(self, label):
+        ret = []
+        for l in label:
+            for i in range(1, 3):
+                ret.append(1 if i <= l else 0)
+        return ret
 
 class CoordinateDataset(Dataset):
     def __init__(self, dataframe, transform=None):
@@ -146,7 +167,7 @@ class SeriesLevelDataset(Dataset):
         label = np.array(self.labels[(curr["study_id"], curr["series_id"])])
 
         images = np.array([self.transform(load_dicom(image_path)) if self.transform
-                                  else load_dicom(image_path) for image_path in image_paths])
+                           else load_dicom(image_path) for image_path in image_paths])
 
         return images, label
 
@@ -223,7 +244,6 @@ class TrainingTransform(nn.Module):
         image = self.grayscale(image)
         image = self.gaussian_blur(image)
         image = self.to_tensor(image)
-
 
         return image
 

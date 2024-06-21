@@ -233,3 +233,10 @@ Afterwards, I can tack on the temporal components. Hoping I get to define the ba
 
 ### 10 PM
 Well forget the UNet backbone. I will try to use that new public solution with 0.84 score. No need to reinvent the wheel, let me learn the timm model and make architecture changes later.
+
+### 11 PM
+Manage to have it at least start running. Trains pretty fast with batch size 16. I'll call it a day after it finishes training, takes just 1 hr.
+
+## 6/21
+### 1 PM
+Okay time to try labeling all levels. If it trains with just 3 labels, it should train with more ideally.
