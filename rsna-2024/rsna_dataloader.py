@@ -27,19 +27,19 @@ class PerImageDataset(Dataset):
         self.label = (dataframe[["image_path", "level", "severity"]]
                       .groupby("image_path")
                       # !TODO: Unhardcode
-                      .filter(lambda x: len(x) == 5)
+                      .filter(lambda x: len(x) == 5))
+
+        self.label = (self.label.groupby("image_path")
                       .agg({"image_path": "unique",
                             "level": lambda x: ",".join(x),
-                            "severity": lambda x: ",".join(x)})
-                      )
+                            "severity": lambda x: ",".join(x)}))
 
     def __len__(self):
-        return len(self.dataframe)
+        return len(self.label)
 
     def __getitem__(self, index):
-        image_path = self.dataframe['image_path'][index]
+        image_path = self.label['image_path'][index][0]
         image = load_dicom(image_path)
-        # target = self.label[index]
 
         if self.transform:
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
