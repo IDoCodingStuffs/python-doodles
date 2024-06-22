@@ -260,3 +260,10 @@ What helped was chilling down the learning rates of the mid layer and backbone. 
 
 ### 11 PM
 Nah it just converged to local minima because predicting everything as 0 is overrepresented. I need to add FocalLoss and oversample.
+
+## 6/22
+### 8 AM
+I need to prepare for the AI midterm today. Did not implement FocalLoss but did implement oversampling. Let's see if it helps first.
+
+### 10 AM
+It is somewhat helping. For one of the levels it started getting pink in the middle of the diagonal. Let me try changing up the sample weights (2^class vs class * 4) a little and try again.
