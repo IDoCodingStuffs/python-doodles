@@ -254,3 +254,6 @@ Turns out it does not like flips. Let's omit those, the orientation does not cha
 
 ### 5 PM
 So the loss that was going down before I accidentally stopped that run? It is not dropping after starting again. I might have to random seed fish I guess. But at least now I know it is possible.
+
+### 6 PM
+What helped was chilling down the learning rates of the mid layer and backbone. I might also need to swap the scheduler for something else than cosine annealing though.
