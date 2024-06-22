@@ -257,3 +257,6 @@ So the loss that was going down before I accidentally stopped that run? It is no
 
 ### 6 PM
 What helped was chilling down the learning rates of the mid layer and backbone. I might also need to swap the scheduler for something else than cosine annealing though.
+
+### 11 PM
+Nah it just converged to local minima because predicting everything as 0 is overrepresented. I need to add FocalLoss and oversample.
