@@ -34,6 +34,9 @@ class PerImageDataset(Dataset):
                             "level": lambda x: ",".join(x),
                             "severity": lambda x: ",".join(x)}))
 
+        # !TODO: refactor and properly formulate
+        self.label["weight"] = [sum(np.argmax(self.label_as_tensor(e[0]).numpy(), axis=1)) * 2 + 1 for e in self.label["image_path"]]
+
     def __len__(self):
         return len(self.label)
 
@@ -394,7 +397,9 @@ def create_datasets_and_loaders(df: pd.DataFrame,
     train_dataset = PerImageDataset(train_df, transform_train)
     val_dataset = PerImageDataset(val_df, transform_val)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True)
+    train_sampler = WeightedRandomSampler(weights=train_dataset.label["weight"], num_samples=len(train_dataset))
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, sampler=train_sampler)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False)
 
     return train_loader, val_loader, train_dataset, val_dataset
