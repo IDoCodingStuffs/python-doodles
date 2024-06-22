@@ -48,7 +48,7 @@ def model_validation_loss(model, val_loader, loss_fns):
         loss = sum([loss_fn(output, label) for loss_fn in loss_fns])
         total_loss += loss.item()
 
-    total_loss = total_loss / len(val_loader.dataset)
+    total_loss = total_loss / len(val_loader)
 
     return total_loss
 
