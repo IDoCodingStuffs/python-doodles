@@ -35,7 +35,7 @@ class PerImageDataset(Dataset):
                             "severity": lambda x: ",".join(x)}))
 
         # !TODO: refactor and properly formulate
-        self.label["weight"] = [sum(np.argmax(self.label_as_tensor(e[0]).numpy(), axis=1)) * 2 + 1 for e in self.label["image_path"]]
+        self.label["weight"] = [sum(np.argmax(self.label_as_tensor(e[0]).numpy(), axis=1)) * 8 + 1 for e in self.label["image_path"]]
 
     def __len__(self):
         return len(self.label)
