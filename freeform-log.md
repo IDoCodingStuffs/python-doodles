@@ -267,3 +267,7 @@ I need to prepare for the AI midterm today. Did not implement FocalLoss but did 
 
 ### 10 AM
 It is somewhat helping. For one of the levels it started getting pink in the middle of the diagonal. Let me try changing up the sample weights (2^class vs class * 4) a little and try again.
+
+### 11 AM
+Initial epochs showing mispredictions now tend to skew towards the other classes. Man this is hard. 
+Guess I should track loss separately per level too? So 5 focal loss functions, with the added benefit of plotting them separately.

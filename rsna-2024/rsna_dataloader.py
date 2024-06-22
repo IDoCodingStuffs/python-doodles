@@ -310,7 +310,8 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     train_sampler = WeightedRandomSampler(weights=train_dataset.sampling_weights, num_samples=len(train_dataset),
                                           replacement=True)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler, num_workers=num_workers)
+    # train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler, num_workers=num_workers)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     return train_loader, val_loader, len(train_df), len(val_df)

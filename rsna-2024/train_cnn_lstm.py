@@ -102,7 +102,8 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     schedulers.extend(
         [torch.optim.lr_scheduler.CosineAnnealingLR(head_optimizer, NUM_EPOCHS, eta_min=1e-4) for head_optimizer in
          head_optimizers])
-    criteria = [nn.BCELoss(),]
+
+    criteria = [FocalLoss() for i in range(5)]
 
     train_model_with_validation(model,
                                 optimizers,

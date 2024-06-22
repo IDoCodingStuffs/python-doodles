@@ -22,6 +22,20 @@ _logger = logging.getLogger(__name__)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+class FocalLoss(nn.Module):
+    def __init__(self, gamma=2, alpha=1):
+        super(FocalLoss, self).__init__()
+        self.gamma = gamma
+        self.alpha = alpha
+
+    def forward(self, outputs, targets):
+        ce_loss = torch.nn.functional.cross_entropy(outputs, targets, reduction='none')
+        pt = torch.exp(-ce_loss)
+        focal_loss = (self.alpha * (1 - pt) ** self.gamma * ce_loss).mean()
+
+        return focal_loss
+
+
 # !TODO: Optional
 def freeze_model_backbone(model: nn.Module):
     for param in model.backbone.model.parameters():
