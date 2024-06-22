@@ -59,8 +59,9 @@ def model_validation_loss(model, val_loader, loss_fns):
         label = label.to(device)
 
         output = model(images.to(device))
-        loss = sum([loss_fn(output, label) for loss_fn in loss_fns])
-        total_loss += loss.item()
+        for index, loss_fn in enumerate(loss_fns):
+            loss = loss_fn(output[index], label[index])
+            total_loss += loss.cpu().item()
 
     total_loss = total_loss / len(val_loader)
 
@@ -103,9 +104,11 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
             output = model(images.to(device))
 
             # !TODO: Refactor
-            loss = sum([loss_fns[i](output[i], label[i]) for i in range(len(loss_fns))])
-            epoch_loss += loss.cpu().item()
-            loss.backward(retain_graph=True)
+            # !TODO: Track separately
+            for index, loss_fn in enumerate(loss_fns):
+                loss = loss_fn(output[index], label[index])
+                epoch_loss += loss.cpu().item()
+                loss.backward(retain_graph=True)
 
             for optimizer in optimizers:
                 optimizer.step()
