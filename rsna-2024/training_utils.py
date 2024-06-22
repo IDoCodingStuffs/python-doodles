@@ -95,7 +95,7 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
             for optimizer in optimizers:
                 optimizer.step()
 
-        epoch_loss = epoch_loss / len(train_loader.dataset)
+        epoch_loss = epoch_loss / len(train_loader)
 
         epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns)
 
