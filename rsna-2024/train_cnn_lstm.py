@@ -88,7 +88,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     model = TimmModel(backbone=CONFIG["backbone"]).to(device)
     optimizers = [
                   torch.optim.Adam(model.lstm.parameters(), lr=1e-3),
-                  torch.optim.Adam(model.encoder.parameters(), lr=1e-3)]
+                  torch.optim.Adam(model.encoder.parameters(), lr=5e-4)]
 
     head_optimizers = [torch.optim.Adam(head.parameters(), lr=1e-3) for head in model.heads]
     optimizers.extend(head_optimizers)
@@ -97,7 +97,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-5),
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=1e-5),
     ]
-    schedulers.extend([torch.optim.lr_scheduler.CosineAnnealingLR(head_optimizer, NUM_EPOCHS, eta_min=1e-5) for head_optimizer in head_optimizers])
+    schedulers.extend([torch.optim.lr_scheduler.CosineAnnealingLR(head_optimizer, NUM_EPOCHS, eta_min=1e-4) for head_optimizer in head_optimizers])
     criteria = [nn.BCELoss(),]
 
     train_model_with_validation(model,
