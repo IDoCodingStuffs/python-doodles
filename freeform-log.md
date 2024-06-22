@@ -276,3 +276,7 @@ Guess I should track loss separately per level too? So 5 focal loss functions, w
 Worked on the confusion matrix viz a bit, now it is a lot more informative. From the earlier looks, it seems the model can finally try to pick up some features now that I am using focal loss.
 Some more tuning might be useful but next step will likely be figuring how to have it do the test-train split better so that half the images are not ending up in the valset, and then expand the model.
 But it remains to be seen if it will keep training or flatline after 100 or so epochs (1 hour per 100 with the current efficientnet + single lstm + 5-head setup)
+
+### 4 PM
+Looking at the confusion matrix, it does not seem to be able to extract features well. Also starts flatlining around 160 epochs.
+Let's see if it fares better with a bigger efficientnet. Say b4.

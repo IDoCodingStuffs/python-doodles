@@ -12,7 +12,7 @@ CONFIG = dict(
     load_last=True,
     n_folds=5,
     n_levels=5,
-    backbone="efficientnet_b0.ra_in1k",  # tf_efficientnetv2_s_in21ft1k
+    backbone="tf_efficientnetv2_b3",
     img_size=(384, 384),
     n_slice_per_c=16,
     in_chans=1,
@@ -126,7 +126,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b0_lstm_t2stir")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnetv2_b3_lstm_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 
