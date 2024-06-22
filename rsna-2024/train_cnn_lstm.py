@@ -62,12 +62,13 @@ class TimmModel(nn.Module):
                 nn.Linear(256, CONFIG["out_dim"]),
                 nn.Softmax(),
             )
-        for i in range(CONFIG["n_levels"])])
+            for i in range(CONFIG["n_levels"])])
 
     def forward(self, x):
         feat = self.encoder(x)
         feat, _ = self.lstm(feat)
         return torch.stack([head(feat) for head in self.heads], dim=1)
+
 
 def train_model_for_series(data_subset_label: str, model_label: str):
     data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
@@ -83,21 +84,24 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                              num_workers=16,
                                                                              batch_size=8)
 
-    NUM_EPOCHS = 100
+    NUM_EPOCHS = 200
 
     model = TimmModel(backbone=CONFIG["backbone"]).to(device)
     optimizers = [
-                  torch.optim.Adam(model.lstm.parameters(), lr=1e-3),
-                  torch.optim.Adam(model.encoder.parameters(), lr=5e-4)]
+        torch.optim.Adam(model.encoder.parameters(), lr=1e-4),
+        torch.optim.Adam(model.lstm.parameters(), lr=5e-4),
+    ]
 
     head_optimizers = [torch.optim.Adam(head.parameters(), lr=1e-3) for head in model.heads]
     optimizers.extend(head_optimizers)
 
     schedulers = [
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-5),
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=1e-5),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-6),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-5),
     ]
-    schedulers.extend([torch.optim.lr_scheduler.CosineAnnealingLR(head_optimizer, NUM_EPOCHS, eta_min=1e-4) for head_optimizer in head_optimizers])
+    schedulers.extend(
+        [torch.optim.lr_scheduler.CosineAnnealingLR(head_optimizer, NUM_EPOCHS, eta_min=1e-4) for head_optimizer in
+         head_optimizers])
     criteria = [nn.BCELoss(),]
 
     train_model_with_validation(model,
@@ -115,8 +119,8 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 def train():
     model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b0_lstm_t2stir")
-    # model_t1 = train_model_for_series("Sagittal T1", "resnet18_lstm_t1")
-    # model_t2 = train_model_for_series("Axial T2", "resnet18_lstm_t2")
+    # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
+    # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 
 
 if __name__ == '__main__':
