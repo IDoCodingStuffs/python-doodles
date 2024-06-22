@@ -105,11 +105,11 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     ])
 
     criteria = [
-        FocalLoss(gamma=5).to(device),
-        FocalLoss(gamma=5).to(device),
+        FocalLoss(gamma=6).to(device),
         FocalLoss(gamma=4).to(device),
-        FocalLoss(gamma=3).to(device),
-        FocalLoss(gamma=5).to(device),
+        FocalLoss(gamma=4).to(device),
+        FocalLoss(gamma=3.5).to(device),
+        FocalLoss(gamma=6).to(device),
     ]
 
     train_model_with_validation(model,
