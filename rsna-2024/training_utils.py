@@ -102,7 +102,8 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
 
             output = model(images.to(device))
 
-            loss = sum([loss_fn(output, label) for loss_fn in loss_fns])
+            # !TODO: Refactor
+            loss = sum([loss_fns[i](output[i], label[i]) for i in range(len(loss_fns))])
             epoch_loss += loss.cpu().item()
             loss.backward(retain_graph=True)
 
