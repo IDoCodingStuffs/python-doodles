@@ -271,3 +271,8 @@ It is somewhat helping. For one of the levels it started getting pink in the mid
 ### 11 AM
 Initial epochs showing mispredictions now tend to skew towards the other classes. Man this is hard. 
 Guess I should track loss separately per level too? So 5 focal loss functions, with the added benefit of plotting them separately.
+
+### 2 PM
+Worked on the confusion matrix viz a bit, now it is a lot more informative. From the earlier looks, it seems the model can finally try to pick up some features now that I am using focal loss.
+Some more tuning might be useful but next step will likely be figuring how to have it do the test-train split better so that half the images are not ending up in the valset, and then expand the model.
+But it remains to be seen if it will keep training or flatline after 100 or so epochs (1 hour per 100 with the current efficientnet + single lstm + 5-head setup)
