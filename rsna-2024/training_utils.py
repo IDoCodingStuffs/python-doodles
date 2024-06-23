@@ -60,7 +60,7 @@ def model_validation_loss(model, val_loader, loss_fns):
 
         output = model(images.to(device))
         for index, loss_fn in enumerate(loss_fns):
-            loss = loss_fn(output, label)
+            loss = loss_fn(output[:, index], label[:, index])
             total_loss += loss.cpu().item()
 
     total_loss = total_loss / len(val_loader)
@@ -69,8 +69,8 @@ def model_validation_loss(model, val_loader, loss_fns):
 
 
 def dump_plots_for_loss_and_acc(losses, val_losses, data_subset_label, model_label):
-    plt.plot(np.log(losses), label="train")
-    plt.plot(np.log(val_losses), label="val")
+    plt.plot(losses, label="train")
+    plt.plot(val_losses, label="val")
     plt.legend(loc="center right")
     plt.title(data_subset_label)
     # plt.savefig(f'./figures/{model_label}_{time.time_ns() // 1e9}_loss.png')
@@ -106,7 +106,7 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
             # !TODO: Refactor
             # !TODO: Track separately
             for index, loss_fn in enumerate(loss_fns):
-                loss = loss_fn(output, label)
+                loss = loss_fn(output[:, index], label[:, index])
                 epoch_loss += loss.cpu().item()
                 loss.backward(retain_graph=True)
 
