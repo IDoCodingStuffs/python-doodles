@@ -245,9 +245,8 @@ class TrainingTransform(nn.Module):
             transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 3)),
             transforms.GaussianBlur(kernel_size=5, sigma=(0.1, 3)),
             transforms.GaussianBlur(kernel_size=7, sigma=(0.1, 3)),
-            transforms.GaussianBlur(kernel_size=9, sigma=(0.1, 3)),
             v2.Identity(),
-        ], p=[0.2, 0.2, 0.2, 0.2, 0.2])
+        ], p=[0.2, 0.2, 0.2, 0.4])
 
         self.grayscale = transforms.Grayscale(num_output_channels=num_channels)
         self.to_tensor = transforms.ToTensor()
