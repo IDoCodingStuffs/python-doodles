@@ -51,6 +51,9 @@ class CNN_LSTM_Model(nn.Module):
         elif 'convnext' in backbone:
             hdim = self.encoder.head.fc.in_features
             self.encoder.head.fc = nn.Identity()
+        elif 'vit' in backbone:
+            hdim = self.encoder.head.in_features
+            self.encoder.head.fc = nn.Identity()
 
         self.lstm = nn.LSTM(hdim, 256, num_layers=2, dropout=CONFIG["drop_rate"], bidirectional=True, batch_first=True)
         self.heads = nn.ModuleList([
@@ -65,9 +68,9 @@ class CNN_LSTM_Model(nn.Module):
             for i in range(CONFIG["n_levels"])])
 
     def forward(self, x):
-        feat = self.encoder(x)
+        feat = self.encoder(x.squeeze(0))
         feat, _ = self.lstm(feat)
-        return torch.stack([head(feat) for head in self.heads], dim=1)
+        return torch.mean(torch.stack([head(feat) for head in self.heads], dim=1), dim=0)
 
 
 class VIT_Model(nn.Module):
@@ -140,7 +143,7 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
                                                                              data_subset_label,
                                                                              transform_train,
                                                                              transform_val,
-                                                                             num_workers=12,
+                                                                             num_workers=0,
                                                                              split_factor=0.05,
                                                                              batch_size=8)
 
@@ -197,9 +200,9 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = VIT_Model_25D(backbone=CONFIG["backbone"]).to(device)
+    model = CNN_LSTM_Model(backbone=CONFIG["backbone"]).to(device)
     optimizers = [
-        torch.optim.Adam(model.image_encoder.parameters(), lr=1e-4),
+        torch.optim.Adam(model.parameters(), lr=1e-4),
     ]
 
     schedulers = [
@@ -228,7 +231,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tiny_vit_21m_384_t2stir_series")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tiny_vit_21m_384_t2stir_lstm")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 
