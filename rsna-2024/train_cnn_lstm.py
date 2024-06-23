@@ -12,7 +12,8 @@ CONFIG = dict(
     load_last=True,
     n_folds=5,
     n_levels=5,
-    backbone="tf_efficientnetv2_b3",
+    # backbone="tf_efficientnetv2_b3",
+    backbone="tiny_vit_21m_384",
     img_size=(384, 384),
     n_slice_per_c=16,
     in_chans=1,
@@ -32,9 +33,9 @@ CONFIG = dict(
 )
 
 
-class TimmModel(nn.Module):
+class CNN_LSTM_Model(nn.Module):
     def __init__(self, backbone, pretrained=False):
-        super(TimmModel, self).__init__()
+        super(CNN_LSTM_Model, self).__init__()
 
         self.encoder = timm.create_model(
             backbone,
@@ -70,6 +71,24 @@ class TimmModel(nn.Module):
         return torch.stack([head(feat) for head in self.heads], dim=1)
 
 
+class VIT_Model(nn.Module):
+    def __init__(self, backbone, pretrained=False):
+        super(VIT_Model, self).__init__()
+
+        self.encoder = timm.create_model(
+            backbone,
+            num_classes=CONFIG["out_dim"] * CONFIG["n_levels"],
+            features_only=False,
+            drop_rate=CONFIG["drop_rate"],
+            drop_path_rate=CONFIG["drop_path_rate"],
+            pretrained=pretrained
+        )
+
+    def forward(self, x):
+        return self.encoder(x).reshape((-1, CONFIG["n_levels"], CONFIG["out_dim"]))
+
+
+
 def train_model_for_series(data_subset_label: str, model_label: str):
     data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
     training_data = retrieve_training_data(data_basepath)
@@ -81,29 +100,21 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                              data_subset_label,
                                                                              transform_train,
                                                                              transform_val,
-                                                                             num_workers=12,
+                                                                             num_workers=0,
                                                                              split_factor=0.1,
                                                                              batch_size=8)
 
     NUM_EPOCHS = 500
 
-    model = TimmModel(backbone=CONFIG["backbone"]).to(device)
+    # model = CNN_LSTM_Model(backbone=CONFIG["backbone"]).to(device)
+    model = VIT_Model(backbone=CONFIG["backbone"]).to(device)
     optimizers = [
         torch.optim.Adam(model.encoder.parameters(), lr=1e-4),
-        torch.optim.Adam(model.lstm.parameters(), lr=5e-4),
     ]
-
-    head_optimizers = [torch.optim.Adam(head.parameters(), lr=1e-3) for head in model.heads]
-    optimizers.extend(head_optimizers)
 
     schedulers = [
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-6),
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-5),
     ]
-    schedulers.extend([
-        torch.optim.lr_scheduler.CosineAnnealingLR(head_optimizer, NUM_EPOCHS, eta_min=1e-4) for head_optimizer in
-        head_optimizers
-    ])
 
     criteria = [
         FocalLoss(gamma=6).to(device),
@@ -127,7 +138,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnetv2_b3_lstm_t2stir")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tiny_vit_21m_384_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 
