@@ -122,10 +122,16 @@ class CoordinateDataset(Dataset):
 class SeriesLevelDataset(Dataset):
     def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
         self.base_path = base_path
-        self.dataframe = (dataframe[['study_id', "series_id", "severity", "level"]]
+
+        # !TODO: Impute later
+        self.dataframe = dataframe.groupby(['study_id', "series_id"]).filter(lambda x: len(x["level"].unique()) == 5)
+        self.dataframe = (self.dataframe[['study_id', "series_id", "severity", "level"]]
                           .drop_duplicates())
         self.transform = transform
+
         self.series = dataframe[['study_id', "series_id"]].drop_duplicates().reset_index(drop=True)
+
+
         self.levels = sorted(self.dataframe["level"].unique())
         self.labels = dict()
         for name, group in self.dataframe.groupby(["study_id", "series_id"]):
