@@ -287,3 +287,5 @@ Let's see if it fares better with a bigger efficientnet. Say b4.
 You know what, I will try a ViT model. It has the temporality and also serves as a vision model after all.
 And also very easy to implement with Timm, don't even need the heads per class.
 And from the way it looks so far, it is converging very fast within the first epochs. Hoping it won't turn out to be just overfitting to the skewed data.
+
+Well the confusion matrix looks kinda meh, but it does seem to be picking up stuff and I will have to see how it looks at 500 epochs.
