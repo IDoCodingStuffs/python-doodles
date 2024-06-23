@@ -87,8 +87,7 @@ class VIT_Model(nn.Module):
         return self.encoder(x).reshape((-1, CONFIG["n_levels"], CONFIG["out_dim"]))
 
 
-
-def train_model_for_series(data_subset_label: str, model_label: str):
+def train_model_for_series_per_image(data_subset_label: str, model_label: str):
     data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
     training_data = retrieve_training_data(data_basepath)
 
@@ -136,8 +135,58 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     return model
 
 
+def train_model_for_series(data_subset_label: str, model_label: str):
+    data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
+    training_data = retrieve_training_data(data_basepath)
+
+    transform_train = TrainingTransform(image_size=CONFIG["img_size"], num_channels=3)
+    transform_val = ValidationTransform(image_size=CONFIG["img_size"], num_channels=3)
+
+    trainloader, valloader, trainset, valset = create_series_level_datasets_and_loaders(training_data,
+                                                                                        data_subset_label,
+                                                                                        transform_train,
+                                                                                        transform_val,
+                                                                                        base_path=os.path.join(
+                                                                                            data_basepath,
+                                                                                            "train_images"),
+                                                                                        num_workers=0,
+                                                                                        split_factor=0.1,
+                                                                                        batch_size=1)
+
+    NUM_EPOCHS = CONFIG["epochs"]
+
+    model = VIT_Model(backbone=CONFIG["backbone"]).to(device)
+    optimizers = [
+        torch.optim.Adam(model.encoder.parameters(), lr=1e-4),
+    ]
+
+    schedulers = [
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-6),
+    ]
+
+    criteria = [
+        FocalLoss(alpha=0.2).to(device),
+        FocalLoss(alpha=0.2).to(device),
+        FocalLoss(alpha=0.2).to(device),
+        FocalLoss(alpha=0.2).to(device),
+        FocalLoss(alpha=0.2).to(device),
+    ]
+
+    train_model_with_validation(model,
+                                optimizers,
+                                schedulers,
+                                criteria,
+                                trainloader,
+                                valloader,
+                                model_desc=model_label,
+                                train_loader_desc=f"Training {data_subset_label}",
+                                epochs=NUM_EPOCHS)
+
+    return model
+
+
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tiny_vit_21m_512_t2stir")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tiny_vit_21m_512_t2stir_series")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 

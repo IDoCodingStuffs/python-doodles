@@ -277,14 +277,11 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     train_dataset = SeriesLevelDataset(base_path, train_df, transform_train)
     val_dataset = SeriesLevelDataset(base_path, val_df, transform_val)
 
-    train_sampler = WeightedRandomSampler(weights=train_dataset.sampling_weights, num_samples=len(train_dataset),
-                                          replacement=True)
 
-    # train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_sampler, num_workers=num_workers)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
-    return train_loader, val_loader, len(train_df), len(val_df)
+    return train_loader, val_loader, train_dataset, val_dataset
 
 
 def create_series_level_coordinate_datasets_and_loaders(df: pd.DataFrame,
