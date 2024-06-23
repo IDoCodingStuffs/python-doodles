@@ -69,8 +69,8 @@ def model_validation_loss(model, val_loader, loss_fns):
 
 
 def dump_plots_for_loss_and_acc(losses, val_losses, data_subset_label, model_label):
-    plt.plot(losses, label="train")
-    plt.plot(val_losses, label="val")
+    plt.plot(np.log(losses), label="train")
+    plt.plot(np.log(val_losses), label="val")
     plt.legend(loc="center right")
     plt.title(data_subset_label)
     # plt.savefig(f'./figures/{model_label}_{time.time_ns() // 1e9}_loss.png')

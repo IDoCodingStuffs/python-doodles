@@ -294,4 +294,6 @@ Well the confusion matrix looks kinda meh, but it does seem to be picking up stu
 I restarted it, set to go up to 200 epochs and using a 512 res instead of 384 res variant. I have high hopes.
 If it fails, I can start looking into training some larger ViT and doing transfer learning. But it might get finicky since those things are HUGE.
 
+### 7 AM
+It might be having issues due to the weird very high gamma I have been using. I wonder what it will look like with the default gamma.
 
