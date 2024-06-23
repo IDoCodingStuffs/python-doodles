@@ -12,8 +12,8 @@ CONFIG = dict(
     load_last=True,
     n_folds=5,
     n_levels=5,
-    backbone="tiny_vit_21m_512",
-    img_size=(512, 512),
+    backbone="tiny_vit_21m_384",
+    img_size=(384, 384),
     n_slice_per_c=16,
     in_chans=1,
 
@@ -117,7 +117,7 @@ class VIT_Model_25D(nn.Module):
         )
         self.image_encoder.head.fc = nn.Identity()
         self.spatial_encoder = nn.Sequential(
-            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=576, nhead=8), num_layers=4),
+            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=576, nhead=4), num_layers=2),
             NormMLPClassifierHead(self.num_classes)
         )
 
@@ -191,7 +191,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                         base_path=os.path.join(
                                                                                             data_basepath,
                                                                                             "train_images"),
-                                                                                        num_workers=0,
+                                                                                        num_workers=12,
                                                                                         split_factor=0.1,
                                                                                         batch_size=1)
 
@@ -228,7 +228,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tiny_vit_21m_512_t2stir_series")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tiny_vit_21m_384_t2stir_series")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 
