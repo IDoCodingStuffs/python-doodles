@@ -297,3 +297,8 @@ If it fails, I can start looking into training some larger ViT and doing transfe
 ### 7 AM
 It might be having issues due to the weird very high gamma I have been using. I wonder what it will look like with the default gamma.
 
+### 10 AM
+Looks better halfway through. I think part of the issue was ^6 is a bit too much, propagating basically no loss.
+That said I might need to figure a better loss function or fix some other issue with FocalLoss. It decreases alright, 
+but that decrease should show up as a perfect diagonal on the confusion matrix. Which it is not.
+
