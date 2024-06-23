@@ -87,6 +87,48 @@ class VIT_Model(nn.Module):
         return self.encoder(x).reshape((-1, CONFIG["n_levels"], CONFIG["out_dim"]))
 
 
+class NormMLPClassifierHead(nn.Module):
+    def __init__(self, out_dim):
+        super(NormMLPClassifierHead, self).__init__()
+
+        self.out_dim = out_dim
+        self.head = nn.Sequential(
+            nn.LayerNorm(576, eps=1e-05, elementwise_affine=True),
+            nn.Flatten(start_dim=1, end_dim=-1),
+            nn.Dropout(p=0.0, inplace=False),
+            nn.Linear(in_features=576, out_features=15, bias=True),
+        )
+
+    def forward(self, x):
+        return self.head(x)
+
+class VIT_Model_25D(nn.Module):
+    def __init__(self, backbone, pretrained=False):
+        super(VIT_Model_25D, self).__init__()
+
+        self.num_classes = CONFIG["out_dim"] * CONFIG["n_levels"]
+        self.image_encoder = timm.create_model(
+            backbone,
+            num_classes=self.num_classes,
+            features_only=False,
+            drop_rate=CONFIG["drop_rate"],
+            drop_path_rate=CONFIG["drop_path_rate"],
+            pretrained=pretrained
+        )
+        self.image_encoder.head.fc = nn.Identity()
+        self.spatial_encoder = nn.Sequential(
+            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=576, nhead=8), num_layers=4),
+            NormMLPClassifierHead(self.num_classes)
+        )
+
+    def forward(self, x):
+        image_feat = self.image_encoder(x.squeeze(0))
+        out = self.spatial_encoder(image_feat)
+        # !TODO: This is probably not right
+        out = torch.mean(out, dim=0)
+        out = out.reshape((-1, CONFIG["n_levels"], CONFIG["out_dim"]))
+        return out
+
 def train_model_for_series_per_image(data_subset_label: str, model_label: str):
     data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
     training_data = retrieve_training_data(data_basepath)
@@ -155,9 +197,9 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = VIT_Model(backbone=CONFIG["backbone"]).to(device)
+    model = VIT_Model_25D(backbone=CONFIG["backbone"]).to(device)
     optimizers = [
-        torch.optim.Adam(model.encoder.parameters(), lr=1e-4),
+        torch.optim.Adam(model.image_encoder.parameters(), lr=1e-4),
     ]
 
     schedulers = [

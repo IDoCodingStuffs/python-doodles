@@ -160,7 +160,7 @@ class SeriesLevelDataset(Dataset):
         images = np.array([self.transform(load_dicom(image_path)) if self.transform
                            else load_dicom(image_path) for image_path in image_paths])
 
-        return images, label
+        return images, torch.tensor(label).type(torch.FloatTensor)
 
 
     def _get_image_index(self, image_path):

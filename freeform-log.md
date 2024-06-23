@@ -306,3 +306,6 @@ but that decrease should show up as a perfect diagonal on the confusion matrix. 
 Let me try with no Gaussian blur now. Maybe it gets stuck in minima without clear distinctions, identifies label 0s as 2s etc because of it.
 I can re-add augmentation later if it ends up overtraining.
 
+### 2 PM
+Actually, let me try the 2.5D model approach again. I have definitely confirmed the backbone can learn, so now I can refine it by adding stuff.
+Chances are the per image model was having those weird precision issues due to the images on the distal ends.
