@@ -1,5 +1,4 @@
 import timm
-import torch.optim
 
 from training_utils import *
 from rsna_dataloader import *
@@ -109,11 +108,11 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     # model = CNN_LSTM_Model(backbone=CONFIG["backbone"]).to(device)
     model = VIT_Model(backbone=CONFIG["backbone"]).to(device)
     optimizers = [
-        torch.optim.RMSprop(model.encoder.parameters(), lr=1e-2, momentum=0.9),
+        torch.optim.Adam(model.encoder.parameters(), lr=1e-4),
     ]
 
     schedulers = [
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-4),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-6),
     ]
 
     criteria = [
