@@ -289,3 +289,9 @@ And also very easy to implement with Timm, don't even need the heads per class.
 And from the way it looks so far, it is converging very fast within the first epochs. Hoping it won't turn out to be just overfitting to the skewed data.
 
 Well the confusion matrix looks kinda meh, but it does seem to be picking up stuff and I will have to see how it looks at 500 epochs.
+
+### 2 AM
+I restarted it, set to go up to 200 epochs and using a 512 res instead of 384 res variant. I have high hopes.
+If it fails, I can start looking into training some larger ViT and doing transfer learning. But it might get finicky since those things are HUGE.
+
+
