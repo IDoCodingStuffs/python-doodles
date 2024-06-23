@@ -100,7 +100,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                              data_subset_label,
                                                                              transform_train,
                                                                              transform_val,
-                                                                             num_workers=0,
+                                                                             num_workers=12,
                                                                              split_factor=0.1,
                                                                              batch_size=8)
 
