@@ -100,7 +100,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                              transform_train,
                                                                              transform_val,
                                                                              num_workers=12,
-                                                                             split_factor=0.1,
+                                                                             split_factor=0.05,
                                                                              batch_size=8)
 
     NUM_EPOCHS = CONFIG["epochs"]
@@ -108,7 +108,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     # model = CNN_LSTM_Model(backbone=CONFIG["backbone"]).to(device)
     model = VIT_Model(backbone=CONFIG["backbone"]).to(device)
     optimizers = [
-        torch.optim.Adam(model.encoder.parameters(), lr=1e-4),
+        torch.optim.Adam(model.encoder.parameters(), lr=1e-3),
     ]
 
     schedulers = [
