@@ -302,3 +302,5 @@ Looks better halfway through. I think part of the issue was ^6 is a bit too much
 That said I might need to figure a better loss function or fix some other issue with FocalLoss. It decreases alright, 
 but that decrease should show up as a perfect diagonal on the confusion matrix. Which it is not.
 
+Maybe I should try a different optimizer. Let's see how RMSProp does.
+
