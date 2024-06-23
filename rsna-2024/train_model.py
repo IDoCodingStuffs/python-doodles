@@ -108,7 +108,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     # model = CNN_LSTM_Model(backbone=CONFIG["backbone"]).to(device)
     model = VIT_Model(backbone=CONFIG["backbone"]).to(device)
     optimizers = [
-        torch.optim.Adam(model.encoder.parameters(), lr=1e-3),
+        torch.optim.Adam(model.encoder.parameters(), lr=1e-4),
     ]
 
     schedulers = [
