@@ -122,8 +122,6 @@ class CoordinateDataset(Dataset):
 class SeriesLevelDataset(Dataset):
     def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
         self.base_path = base_path
-        # self.dataframe = (dataframe[['study_id', "series_id", "severity", "condition", "level"]]
-        #                   .drop_duplicates())
         self.dataframe = (dataframe[['study_id', "series_id", "severity", "level"]]
                           .drop_duplicates())
         self.transform = transform
@@ -131,46 +129,18 @@ class SeriesLevelDataset(Dataset):
         self.levels = sorted(self.dataframe["level"].unique())
         self.labels = dict()
         for name, group in self.dataframe.groupby(["study_id", "series_id"]):
-            # !TODO: Refine this
             # !TODO: Better imputation
-            # label_indices = [-1 for e in range(len(self.levels) * len(conditions))]
             label_indices = [0 for e in range(len(self.levels))]
             for index, row in group.iterrows():
                 if row["severity"] in label_map:  # and row["condition"] in conditions:
-                    # label_index = self.levels.index(row["level"]) * len(conditions) + conditions.index(row["condition"])
                     label_index = self.levels.index(row["level"])
                     label_indices[label_index] = label_map[row["severity"]]
 
             self.labels[name] = []
-            # self.labels[name] = label_indices
-
-            # 1 hot encode
-            # for label in label_indices:
-            #     self.labels[name].append([0 if label != i else 1 for i in range(3)])
-
-            # Split 0.33 - 0.66 for each level
-            # for label in label_indices:
-            #     if label == -1:
-            #         raise ValueError()
-            #     self.labels[name].append(0.16 + 0.33 * label)
-
-            # Multihot encoding
             for label in label_indices:
-                self.labels[name].append(0 if label == 0 else 1)
-                self.labels[name].append(0 if label < 2 else 1)
+                curr = [0 if label != i else 1 for i in range(3)]
+                self.labels[name].append(curr)
 
-        self.sampling_weights = []
-        for index in range(len(self.series)):
-            curr = self.series.iloc[index]
-            key = (curr["study_id"], curr["series_id"])
-            # self.sampling_weights.append(1 + (np.sum(self.labels[key]) - len(self.levels) * 0.25) * 8)
-            # Equal sampling
-            # self.sampling_weights.append(1)
-            # Multi-hot encoded weights
-            # !TODO: Verify
-            self.sampling_weights.append(1 + (np.sum(self.labels[key])) * 4)
-            # One-hot encoded weights
-            # self.sampling_weights.append(2 ** np.argmax(self.labels[key]))
 
     def __len__(self):
         return len(self.series)
@@ -185,6 +155,7 @@ class SeriesLevelDataset(Dataset):
                            else load_dicom(image_path) for image_path in image_paths])
 
         return images, label
+
 
     def _get_image_index(self, image_path):
         return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
