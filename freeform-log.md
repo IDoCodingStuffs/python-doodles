@@ -280,6 +280,3 @@ But it remains to be seen if it will keep training or flatline after 100 or so e
 ### 4 PM
 Looking at the confusion matrix, it does not seem to be able to extract features well. Also starts flatlining around 160 epochs.
 Let's see if it fares better with a bigger efficientnet. Say b4.
-
-## 6/23
-Maybe some improvement? I will make a change to the schedulers so that cosine annealing is only for the heads, as well as making the LSTM block deeper, and then leave it running overnight.
