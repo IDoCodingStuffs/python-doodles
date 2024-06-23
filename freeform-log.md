@@ -302,3 +302,7 @@ Looks better halfway through. I think part of the issue was ^6 is a bit too much
 That said I might need to figure a better loss function or fix some other issue with FocalLoss. It decreases alright, 
 but that decrease should show up as a perfect diagonal on the confusion matrix. Which it is not.
 
+### 1 PM
+Let me try with no Gaussian blur now. Maybe it gets stuck in minima without clear distinctions, identifies label 0s as 2s etc because of it.
+I can re-add augmentation later if it ends up overtraining.
+
