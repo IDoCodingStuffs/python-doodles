@@ -316,3 +316,4 @@ So back to efficientnet so that it can fit in memory, and let's see if a transfo
 
 ### 4 PM
 No, mem usage still blows up. It exceeds 24G. Same thing plagued me trying UNet too, just fitting the series into memory is a whole ordeal.
+I have to figure just wtf is going on. It has to be the way I pass in a series since I don't encounter this in batching per image, and even setting the transformer layer to identity reproes this.

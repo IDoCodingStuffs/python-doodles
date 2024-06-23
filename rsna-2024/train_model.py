@@ -126,11 +126,12 @@ class VIT_Model_25D(nn.Module):
         elif 'vit' in backbone:
             hdim = 546
             self.encoder.head.fc = nn.Identity()
-        self.spatial_encoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=hdim, nhead=8), num_layers=4)
+        # self.spatial_encoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=hdim, nhead=8), num_layers=4)
+        self.spatial_encoder = nn.Identity()
         self.head = NormMLPClassifierHead(self.num_classes)
 
     def forward(self, x):
-        feat = self.encoder(x.squeeze(0))
+        feat = self.encoder(x[0])
         feat = self.spatial_encoder(feat)
         feat = self.head(feat)
 

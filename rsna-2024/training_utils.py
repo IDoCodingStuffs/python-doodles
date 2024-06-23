@@ -98,7 +98,7 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
             # label = label.type(torch.LongTensor).to(device)
 
             for optimizer in optimizers:
-                optimizer.zero_grad()
+                optimizer.zero_grad(set_to_none=True)
 
             output = model(images.to(device))
 
@@ -106,7 +106,7 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
             # !TODO: Track separately
             for index, loss_fn in enumerate(loss_fns):
                 loss = loss_fn(output[:, index], label[:, index])
-                epoch_loss += loss.cpu().item()
+                epoch_loss += loss.detach().cpu().item()
                 loss.backward(retain_graph=True)
 
             for optimizer in optimizers:
