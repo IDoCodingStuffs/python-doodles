@@ -52,7 +52,7 @@ class TimmModel(nn.Module):
             hdim = self.encoder.head.fc.in_features
             self.encoder.head.fc = nn.Identity()
 
-        self.lstm = nn.LSTM(hdim, 256, num_layers=2, dropout=CONFIG["drop_rate"], bidirectional=True, batch_first=True)
+        self.lstm = nn.LSTM(hdim, 256, num_layers=4, dropout=CONFIG["drop_rate"], bidirectional=True, batch_first=True)
         self.heads = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(512, 256),
@@ -97,11 +97,11 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     optimizers.extend(head_optimizers)
 
     schedulers = [
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-6),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=1e-5),
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-5),
     ]
     schedulers.extend([
-        torch.optim.lr_scheduler.CosineAnnealingLR(head_optimizer, NUM_EPOCHS, eta_min=1e-4) for head_optimizer in
+        torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(head_optimizer, NUM_EPOCHS // 20, eta_min=1e-5) for head_optimizer in
         head_optimizers
     ])
 
