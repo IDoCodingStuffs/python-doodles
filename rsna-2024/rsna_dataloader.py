@@ -127,9 +127,9 @@ class SeriesLevelDataset(Dataset):
         self.dataframe = dataframe.groupby(['study_id', "series_id"]).filter(lambda x: len(x["level"].unique()) == 5)
         self.dataframe = (self.dataframe[['study_id', "series_id", "severity", "level"]]
                           .drop_duplicates())
-        self.transform = transform
+        self.series = self.dataframe[['study_id', "series_id"]].drop_duplicates().reset_index(drop=True)
 
-        self.series = dataframe[['study_id', "series_id"]].drop_duplicates().reset_index(drop=True)
+        self.transform = transform
 
 
         self.levels = sorted(self.dataframe["level"].unique())
@@ -275,7 +275,9 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                              num_workers=0):
     filtered_df = df[df['series_description'] == series_description]
 
-    train_df, val_df = train_test_split(filtered_df, test_size=split_factor, random_state=random_seed)
+    train_studies, val_studies = train_test_split(filtered_df["study_id"], test_size=split_factor, random_state=random_seed)
+    train_df = filtered_df[filtered_df["study_id"].isin(train_studies)]
+    val_df = filtered_df[filtered_df["study_id"].isin(val_studies)]
     train_df = train_df.reset_index(drop=True)
     val_df = val_df.reset_index(drop=True)
 
