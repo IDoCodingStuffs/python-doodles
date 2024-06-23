@@ -12,7 +12,8 @@ CONFIG = dict(
     load_last=True,
     n_folds=5,
     n_levels=5,
-    backbone="tiny_vit_21m_384",
+    # backbone="tiny_vit_21m_384",
+    backbone="tf_efficientnet_b3",
     img_size=(384, 384),
     n_slice_per_c=16,
     in_chans=1,
@@ -70,7 +71,8 @@ class CNN_LSTM_Model(nn.Module):
     def forward(self, x):
         feat = self.encoder(x.squeeze(0))
         feat, _ = self.lstm(feat)
-        return torch.mean(torch.stack([head(feat) for head in self.heads], dim=1), dim=0)
+        # !TODO: This is probably incorrect
+        return torch.mean(torch.stack([head(feat) for head in self.heads], dim=1), dim=0).unsqueeze(0)
 
 
 class VIT_Model(nn.Module):
@@ -96,10 +98,10 @@ class NormMLPClassifierHead(nn.Module):
 
         self.out_dim = out_dim
         self.head = nn.Sequential(
-            nn.LayerNorm(576, eps=1e-05, elementwise_affine=True),
+            nn.LayerNorm(1536, eps=1e-05, elementwise_affine=True),
             nn.Flatten(start_dim=1, end_dim=-1),
             nn.Dropout(p=0.0, inplace=False),
-            nn.Linear(in_features=576, out_features=15, bias=True),
+            nn.Linear(in_features=1536, out_features=15, bias=True),
         )
 
     def forward(self, x):
@@ -118,9 +120,14 @@ class VIT_Model_25D(nn.Module):
             drop_path_rate=CONFIG["drop_path_rate"],
             pretrained=pretrained
         )
-        self.image_encoder.head.fc = nn.Identity()
+        if 'efficient' in backbone:
+            hdim = self.image_encoder.conv_head.out_channels
+            self.image_encoder.classifier = nn.Identity()
+        elif 'vit' in backbone:
+            hdim = 546
+            self.image_encoder.head.fc = nn.Identity()
         self.spatial_encoder = nn.Sequential(
-            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=576, nhead=4), num_layers=2),
+            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=hdim, nhead=8), num_layers=4),
             NormMLPClassifierHead(self.num_classes)
         )
 
@@ -200,7 +207,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = CNN_LSTM_Model(backbone=CONFIG["backbone"]).to(device)
+    model = VIT_Model_25D(backbone=CONFIG["backbone"]).to(device)
     optimizers = [
         torch.optim.Adam(model.parameters(), lr=1e-4),
     ]
@@ -231,7 +238,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tiny_vit_21m_384_t2stir_lstm")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tf_efficientnet_b3_transformer_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 

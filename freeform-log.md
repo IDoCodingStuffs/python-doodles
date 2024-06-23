@@ -309,3 +309,7 @@ I can re-add augmentation later if it ends up overtraining.
 ### 2 PM
 Actually, let me try the 2.5D model approach again. I have definitely confirmed the backbone can learn, so now I can refine it by adding stuff.
 Chances are the per image model was having those weird precision issues due to the images on the distal ends.
+
+### 3 PM
+Now I can verify ViT absolutely can and does learn features per-image. Next will be confirming something that can learn per series.
+So back to efficientnet so that it can fit in memory, and let's see if a transformer mid layer will work.
