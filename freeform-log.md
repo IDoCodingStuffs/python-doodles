@@ -313,3 +313,6 @@ Chances are the per image model was having those weird precision issues due to t
 ### 3 PM
 Now I can verify ViT absolutely can and does learn features per-image. Next will be confirming something that can learn per series.
 So back to efficientnet so that it can fit in memory, and let's see if a transformer mid layer will work.
+
+### 4 PM
+No, mem usage still blows up. It exceeds 24G. Same thing plagued me trying UNet too, just fitting the series into memory is a whole ordeal.

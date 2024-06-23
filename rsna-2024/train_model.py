@@ -112,7 +112,7 @@ class VIT_Model_25D(nn.Module):
         super(VIT_Model_25D, self).__init__()
 
         self.num_classes = CONFIG["out_dim"] * CONFIG["n_levels"]
-        self.image_encoder = timm.create_model(
+        self.encoder = timm.create_model(
             backbone,
             num_classes=self.num_classes,
             features_only=False,
@@ -121,23 +121,22 @@ class VIT_Model_25D(nn.Module):
             pretrained=pretrained
         )
         if 'efficient' in backbone:
-            hdim = self.image_encoder.conv_head.out_channels
-            self.image_encoder.classifier = nn.Identity()
+            hdim = self.encoder.conv_head.out_channels
+            self.encoder.classifier = nn.Identity()
         elif 'vit' in backbone:
             hdim = 546
-            self.image_encoder.head.fc = nn.Identity()
-        self.spatial_encoder = nn.Sequential(
-            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=hdim, nhead=8), num_layers=4),
-            NormMLPClassifierHead(self.num_classes)
-        )
+            self.encoder.head.fc = nn.Identity()
+        self.spatial_encoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=hdim, nhead=8), num_layers=4)
+        self.head = NormMLPClassifierHead(self.num_classes)
 
     def forward(self, x):
-        image_feat = self.image_encoder(x.squeeze(0))
-        out = self.spatial_encoder(image_feat)
-        # !TODO: This is probably not right
-        out = torch.mean(out, dim=0)
-        out = out.reshape((-1, CONFIG["n_levels"], CONFIG["out_dim"]))
-        return out
+        feat = self.encoder(x.squeeze(0))
+        feat = self.spatial_encoder(feat)
+        feat = self.head(feat)
+
+        # !TODO: This is likely incorrect
+        return torch.mean(feat, dim=0).reshape((-1, CONFIG["n_levels"], CONFIG["out_dim"]))
+
 
 def train_model_for_series_per_image(data_subset_label: str, model_label: str):
     data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
@@ -201,7 +200,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                         base_path=os.path.join(
                                                                                             data_basepath,
                                                                                             "train_images"),
-                                                                                        num_workers=12,
+                                                                                        num_workers=0,
                                                                                         split_factor=0.1,
                                                                                         batch_size=1)
 
