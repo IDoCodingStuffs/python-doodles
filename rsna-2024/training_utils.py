@@ -105,62 +105,64 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
         # if epoch >= 10:
         #     unfreeze_model_backbone(model)
 
-        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
-                     profile_memory=True,
-                     record_shapes=True,
-                     schedule=torch.profiler.schedule(
-                         wait=5,
-                         warmup=2,
-                         active=6,
-                         repeat=5
-                     ),
-                     on_trace_ready=trace_handler,
-                     with_stack=True,
-                     ) as prof:
-            for images, label in tqdm(train_loader, desc=f"Epoch {epoch}"):
-                # !TODO: Do this in the data loader
-                label = label.to(device)
-                # label = label.type(torch.LongTensor).to(device)
+        # with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+        #              profile_memory=True,
+        #              record_shapes=True,
+        #              schedule=torch.profiler.schedule(
+        #                  wait=5,
+        #                  warmup=2,
+        #                  active=6,
+        #                  repeat=5
+        #              ),
+        #              on_trace_ready=trace_handler,
+        #              with_stack=True,
+        #              ) as prof:
+        for index, val in enumerate(tqdm(train_loader, desc=f"Epoch {epoch}")):
+            images, label = val
+            # !TODO: Do this in the data loader
+            label = label.to(device)
+            # label = label.type(torch.LongTensor).to(device)
 
-                for optimizer in optimizers:
-                    optimizer.zero_grad(set_to_none=True)
+            for optimizer in optimizers:
+                optimizer.zero_grad(set_to_none=True)
 
-                output = model(images.to(device))
+            output = model(images.to(device))
 
-                # !TODO: Refactor
-                # !TODO: Track separately
-                for index, loss_fn in enumerate(loss_fns):
-                    loss = loss_fn(output[:, index], label[:, index])
-                    epoch_loss += loss.detach().cpu().item()
-                    loss.backward(retain_graph=True)
-                    del loss
+            # !TODO: Refactor
+            # !TODO: Track separately
+            for index, loss_fn in enumerate(loss_fns):
+                loss = loss_fn(output[:, index], label[:, index])
+                epoch_loss += loss.detach().cpu().item()
+                loss.backward(retain_graph=True)
+                del loss
 
-                del output
+            del output
 
-                for optimizer in optimizers:
-                    optimizer.step()
+            for optimizer in optimizers:
+                optimizer.step()
 
-                prof.step()
+            #prof.step()
+            if index % 20 == 0:
                 torch.cuda.empty_cache()
 
-            epoch_loss = epoch_loss / len(train_loader)
-            epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns, epoch)
+        epoch_loss = epoch_loss / len(train_loader)
+        epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns, epoch)
 
-            for scheduler in schedulers:
-                scheduler.step()
+        for scheduler in schedulers:
+            scheduler.step()
 
 
-            if (epoch + 1) % 25 == 0 or ((epoch + 1) % 10 == 0 and (
-                    (not epoch_validation_losses) or epoch_validation_loss < min(epoch_validation_losses))):
-                os.makedirs(f'./models/{model_desc}', exist_ok=True)
-                torch.save(model, f'./models/{model_desc}/{model_desc}' + "_" + str(epoch) + ".pt")
+        if (epoch + 1) % 25 == 0 or ((epoch + 1) % 10 == 0 and (
+                (not epoch_validation_losses) or epoch_validation_loss < min(epoch_validation_losses))):
+            os.makedirs(f'./models/{model_desc}', exist_ok=True)
+            torch.save(model, f'./models/{model_desc}/{model_desc}' + "_" + str(epoch) + ".pt")
 
-            epoch_validation_losses.append(epoch_validation_loss)
-            epoch_losses.append(epoch_loss)
+        epoch_validation_losses.append(epoch_validation_loss)
+        epoch_losses.append(epoch_loss)
 
-            dump_plots_for_loss_and_acc(epoch_losses, epoch_validation_losses,
-                                        train_loader_desc, model_desc)
-            print(f"Training Loss for epoch {epoch}: {epoch_loss:.6f}")
-            print(f"Validation Loss for epoch {epoch}: {epoch_validation_loss:.6f}")
+        dump_plots_for_loss_and_acc(epoch_losses, epoch_validation_losses,
+                                    train_loader_desc, model_desc)
+        print(f"Training Loss for epoch {epoch}: {epoch_loss:.6f}")
+        print(f"Validation Loss for epoch {epoch}: {epoch_validation_loss:.6f}")
 
     return epoch_losses, epoch_validation_losses

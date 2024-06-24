@@ -346,3 +346,7 @@ Also, the validation set runs similarly slow at 1 seconds per iter. Effect of wh
 And also also, why the fuck is trainset 1898 samples and val is 782 despite a 0.1 split? Makes no sense.
 
 Time to add profiling.
+
+### 2 PM
+Profiling did not do much, but after adding a cache emptying call per training iteration, it is no longer exploding.
+But the downside is, I am getting bottlenecked by IO instead now. A lot of copy to GPU.
