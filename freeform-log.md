@@ -356,3 +356,6 @@ Sure, `empty_cache()` is just a band-aid but it still works... Until it stops wo
 Also the same effect from every 10...
 
 Guess I will just put up with it for now. One day I will figure it out.
+
+1.5it/s consistent up to 900 with the empty call
+2-5s/it right after the 30th without
