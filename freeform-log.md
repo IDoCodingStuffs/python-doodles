@@ -359,3 +359,8 @@ Guess I will just put up with it for now. One day I will figure it out.
 
 1.5it/s consistent up to 900 with the empty call
 2-5s/it right after the 30th without
+
+### 3 PM
+Added global average pooling to the head instead of naive mean. And re enabled layer normalization, if that will mean anything for just 38 features.
+Now it trains at 1 it/s and infers at 8 it/s, so I will leave it alone for a few hours to see what the loss will end up looking like. It is starting off good as of epoch 1.
+Probably not realistic to train it for 100 epochs on local though. I might need to rent an H100 eventually.
