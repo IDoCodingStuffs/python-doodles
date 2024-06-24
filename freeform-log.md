@@ -340,3 +340,9 @@ Next thing to see is if the loss actually goes down.
 
 Oh and the memory leak kicks in later with overflow into swap memory, which drops it to 1-2 seconds per iteration instead. So like a 4-6x perf loss.
 I definitely need to fix the root cause, learn how to profile.
+
+Towards the end some iterations take even more, up to like 30. But then following iterations run better.
+Also, the validation set runs similarly slow at 1 seconds per iter. Effect of which is, 25 minutes for training and 10 for validation per epoch.
+And also also, why the fuck is trainset 1898 samples and val is 782 despite a 0.1 split? Makes no sense.
+
+Time to add profiling.
