@@ -97,10 +97,11 @@ class NormMLPClassifierHead(nn.Module):
 
         self.out_dim = out_dim
         self.head = nn.Sequential(
+            nn.AvgPool2d(kernel_size=15),
             # nn.LayerNorm(576, eps=1e-05, elementwise_affine=True),
             nn.Flatten(start_dim=1, end_dim=-1),
             nn.Dropout(p=0.0, inplace=False),
-            nn.Linear(in_features=576, out_features=15, bias=True),
+            nn.Linear(in_features=38, out_features=15, bias=True),
         )
 
     def forward(self, x):
@@ -132,10 +133,10 @@ class VIT_Model_25D(nn.Module):
     def forward(self, x):
         feat = self.encoder(x.squeeze(0))
         feat = self.spatial_encoder(feat)
-        feat = self.head(feat)
+        feat = self.head(feat.unsqueeze(0))
 
         # !TODO: This is likely incorrect
-        return torch.mean(feat, dim=0).reshape((-1, CONFIG["n_levels"], CONFIG["out_dim"]))
+        return feat.reshape((-1, CONFIG["n_levels"], CONFIG["out_dim"]))
 
 
 def train_model_for_series_per_image(data_subset_label: str, model_label: str):
@@ -200,7 +201,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                         base_path=os.path.join(
                                                                                             data_basepath,
                                                                                             "train_images"),
-                                                                                        num_workers=12,
+                                                                                        num_workers=0,
                                                                                         split_factor=0.1,
                                                                                         batch_size=1)
 

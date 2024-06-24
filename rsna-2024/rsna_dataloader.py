@@ -35,7 +35,8 @@ class PerImageDataset(Dataset):
                             "severity": lambda x: ",".join(x)}))
 
         # !TODO: refactor and properly formulate
-        self.label["weight"] = [sum(2 ** np.argmax(self.label_as_tensor(e[0]).numpy(), axis=1)) + 1 for e in self.label["image_path"]]
+        self.label["weight"] = [sum(2 ** np.argmax(self.label_as_tensor(e[0]).numpy(), axis=1)) + 1 for e in
+                                self.label["image_path"]]
 
     def __len__(self):
         return len(self.label)
@@ -61,7 +62,6 @@ class PerImageDataset(Dataset):
         label = self._one_hot_encode_multihead(label)
 
         return torch.tensor(label).type(torch.FloatTensor)
-
 
     def _multi_hot_encode(self, label):
         ret = []
@@ -131,7 +131,6 @@ class SeriesLevelDataset(Dataset):
 
         self.transform = transform
 
-
         self.levels = sorted(self.dataframe["level"].unique())
         self.labels = dict()
         for name, group in self.dataframe.groupby(["study_id", "series_id"]):
@@ -147,7 +146,6 @@ class SeriesLevelDataset(Dataset):
                 curr = [0 if label != i else 1 for i in range(3)]
                 self.labels[name].append(curr)
 
-
     def __len__(self):
         return len(self.series)
 
@@ -157,11 +155,13 @@ class SeriesLevelDataset(Dataset):
         image_paths = sorted(image_paths, key=lambda x: self._get_image_index(x))
         label = np.array(self.labels[(curr["study_id"], curr["series_id"])])
 
+        # Pad to max 29
         images = np.array([self.transform(load_dicom(image_path)) if self.transform
                            else load_dicom(image_path) for image_path in image_paths])
+        front_buffer = 29 - len(images)
+        images = np.pad(images, ((front_buffer, 0), (0, 0), (0, 0), (0, 0)))
 
         return images, torch.tensor(label).type(torch.FloatTensor)
-
 
     def _get_image_index(self, image_path):
         return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
@@ -275,7 +275,8 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                              num_workers=0):
     filtered_df = df[df['series_description'] == series_description]
 
-    train_studies, val_studies = train_test_split(filtered_df["study_id"], test_size=split_factor, random_state=random_seed)
+    train_studies, val_studies = train_test_split(filtered_df["study_id"], test_size=split_factor,
+                                                  random_state=random_seed)
     train_df = filtered_df[filtered_df["study_id"].isin(train_studies)]
     val_df = filtered_df[filtered_df["study_id"].isin(val_studies)]
     train_df = train_df.reset_index(drop=True)
@@ -284,7 +285,6 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     random.seed(random_seed)
     train_dataset = SeriesLevelDataset(base_path, train_df, transform_train)
     val_dataset = SeriesLevelDataset(base_path, val_df, transform_val)
-
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
@@ -366,7 +366,8 @@ def create_datasets_and_loaders(df: pd.DataFrame,
                                 num_workers=0,
                                 batch_size=8):
     filtered_df = df[df['series_description'] == series_description]
-    train_series, val_series = train_test_split(filtered_df["series_id"], test_size=split_factor, random_state=random_seed)
+    train_series, val_series = train_test_split(filtered_df["series_id"], test_size=split_factor,
+                                                random_state=random_seed)
     train_df = filtered_df[filtered_df["series_id"].isin(train_series)].reset_index(drop=True)
     val_df = filtered_df[filtered_df["series_id"].isin(val_series)].reset_index(drop=True)
 
