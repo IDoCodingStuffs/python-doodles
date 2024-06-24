@@ -98,7 +98,7 @@ class NormMLPClassifierHead(nn.Module):
         self.out_dim = out_dim
         self.head = nn.Sequential(
             nn.AvgPool2d(kernel_size=15),
-            # nn.LayerNorm(576, eps=1e-05, elementwise_affine=True),
+            nn.LayerNorm(38, eps=1e-05, elementwise_affine=True),
             nn.Flatten(start_dim=1, end_dim=-1),
             nn.Dropout(p=0.0, inplace=False),
             nn.Linear(in_features=38, out_features=15, bias=True),
