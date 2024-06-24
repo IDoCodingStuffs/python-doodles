@@ -104,7 +104,7 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
         # if epoch >= 10:
         #     unfreeze_model_backbone(model)
 
-        with profile(activities=[ProfilerActivity.CUDA],
+        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
                      profile_memory=True,
                      record_shapes=True,
                      schedule=torch.profiler.schedule(
