@@ -68,6 +68,7 @@ def model_validation_loss(model, val_loader, loss_fns, epoch):
                 del loss
 
             del output
+            torch.cuda.empty_cache()
 
         total_loss = total_loss / len(val_loader)
 
@@ -84,7 +85,7 @@ def dump_plots_for_loss_and_acc(losses, val_losses, data_subset_label, model_lab
 
 
 def trace_handler(p):
-    output = p.key_averages().table(sort_by="self_cuda_time_total", row_limit=10)
+    output = p.key_averages().table(sort_by="self_cuda_memory_usage", row_limit=10)
     print(output)
     p.export_chrome_trace("./traces/trace_" + str(p.step_num) + ".json")
 
@@ -140,6 +141,7 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
                     optimizer.step()
 
                 prof.step()
+                torch.cuda.empty_cache()
 
             epoch_loss = epoch_loss / len(train_loader)
             epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns, epoch)
