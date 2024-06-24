@@ -337,3 +337,6 @@ No, it still keeps increasing. Back to the drawing board. Not to mention, the mo
 Let me track the iteration times to see how terrible it really is.
 Ok it starts with like 2-3 iterations per sec. So 10-20x longer than per image, which is actually reasonable.
 Next thing to see is if the loss actually goes down.
+
+Oh and the memory leak kicks in later with overflow into swap memory, which drops it to 1-2 seconds per iteration instead. So like a 4-6x perf loss.
+I definitely need to fix the root cause, learn how to profile.
