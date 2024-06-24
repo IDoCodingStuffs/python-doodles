@@ -12,8 +12,7 @@ CONFIG = dict(
     load_last=True,
     n_folds=5,
     n_levels=5,
-    # backbone="tiny_vit_21m_384",
-    backbone="tf_efficientnet_b3",
+    backbone="tiny_vit_21m_384",
     img_size=(384, 384),
     n_slice_per_c=16,
     in_chans=1,
@@ -98,10 +97,10 @@ class NormMLPClassifierHead(nn.Module):
 
         self.out_dim = out_dim
         self.head = nn.Sequential(
-            nn.LayerNorm(1536, eps=1e-05, elementwise_affine=True),
+            nn.LayerNorm( 576, eps=1e-05, elementwise_affine=True),
             nn.Flatten(start_dim=1, end_dim=-1),
             nn.Dropout(p=0.0, inplace=False),
-            nn.Linear(in_features=1536, out_features=15, bias=True),
+            nn.Linear(in_features=576, out_features=15, bias=True),
         )
 
     def forward(self, x):
@@ -124,14 +123,13 @@ class VIT_Model_25D(nn.Module):
             hdim = self.encoder.conv_head.out_channels
             self.encoder.classifier = nn.Identity()
         elif 'vit' in backbone:
-            hdim = 546
+            hdim = 576
             self.encoder.head.fc = nn.Identity()
-        # self.spatial_encoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=hdim, nhead=8), num_layers=4)
-        self.spatial_encoder = nn.Identity()
+        self.spatial_encoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=hdim, nhead=8), num_layers=4)
         self.head = NormMLPClassifierHead(self.num_classes)
 
     def forward(self, x):
-        feat = self.encoder(x[0])
+        feat = self.encoder(x.squeeze(0))
         feat = self.spatial_encoder(feat)
         feat = self.head(feat)
 
@@ -238,7 +236,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tf_efficientnet_b3_transformer_t2stir")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tiny_vit_21m_384_transformer_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 

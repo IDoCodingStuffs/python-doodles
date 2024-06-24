@@ -319,3 +319,8 @@ No, mem usage still blows up. It exceeds 24G. Same thing plagued me trying UNet 
 I have to figure just wtf is going on. It has to be the way I pass in a series since I don't encounter this in batching per image, and even setting the transformer layer to identity reproes this.
 
 It's not the number of images passed either -- just `model(images[0:2].to(device))` still reproes also. Break time, I have a midterm to submit tonight after all.
+
+## 6/24
+### 9 AM
+Managed to submit midterm 1 hour before it was due, at 3 AM. Meanwhile found some 7 year old discussion suggesting to call
+`del loss` and `del output` to avoid some Python scoping shenanigans. Seems to be working.

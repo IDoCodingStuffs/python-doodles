@@ -51,21 +51,26 @@ def unfreeze_model_backbone(model: nn.Module):
 
 
 def model_validation_loss(model, val_loader, loss_fns):
-    model.eval()
     total_loss = 0
 
-    for images, label in val_loader:
-        # !TODO: Do this in the data loader
-        label = label.to(device)
+    with torch.no_grad():
+        model.eval()
 
-        output = model(images.to(device))
-        for index, loss_fn in enumerate(loss_fns):
-            loss = loss_fn(output[:, index], label[:, index])
-            total_loss += loss.cpu().item()
+        for images, label in val_loader:
+            # !TODO: Do this in the data loader
+            label = label.to(device)
 
-    total_loss = total_loss / len(val_loader)
+            output = model(images.to(device))
+            for index, loss_fn in enumerate(loss_fns):
+                loss = loss_fn(output[:, index], label[:, index])
+                total_loss += loss.cpu().item()
+                del loss
 
-    return total_loss
+            del output
+
+        total_loss = total_loss / len(val_loader)
+
+        return total_loss
 
 
 def dump_plots_for_loss_and_acc(losses, val_losses, data_subset_label, model_label):
@@ -108,12 +113,14 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
                 loss = loss_fn(output[:, index], label[:, index])
                 epoch_loss += loss.detach().cpu().item()
                 loss.backward(retain_graph=True)
+                del loss
+
+            del output
 
             for optimizer in optimizers:
                 optimizer.step()
 
         epoch_loss = epoch_loss / len(train_loader)
-
         epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns)
 
         for scheduler in schedulers:
