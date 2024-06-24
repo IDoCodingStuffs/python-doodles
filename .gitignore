@@ -3,10 +3,12 @@ catboost_info
 .ipynb_checkpoints
 .pytest_cache
 **/.ipynb_checkpoints
-submission.csv
 data
 models
 __pycache__
 .idea
 figures
+traces
+
+submission.csv
 foo.py

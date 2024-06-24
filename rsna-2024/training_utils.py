@@ -86,7 +86,7 @@ def dump_plots_for_loss_and_acc(losses, val_losses, data_subset_label, model_lab
 def trace_handler(p):
     output = p.key_averages().table(sort_by="self_cuda_time_total", row_limit=10)
     print(output)
-    p.export_chrome_trace("/tmp/trace_" + str(p.step_num) + ".json")
+    p.export_chrome_trace("./traces/trace_" + str(p.step_num) + ".json")
 
 
 def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_loader, val_loader,
