@@ -104,14 +104,17 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
         # if epoch >= 10:
         #     unfreeze_model_backbone(model)
 
-        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+        with profile(activities=[ProfilerActivity.CUDA],
                      profile_memory=True,
                      record_shapes=True,
                      schedule=torch.profiler.schedule(
-                         wait=100,
-                         warmup=100,
-                         active=20),
-                     on_trace_ready=trace_handler
+                         wait=5,
+                         warmup=2,
+                         active=6,
+                         repeat=5
+                     ),
+                     on_trace_ready=trace_handler,
+                     with_stack=True,
                      ) as prof:
             for images, label in tqdm(train_loader, desc=f"Epoch {epoch}"):
                 # !TODO: Do this in the data loader
@@ -136,11 +139,14 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
                 for optimizer in optimizers:
                     optimizer.step()
 
+                prof.step()
+
             epoch_loss = epoch_loss / len(train_loader)
             epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns, epoch)
 
             for scheduler in schedulers:
                 scheduler.step()
+
 
             if (epoch + 1) % 25 == 0 or ((epoch + 1) % 10 == 0 and (
                     (not epoch_validation_losses) or epoch_validation_loss < min(epoch_validation_losses))):
