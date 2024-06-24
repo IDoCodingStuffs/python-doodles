@@ -350,3 +350,9 @@ Time to add profiling.
 ### 2 PM
 Profiling did not do much, but after adding a cache emptying call per training iteration, it is no longer exploding.
 But the downside is, I am getting bottlenecked by IO instead now. A lot of copy to GPU.
+
+And when I finally make the purge happen only every 20 iterations, things start looking much better.
+Sure, `empty_cache()` is just a band-aid but it still works... Until it stops working, around 220th iteration.
+Also the same effect from every 10...
+
+Guess I will just put up with it for now. One day I will figure it out.
