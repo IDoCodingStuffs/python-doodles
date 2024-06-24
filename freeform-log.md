@@ -324,3 +324,16 @@ It's not the number of images passed either -- just `model(images[0:2].to(device
 ### 9 AM
 Managed to submit midterm 1 hour before it was due, at 3 AM. Meanwhile found some 7 year old discussion suggesting to call
 `del loss` and `del output` to avoid some Python scoping shenanigans. Seems to be working.
+
+Well it still goes over 24Gs so something is still fucky. But it stays stable at least.
+
+### 10 AM
+Swapping the spatial component with an identity did not work. Disabling layer norm keeps it stable for longer.
+Although it still increases, at least is below 24G for now. Let's see if it will stay that way, and what epoch times will be like.
+
+No, it still keeps increasing. Back to the drawing board. Not to mention, the model is taking forever in an epoch.
+
+### 11 AM
+Let me track the iteration times to see how terrible it really is.
+Ok it starts with like 2-3 iterations per sec. So 10-20x longer than per image, which is actually reasonable.
+Next thing to see is if the loss actually goes down.

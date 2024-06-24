@@ -97,7 +97,7 @@ class NormMLPClassifierHead(nn.Module):
 
         self.out_dim = out_dim
         self.head = nn.Sequential(
-            nn.LayerNorm( 576, eps=1e-05, elementwise_affine=True),
+            # nn.LayerNorm(576, eps=1e-05, elementwise_affine=True),
             nn.Flatten(start_dim=1, end_dim=-1),
             nn.Dropout(p=0.0, inplace=False),
             nn.Linear(in_features=576, out_features=15, bias=True),
@@ -125,7 +125,8 @@ class VIT_Model_25D(nn.Module):
         elif 'vit' in backbone:
             hdim = 576
             self.encoder.head.fc = nn.Identity()
-        self.spatial_encoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=hdim, nhead=8), num_layers=4)
+        # self.spatial_encoder = nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=hdim, nhead=8), num_layers=2)
+        self.spatial_encoder = nn.Identity()
         self.head = NormMLPClassifierHead(self.num_classes)
 
     def forward(self, x):
@@ -199,7 +200,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                         base_path=os.path.join(
                                                                                             data_basepath,
                                                                                             "train_images"),
-                                                                                        num_workers=0,
+                                                                                        num_workers=12,
                                                                                         split_factor=0.1,
                                                                                         batch_size=1)
 

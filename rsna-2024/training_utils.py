@@ -50,13 +50,13 @@ def unfreeze_model_backbone(model: nn.Module):
         param.requires_grad = True
 
 
-def model_validation_loss(model, val_loader, loss_fns):
+def model_validation_loss(model, val_loader, loss_fns, epoch):
     total_loss = 0
 
     with torch.no_grad():
         model.eval()
 
-        for images, label in val_loader:
+        for images, label in tqdm(val_loader, desc=f"Validating epoch {epoch}"):
             # !TODO: Do this in the data loader
             label = label.to(device)
 
@@ -97,7 +97,7 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
         # if epoch >= 10:
         #     unfreeze_model_backbone(model)
 
-        for images, label in train_loader:
+        for images, label in tqdm(train_loader, desc=f"Epoch {epoch}"):
             # !TODO: Do this in the data loader
             label = label.to(device)
             # label = label.type(torch.LongTensor).to(device)
@@ -121,7 +121,7 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
                 optimizer.step()
 
         epoch_loss = epoch_loss / len(train_loader)
-        epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns)
+        epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns, epoch)
 
         for scheduler in schedulers:
             scheduler.step()
