@@ -405,3 +405,4 @@ Not training, how about without the transformers? Should start fitting in theory
 
 ### 9 AM
 Moved the avg pooling to after the transformer encoder call. Let's see if it trains now.
+Actually nevermind that, I will try the BERT trick and also realized I was doing the padding wrong, so fixed that.
