@@ -97,11 +97,10 @@ class NormMLPClassifierHead(nn.Module):
 
         self.out_dim = out_dim
         self.head = nn.Sequential(
-            nn.AvgPool2d(kernel_size=15),
-            nn.LayerNorm(19, eps=1e-05, elementwise_affine=True),
+            nn.LayerNorm(512, eps=1e-05, elementwise_affine=True),
             nn.Flatten(start_dim=1, end_dim=-1),
             nn.Dropout(p=0.0, inplace=False),
-            nn.Linear(in_features=19, out_features=15, bias=True),
+            nn.Linear(in_features=512, out_features=15, bias=True),
         )
 
     def forward(self, x):
@@ -128,8 +127,8 @@ class VIT_Model_25D(nn.Module):
             self.encoder.head.fc = nn.Identity()
         self.spatial_encoder = nn.Sequential(
             # !TODO: Need to figure this one
-            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
-            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=288, nhead=8), num_layers=2)
+            nn.AdaptiveAvgPool2d(output_size=(1, 512)),
+            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=512, nhead=8), num_layers=2)
         )
         self.head = NormMLPClassifierHead(self.num_classes)
 

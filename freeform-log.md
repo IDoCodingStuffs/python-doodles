@@ -371,3 +371,9 @@ But as a start, I wonder if it can learn to ignore the front 0-padding for examp
 
 ### 6 PM
 Nah the loss decrease is way too slow. I need to add some spatial learning layer in addition, and do some sort of pooling at the head of it.
+
+### 7 PM
+It's even worse that way. Let me try adaptive pooling and remove the pooling from the head. So the temporal layer only gets some 512-dim vector, 
+and then I can run the transformer layer on it plus the head.
+
+To speed up experiment speed, I will also use a tiny portion of the data to see if it can overfit.
