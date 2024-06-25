@@ -416,3 +416,4 @@ Next iteration, I will try removing the padding since these are transformers aft
 ## 1 PM
 So the softmax + bert trick + padding leads to model just not learning at all. To rectify, I will try removing padding first.
 I think the problem was softmax actually so gonna remove that too.
+Oh and it's sorta faster without the padding as a bonus. About 1.8 it/s
