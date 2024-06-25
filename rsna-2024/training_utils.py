@@ -142,7 +142,7 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
                 optimizer.step()
 
             #prof.step()
-            if index % 10 == 0:
+            if index % 20 == 0:
                 torch.cuda.empty_cache()
 
         epoch_loss = epoch_loss / len(train_loader)
