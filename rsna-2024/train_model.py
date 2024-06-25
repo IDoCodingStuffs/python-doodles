@@ -126,7 +126,7 @@ class VIT_Model_25D(nn.Module):
             self.encoder.head.fc = nn.Identity()
         self.attention_layer = nn.Sequential(
             # !TODO: Need to figure this one out
-            nn.LayerNorm(576, eps=1e-05, elementwise_affine=True),
+            nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True),
             nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
             nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=576, nhead=8), num_layers=2),
         )
