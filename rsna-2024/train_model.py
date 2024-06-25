@@ -127,7 +127,7 @@ class VIT_Model_25D(nn.Module):
             self.encoder.head.fc = nn.Identity()
         self.spatial_encoder = nn.Sequential(
             # !TODO: Need to figure this one
-            nn.AdaptiveAvgPool2d(output_size=(1, 512)),
+            nn.AdaptiveMaxPool2d(output_size=(1, 512)),
             nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=512, nhead=8), num_layers=2)
         )
         self.head = NormMLPClassifierHead(self.num_classes)
