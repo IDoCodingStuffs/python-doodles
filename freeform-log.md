@@ -381,3 +381,6 @@ To speed up experiment speed, I will also use a tiny portion of the data to see 
 The answer is yes, it does. Which means the real training data will actually lead to food results, even if it takes forever to train.
 Oh and I should probably make adaptive pooling use max. With the padding and all.
 Speaking of, let me try using equal padding on each side vs padding only on front. Probably going to work out better with max pooling too.
+
+### 8 PM
+It's definitely looking promising. Next, let me add some layer norm right after the max pool into the attention block and see how that affects things.

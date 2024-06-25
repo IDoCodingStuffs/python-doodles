@@ -125,16 +125,17 @@ class VIT_Model_25D(nn.Module):
         elif 'vit' in backbone:
             hdim = 576
             self.encoder.head.fc = nn.Identity()
-        self.spatial_encoder = nn.Sequential(
+        self.attention_layer = nn.Sequential(
             # !TODO: Need to figure this one
             nn.AdaptiveMaxPool2d(output_size=(1, 512)),
-            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=512, nhead=8), num_layers=2)
+            nn.LayerNorm(512, eps=1e-05, elementwise_affine=True),
+            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=512, nhead=8), num_layers=2),
         )
         self.head = NormMLPClassifierHead(self.num_classes)
 
     def forward(self, x):
         feat = self.encoder(x.squeeze(0))
-        feat = self.spatial_encoder(feat.unsqueeze(0))
+        feat = self.attention_layer(feat.unsqueeze(0))
         feat = self.head(feat)
 
         # !TODO: This is likely incorrect
