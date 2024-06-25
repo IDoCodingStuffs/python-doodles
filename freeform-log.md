@@ -409,3 +409,6 @@ Actually nevermind that, I will try the BERT trick and also realized I was doing
 
 ### 10 AM
 I have been missing the final softmax all along lmfao. No wonder the loss was fluctuating so much.
+
+### 11 AM
+Next iteration, I will try removing the padding since these are transformers after all. And maybe remove the intermediate encoder layer while at it, just pass directly to head.
