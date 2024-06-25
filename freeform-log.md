@@ -377,3 +377,5 @@ It's even worse that way. Let me try adaptive pooling and remove the pooling fro
 and then I can run the transformer layer on it plus the head.
 
 To speed up experiment speed, I will also use a tiny portion of the data to see if it can overfit.
+
+The answer is yes, it does. Which means the real training data will actually lead to food results, even if it takes forever to train.
