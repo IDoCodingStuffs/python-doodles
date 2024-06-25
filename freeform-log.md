@@ -384,3 +384,11 @@ Speaking of, let me try using equal padding on each side vs padding only on fron
 
 ### 8 PM
 It's definitely looking promising. Next, let me add some layer norm right after the max pool into the attention block and see how that affects things.
+
+### 9 PM
+At some point, I can look into accumulated gradients. Loss fluctuates the first few epochs I bother checking, but then my batch size is just 1.
+
+### 10 PM
+So it just fluctuates between 0.18 and 0.23 training loss per iter. Next, what if I remove the transformer blocks?
+Not much difference. I'll have it run overnight with the transformer block, then remove them and run without next.
+After that, I can also try stuff like LSTM or RNNs too.
