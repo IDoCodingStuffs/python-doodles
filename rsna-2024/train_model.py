@@ -128,14 +128,14 @@ class VIT_Model_25D(nn.Module):
             nn.LayerNorm(576, eps=1e-05, elementwise_affine=True),
             nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
             nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=576, nhead=8), num_layers=2),
-            nn.AdaptiveAvgPool2d(output_size=(1, 576)),
         )
         self.head = NormMLPClassifierHead(self.num_classes)
 
     def forward(self, x):
         feat = self.encoder(x.squeeze(0))
         feat = self.attention_layer(feat.unsqueeze(0))
-        feat = self.head(feat)
+        # BERT-like approach
+        feat = self.head(feat[:, 0])
 
         # !TODO: This is likely incorrect
         return feat.reshape((-1, CONFIG["n_levels"], CONFIG["out_dim"]))
@@ -203,7 +203,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                         base_path=os.path.join(
                                                                                             data_basepath,
                                                                                             "train_images"),
-                                                                                        num_workers=12,
+                                                                                        num_workers=0,
                                                                                         split_factor=0.1,
                                                                                         batch_size=1)
 
