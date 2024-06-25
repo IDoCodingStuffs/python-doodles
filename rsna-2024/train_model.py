@@ -95,10 +95,10 @@ class NormMLPClassifierHead(nn.Module):
 
         self.out_dim = out_dim
         self.head = nn.Sequential(
-            nn.LayerNorm(512, eps=1e-05, elementwise_affine=True),
+            nn.LayerNorm(576, eps=1e-05, elementwise_affine=True),
             nn.Flatten(start_dim=1, end_dim=-1),
             nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
-            nn.Linear(in_features=512, out_features=15, bias=True),
+            nn.Linear(in_features=576, out_features=15, bias=True),
         )
 
     def forward(self, x):
@@ -124,11 +124,11 @@ class VIT_Model_25D(nn.Module):
             hdim = 576
             self.encoder.head.fc = nn.Identity()
         self.attention_layer = nn.Sequential(
-            # !TODO: Need to figure this one
-            nn.AdaptiveMaxPool2d(output_size=(1, 512)),
-            nn.LayerNorm(512, eps=1e-05, elementwise_affine=True),
+            # !TODO: Need to figure this one out
+            nn.LayerNorm(576, eps=1e-05, elementwise_affine=True),
             nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
-            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=512, nhead=8), num_layers=2),
+            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=576, nhead=8), num_layers=2),
+            nn.AdaptiveAvgPool2d(output_size=(1, 576)),
         )
         self.head = NormMLPClassifierHead(self.num_classes)
 
@@ -161,7 +161,7 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
     # model = CNN_LSTM_Model(backbone=CONFIG["backbone"]).to(device)
     model = VIT_Model(backbone=CONFIG["backbone"]).to(device)
     optimizers = [
-        torch.optim.Adam(model.encoder.parameters(), lr=1e-4),
+        torch.optim.Adam(model.encoder.parameters(), lr=1e-3),
     ]
 
     schedulers = [

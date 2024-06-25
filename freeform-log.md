@@ -396,5 +396,12 @@ After that, I can also try stuff like LSTM or RNNs too.
 
 By the way, purging cache once every 10 iters vs 1 gets me from 1.05 s/it to 1.3it/s. Pretty neat.
 
-## 1 AM
+## 6/25
+### 1 AM
 Let me add dropout too, why not. I want to see how well this thing trains by the morning. Should be like 12 epochs by then.
+
+### 6 AM
+Not training, how about without the transformers? Should start fitting in theory.
+
+### 9 AM
+Moved the avg pooling to after the transformer encoder call. Let's see if it trains now.
