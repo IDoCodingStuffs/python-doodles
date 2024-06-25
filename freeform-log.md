@@ -389,6 +389,12 @@ It's definitely looking promising. Next, let me add some layer norm right after 
 At some point, I can look into accumulated gradients. Loss fluctuates the first few epochs I bother checking, but then my batch size is just 1.
 
 ### 10 PM
-So it just fluctuates between 0.18 and 0.23 training loss per iter. Next, what if I remove the transformer blocks?
+So it just fluctuates between 0.18 and 0.23 training loss per iter so the tiny data overfit won't tell me much more. 
+Next, what if I remove the transformer blocks?
 Not much difference. I'll have it run overnight with the transformer block, then remove them and run without next.
 After that, I can also try stuff like LSTM or RNNs too.
+
+By the way, purging cache once every 10 iters vs 1 gets me from 1.05 s/it to 1.3it/s. Pretty neat.
+
+## 1 AM
+Let me add dropout too, why not. I want to see how well this thing trains by the morning. Should be like 12 epochs by then.

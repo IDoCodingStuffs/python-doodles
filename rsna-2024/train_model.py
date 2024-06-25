@@ -16,14 +16,12 @@ CONFIG = dict(
     img_size=(384, 384),
     n_slice_per_c=16,
     in_chans=1,
-
-    drop_rate=0.,
+    drop_rate=0.1,
     drop_rate_last=0.3,
     drop_path_rate=0.,
     p_mixup=0.5,
     p_rand_order_v1=0.2,
     lr=1e-3,
-
     out_dim=3,
     epochs=200,
     batch_size=8,
@@ -99,7 +97,7 @@ class NormMLPClassifierHead(nn.Module):
         self.head = nn.Sequential(
             nn.LayerNorm(512, eps=1e-05, elementwise_affine=True),
             nn.Flatten(start_dim=1, end_dim=-1),
-            nn.Dropout(p=0.0, inplace=False),
+            nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
             nn.Linear(in_features=512, out_features=15, bias=True),
         )
 
@@ -129,6 +127,7 @@ class VIT_Model_25D(nn.Module):
             # !TODO: Need to figure this one
             nn.AdaptiveMaxPool2d(output_size=(1, 512)),
             nn.LayerNorm(512, eps=1e-05, elementwise_affine=True),
+            nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
             nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=512, nhead=8), num_layers=2),
         )
         self.head = NormMLPClassifierHead(self.num_classes)
