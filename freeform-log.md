@@ -364,3 +364,10 @@ Guess I will just put up with it for now. One day I will figure it out.
 Added global average pooling to the head instead of naive mean. And re enabled layer normalization, if that will mean anything for just 38 features.
 Now it trains at 1 it/s and infers at 8 it/s, so I will leave it alone for a few hours to see what the loss will end up looking like. It is starting off good as of epoch 1.
 Probably not realistic to train it for 100 epochs on local though. I might need to rent an H100 eventually.
+
+### 4 PM
+I wonder if ViT can actually classify these only with some average pooling. I will probably need to get more elaborate with what I do with the image embeddings and use something more sophisticated.
+But as a start, I wonder if it can learn to ignore the front 0-padding for example.
+
+### 6 PM
+Nah the loss decrease is way too slow. I need to add some spatial learning layer in addition, and do some sort of pooling at the head of it.
