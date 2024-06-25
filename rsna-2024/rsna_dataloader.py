@@ -158,8 +158,11 @@ class SeriesLevelDataset(Dataset):
         # Pad to max 29
         images = np.array([self.transform(load_dicom(image_path)) if self.transform
                            else load_dicom(image_path) for image_path in image_paths])
-        front_buffer = 29 - len(images)
-        images = np.pad(images, ((front_buffer, 0), (0, 0), (0, 0), (0, 0)))
+
+        front_buffer = (29 - len(images)) // 2
+        rear_buffer = (29 - len(images)) // 2 + (len(images) % 2)
+
+        images = np.pad(images, ((front_buffer, rear_buffer), (0, 0), (0, 0), (0, 0)))
 
         return images, torch.tensor(label).type(torch.FloatTensor)
 
