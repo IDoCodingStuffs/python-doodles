@@ -61,7 +61,7 @@ class CNN_LSTM_Model(nn.Module):
                 nn.Dropout(CONFIG["drop_rate_last"]),
                 nn.LeakyReLU(0.1),
                 nn.Linear(256, CONFIG["out_dim"]),
-                nn.Softmax(),
+                # nn.Softmax(),
             )
             for i in range(CONFIG["n_levels"])])
 
@@ -96,10 +96,10 @@ class NormMLPClassifierHead(nn.Module):
         self.out_dim = out_dim
         self.head = nn.Sequential(
             nn.LayerNorm(576, eps=1e-05, elementwise_affine=True),
-            nn.Flatten(start_dim=1, end_dim=-1),
+            # nn.Flatten(start_dim=1, end_dim=-1),
             nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
             nn.Linear(in_features=576, out_features=15, bias=True),
-            nn.Softmax()
+            # nn.Softmax()
         )
 
     def forward(self, x):
@@ -213,8 +213,8 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     model = VIT_Model_25D(backbone=CONFIG["backbone"]).to(device)
     optimizers = [
         torch.optim.Adam(model.encoder.parameters(), lr=1e-4),
-        torch.optim.Adam(model.attention_layer.parameters(), lr=1e-3),
-        torch.optim.Adam(model.head.parameters(), lr=1e-3),
+        torch.optim.Adam(model.attention_layer.parameters(), lr=5e-4),
+        torch.optim.Adam(model.head.parameters(), lr=1e-4),
     ]
 
     schedulers = [

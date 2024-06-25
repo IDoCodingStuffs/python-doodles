@@ -412,3 +412,7 @@ I have been missing the final softmax all along lmfao. No wonder the loss was fl
 
 ### 11 AM
 Next iteration, I will try removing the padding since these are transformers after all. And maybe remove the intermediate encoder layer while at it, just pass directly to head.
+
+## 1 PM
+So the softmax + bert trick + padding leads to model just not learning at all. To rectify, I will try removing padding first.
+I think the problem was softmax actually so gonna remove that too.
