@@ -99,6 +99,7 @@ class NormMLPClassifierHead(nn.Module):
             nn.Flatten(start_dim=1, end_dim=-1),
             nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
             nn.Linear(in_features=576, out_features=15, bias=True),
+            nn.Softmax()
         )
 
     def forward(self, x):
