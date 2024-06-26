@@ -1,9 +1,12 @@
 import timm
+import torchvision
 
 from training_utils import *
 from rsna_dataloader import *
 
 _logger = logging.getLogger(__name__)
+torchvision.disable_beta_transforms_warning()
+
 
 CONFIG = dict(
     project_name="PL-RSNA-2024-Lumbar-Spine-Classification",
