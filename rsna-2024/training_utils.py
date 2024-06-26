@@ -1,3 +1,4 @@
+import os.path
 import time
 
 import matplotlib.pyplot as plt
@@ -147,6 +148,10 @@ def train_model_with_validation(model,
             # prof.step()
             if index % 12 == 0:
                 torch.cuda.empty_cache()
+
+                # !TODO: Refactor
+                while os.path.exists(".pause"):
+                    pass
 
         epoch_loss = epoch_loss / len(train_loader)
         epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns, epoch)
