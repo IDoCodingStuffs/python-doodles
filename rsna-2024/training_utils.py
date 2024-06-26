@@ -132,7 +132,7 @@ def train_model_with_validation(model,
             for loss_index, loss_fn in enumerate(loss_fns):
                 # !TODO: Final batch scaling
                 loss = loss_fn(output[:, loss_index], label[:, loss_index]) / gradient_accumulation_per
-                epoch_loss += loss.detach().cpu().item()
+                epoch_loss += loss.detach().cpu().item() * gradient_accumulation_per
                 loss.backward(retain_graph=True)
                 del loss
 

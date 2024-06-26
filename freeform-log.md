@@ -439,3 +439,10 @@ Also, note to future self for the next thing to do once the model starts trainin
 
 ### 1 AM
 I noticed it has hiccups every few hundred iters or so. Might be worth fixing since it takes epoch time from 19 mins to 27.
+
+### 2 AM
+I just realized I misread the previous iteration's results and saw ` 0.040` as `0.4` lol. I cranked down loss alpha as a consequence.
+But if it does not perform better this time, I will crank it back up.
+
+Or wait, nvm that nvm. it's due to the normalizing division, so equivalen to `0.32`, and I will likely not know if it is behaving better until this morning.
+I should get some sleep.
