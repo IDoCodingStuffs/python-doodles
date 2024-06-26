@@ -464,3 +464,14 @@ https://medium.com/@abdallahashraf90x/oversampling-for-better-machine-learning-w
 https://www.tensorflow.org/tutorials/structured_data/imbalanced_data
 
 If naive oversampling seems to help the model start learning, I can get more elaborate with these approaches next.
+
+### 11 AM
+Keras-style metrics can be another thing to add to get a far better picture of training performance
+Another thing can be undersampling mild/moderates rather than oversampling the other way around, at first.
+Which can help extract features more quickly.
+Also, I should start reserving a test set in case I start overfitting val further down the road.
+
+Oh, training pause-resume by file. I put in some `.pause `file and it pauses if that file is seen. That way I can run metrics on the side.
+
+### 12 PM
+Another agenda item is adding competition scoring metrics. It will help provide a more solid "final score" after the standard metrics start looking promising"
