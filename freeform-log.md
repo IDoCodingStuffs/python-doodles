@@ -444,5 +444,8 @@ I noticed it has hiccups every few hundred iters or so. Might be worth fixing si
 I just realized I misread the previous iteration's results and saw ` 0.040` as `0.4` lol. I cranked down loss alpha as a consequence.
 But if it does not perform better this time, I will crank it back up.
 
-Or wait, nvm that nvm. it's due to the normalizing division, so equivalen to `0.32`, and I will likely not know if it is behaving better until this morning.
+Or wait, nvm that nvm. it's due to the normalizing division, so equivalent to `0.32`, and I will likely not know if it is behaving better until this morning.
 I should get some sleep.
+
+At least reducing the no of iterations per gradient step helped. `23` mins per epoch with `6` vs `30` per with `8`.
+Might end up slower to converge but hopefully not going to get stuck in that minima.
