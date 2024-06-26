@@ -433,4 +433,4 @@ So some things to try next:
 - Figure how to batch the input, or alternatively use gradient accumulation (second option is lazier)
 - Add some image augments. Start with reintroducing Gaussian blur, then flips and then rotations etc.
 
-Starting with grad acc first. Let's do Gaussian blur too, why not.
+Starting with grad acc first. Let's do Gaussian blur too, why not. Also cranked up alpha and gamma.
