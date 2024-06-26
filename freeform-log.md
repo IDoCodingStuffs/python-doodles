@@ -457,3 +457,10 @@ That way I can avoid it learning to predict everything as mild.
 
 ### 8 AM
 No, still gets stuck. Time to retry the more aggressive focal loss trick.
+
+### 10 AM
+Here are some links of interest to get more elaborate with data preprocess:
+https://medium.com/@abdallahashraf90x/oversampling-for-better-machine-learning-with-imbalanced-data-68f9b5ac2696
+https://www.tensorflow.org/tutorials/structured_data/imbalanced_data
+
+If naive oversampling seems to help the model start learning, I can get more elaborate with these approaches next.
