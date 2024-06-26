@@ -227,11 +227,11 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     ]
 
     criteria = [
-        FocalLoss(alpha=0.2).to(device),
-        FocalLoss(alpha=0.2).to(device),
-        FocalLoss(alpha=0.2).to(device),
-        FocalLoss(alpha=0.2).to(device),
-        FocalLoss(alpha=0.2).to(device),
+        FocalLoss(alpha=0.3, gamma=3).to(device),
+        FocalLoss(alpha=0.3, gamma=3).to(device),
+        FocalLoss(alpha=0.3, gamma=3).to(device),
+        FocalLoss(alpha=0.3, gamma=3).to(device),
+        FocalLoss(alpha=0.3, gamma=3).to(device),
     ]
 
     train_model_with_validation(model,

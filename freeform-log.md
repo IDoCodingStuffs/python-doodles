@@ -449,3 +449,11 @@ I should get some sleep.
 
 At least reducing the no of iterations per gradient step helped. `23` mins per epoch with `6` vs `30` per with `8`.
 Might end up slower to converge but hopefully not going to get stuck in that minima.
+
+I guess it is even better, more like just `18` when I am not using the machine to multitask. Maybe I should get a dual GPU setup...
+
+I will probably need to re-introduce oversampling also. To ensure there are some moderate and severe cases every gradient update batch.
+That way I can avoid it learning to predict everything as mild.
+
+### 8 AM
+No, still gets stuck. Time to retry the more aggressive focal loss trick.

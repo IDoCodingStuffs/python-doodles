@@ -133,6 +133,7 @@ class SeriesLevelDataset(Dataset):
 
         self.levels = sorted(self.dataframe["level"].unique())
         self.labels = dict()
+
         for name, group in self.dataframe.groupby(["study_id", "series_id"]):
             # !TODO: Better imputation
             label_indices = [0 for e in range(len(self.levels))]
@@ -145,6 +146,23 @@ class SeriesLevelDataset(Dataset):
             for label in label_indices:
                 curr = [0 if label != i else 1 for i in range(3)]
                 self.labels[name].append(curr)
+
+
+        # !TODO:Refactor
+        # !TODO: Revisit
+        self.weights = []
+        for index, row in self.series.iterrows():
+            curr = self.labels[(row["study_id"], row["series_id"])]
+            if np.argmax(curr[0]) != 0 or np.argmax(curr[-1]) != 0:
+                self.weights.append(20)
+            elif np.argmax(curr[1]) != 0:
+                self.weights.append(10)
+            elif np.argmax(curr[2]) != 0:
+                self.weights.append(5)
+            elif np.argmax(curr[3]) != 0:
+                self.weights.append(3)
+            else:
+                self.weights.append(1)
 
     def __len__(self):
         return len(self.series)
@@ -291,7 +309,9 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     train_dataset = SeriesLevelDataset(base_path, train_df, transform_train)
     val_dataset = SeriesLevelDataset(base_path, val_df, transform_val)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker,num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     return train_loader, val_loader, train_dataset, val_dataset
