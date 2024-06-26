@@ -240,7 +240,7 @@ class TrainingTransform(nn.Module):
         image = self.grayscale(image)
         # image = self.hflip(image)
         # image = self.vflip(image)
-        # image = self.gaussian_blur(image)
+        image = self.gaussian_blur(image)
         image = self.to_tensor(image)
 
         return image
