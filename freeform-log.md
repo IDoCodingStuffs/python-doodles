@@ -434,3 +434,5 @@ So some things to try next:
 - Add some image augments. Start with reintroducing Gaussian blur, then flips and then rotations etc.
 
 Starting with grad acc first. Let's do Gaussian blur too, why not. Also cranked up alpha and gamma.
+
+Also, note to future self for the next thing to do once the model starts training: start looking into classical CV techniques to get a real boost. Even just for preprocessing.

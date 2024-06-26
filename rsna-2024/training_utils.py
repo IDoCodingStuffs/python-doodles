@@ -145,7 +145,7 @@ def train_model_with_validation(model,
                     optimizer.zero_grad(set_to_none=True)
 
             # prof.step()
-            if index % (gradient_accumulation_per * 2) == 0:
+            if index % gradient_accumulation_per == 0:
                 torch.cuda.empty_cache()
 
         epoch_loss = epoch_loss / len(train_loader)
