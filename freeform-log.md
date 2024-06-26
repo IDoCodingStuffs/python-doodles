@@ -413,7 +413,12 @@ I have been missing the final softmax all along lmfao. No wonder the loss was fl
 ### 11 AM
 Next iteration, I will try removing the padding since these are transformers after all. And maybe remove the intermediate encoder layer while at it, just pass directly to head.
 
-## 1 PM
+### 1 PM
 So the softmax + bert trick + padding leads to model just not learning at all. To rectify, I will try removing padding first.
 I think the problem was softmax actually so gonna remove that too.
 Oh and it's sorta faster without the padding as a bonus. About 1.8 it/s
+
+### 5 PM
+Well as of epoch 11, loss is flatlining at around 0.177, down from 0.208 at epoch 0. so similar performance to pooling.
+Maybe my layers are too few? Let's try 6 instead of 2.
+But yeah it is trash so far. I will crank up the backbone lr too, otherwise it is just getting stuck at the local minima predicting everything as moderate.

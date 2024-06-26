@@ -128,7 +128,7 @@ class VIT_Model_25D(nn.Module):
             # !TODO: Need to figure this one out
             nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True),
             nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
-            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=576, nhead=8), num_layers=2),
+            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=576, nhead=8), num_layers=6),
         )
         self.head = NormMLPClassifierHead(self.num_classes)
 
@@ -212,9 +212,9 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     model = VIT_Model_25D(backbone=CONFIG["backbone"]).to(device)
     optimizers = [
-        torch.optim.Adam(model.encoder.parameters(), lr=1e-4),
-        torch.optim.Adam(model.attention_layer.parameters(), lr=5e-4),
-        torch.optim.Adam(model.head.parameters(), lr=1e-4),
+        torch.optim.Adam(model.encoder.parameters(), lr=1e-3),
+        torch.optim.Adam(model.attention_layer.parameters(), lr=1e-3),
+        torch.optim.Adam(model.head.parameters(), lr=1e-3),
     ]
 
     schedulers = [
