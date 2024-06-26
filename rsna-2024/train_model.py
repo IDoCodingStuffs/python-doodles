@@ -227,11 +227,11 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     ]
 
     criteria = [
-        FocalLoss(alpha=0.4, gamma=3.5).to(device),
-        FocalLoss(alpha=0.4, gamma=3.5).to(device),
-        FocalLoss(alpha=0.4, gamma=3.5).to(device),
-        FocalLoss(alpha=0.4, gamma=3.5).to(device),
-        FocalLoss(alpha=0.4, gamma=3.5).to(device),
+        FocalLoss(alpha=0.2).to(device),
+        FocalLoss(alpha=0.2).to(device),
+        FocalLoss(alpha=0.2).to(device),
+        FocalLoss(alpha=0.2).to(device),
+        FocalLoss(alpha=0.2).to(device),
     ]
 
     train_model_with_validation(model,
@@ -241,7 +241,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                 trainloader,
                                 valloader,
                                 model_desc=model_label,
-                                gradient_accumulation_per=8,
+                                gradient_accumulation_per=6,
                                 train_loader_desc=f"Training {data_subset_label}",
                                 epochs=NUM_EPOCHS)
 

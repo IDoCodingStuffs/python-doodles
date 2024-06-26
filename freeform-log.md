@@ -436,3 +436,6 @@ So some things to try next:
 Starting with grad acc first. Let's do Gaussian blur too, why not. Also cranked up alpha and gamma.
 
 Also, note to future self for the next thing to do once the model starts training: start looking into classical CV techniques to get a real boost. Even just for preprocessing.
+
+### 1 AM
+I noticed it has hiccups every few hundred iters or so. Might be worth fixing since it takes epoch time from 19 mins to 27.
