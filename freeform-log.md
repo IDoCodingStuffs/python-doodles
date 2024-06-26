@@ -458,6 +458,9 @@ That way I can avoid it learning to predict everything as mild.
 ### 8 AM
 No, still gets stuck. Time to retry the more aggressive focal loss trick.
 
+### 9 AM
+Started off with higher loss but it is going down as of first 2 epochs. I will need to see how it looks this evening though.
+
 ### 10 AM
 Here are some links of interest to get more elaborate with data preprocess:
 https://medium.com/@abdallahashraf90x/oversampling-for-better-machine-learning-with-imbalanced-data-68f9b5ac2696
@@ -475,3 +478,9 @@ Oh, training pause-resume by file. I put in some `.pause `file and it pauses if 
 
 ### 12 PM
 Another agenda item is adding competition scoring metrics. It will help provide a more solid "final score" after the standard metrics start looking promising"
+
+
+### 2 PM
+Seems the loss just started stagnating after the first couple of epochs. I will let it run all the way through to see if it is one of the cases where it takes some time to discover new minima.
+But meanwhile, I should probably train the backbone per image first and then load.
+The other thing is, I should shift focus to preprocessing.
