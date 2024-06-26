@@ -422,3 +422,15 @@ Oh and it's sorta faster without the padding as a bonus. About 1.8 it/s
 Well as of epoch 11, loss is flatlining at around 0.177, down from 0.208 at epoch 0. so similar performance to pooling.
 Maybe my layers are too few? Let's try 6 instead of 2.
 But yeah it is trash so far. I will crank up the backbone lr too, otherwise it is just getting stuck at the local minima predicting everything as moderate.
+
+### 11 PM
+Yeah still stuck in the same local minima. I guess it sorta is going down albeit very extremely slowly. 
+
+## 6/26
+### 12 AM
+So some things to try next:
+- Higher alpha on FocalLoss
+- Figure how to batch the input, or alternatively use gradient accumulation (second option is lazier)
+- Add some image augments. Start with reintroducing Gaussian blur, then flips and then rotations etc.
+
+Starting with grad acc first. Let's do Gaussian blur too, why not.

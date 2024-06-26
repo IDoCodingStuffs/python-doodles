@@ -16,7 +16,7 @@ CONFIG = dict(
     img_size=(384, 384),
     n_slice_per_c=16,
     in_chans=1,
-    drop_rate=0.1,
+    drop_rate=0.05,
     drop_rate_last=0.3,
     drop_path_rate=0.,
     p_mixup=0.5,
@@ -97,7 +97,7 @@ class NormMLPClassifierHead(nn.Module):
         self.head = nn.Sequential(
             nn.LayerNorm(576, eps=1e-05, elementwise_affine=True),
             # nn.Flatten(start_dim=1, end_dim=-1),
-            nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
+            nn.Dropout(p=CONFIG["drop_rate_last"], inplace=True),
             nn.Linear(in_features=576, out_features=15, bias=True),
             # nn.Softmax()
         )
@@ -224,11 +224,11 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     ]
 
     criteria = [
-        FocalLoss(alpha=0.2).to(device),
-        FocalLoss(alpha=0.2).to(device),
-        FocalLoss(alpha=0.2).to(device),
-        FocalLoss(alpha=0.2).to(device),
-        FocalLoss(alpha=0.2).to(device),
+        FocalLoss(alpha=0.2, gamma=3.5).to(device),
+        FocalLoss(alpha=0.2, gamma=3.5).to(device),
+        FocalLoss(alpha=0.2, gamma=3.5).to(device),
+        FocalLoss(alpha=0.2, gamma=3.5).to(device),
+        FocalLoss(alpha=0.2, gamma=3.5).to(device),
     ]
 
     train_model_with_validation(model,
@@ -238,6 +238,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                 trainloader,
                                 valloader,
                                 model_desc=model_label,
+                                gradient_accumulation_per=8,
                                 train_loader_desc=f"Training {data_subset_label}",
                                 epochs=NUM_EPOCHS)
 

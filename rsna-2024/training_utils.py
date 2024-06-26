@@ -90,58 +90,61 @@ def trace_handler(p):
     p.export_chrome_trace("./traces/trace_" + str(p.step_num) + ".json")
 
 
-def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_loader, val_loader,
+def profile_to_use():
+    return profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+                   profile_memory=True,
+                   record_shapes=True,
+                   schedule=torch.profiler.schedule(
+                       wait=5,
+                       warmup=2,
+                       active=6,
+                       repeat=5
+                   ),
+                   on_trace_ready=trace_handler,
+                   with_stack=True,
+                   )
+
+
+def train_model_with_validation(model,
+                                optimizers,
+                                schedulers,
+                                loss_fns,
+                                train_loader,
+                                val_loader,
                                 train_loader_desc=None,
-                                model_desc="my_model", epochs=10):
+                                model_desc="my_model",
+                                gradient_accumulation_per=1,
+                                epochs=10):
     epoch_losses = []
     epoch_validation_losses = []
-
-    # freeze_model_backbone(model)
 
     for epoch in tqdm(range(epochs), desc=train_loader_desc):
         epoch_loss = 0
         model.train()
 
-        # if epoch >= 10:
-        #     unfreeze_model_backbone(model)
-
-        # with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
-        #              profile_memory=True,
-        #              record_shapes=True,
-        #              schedule=torch.profiler.schedule(
-        #                  wait=5,
-        #                  warmup=2,
-        #                  active=6,
-        #                  repeat=5
-        #              ),
-        #              on_trace_ready=trace_handler,
-        #              with_stack=True,
-        #              ) as prof:
+        # with  as prof:
         for index, val in enumerate(tqdm(train_loader, desc=f"Epoch {epoch}")):
             images, label = val
-            # !TODO: Do this in the data loader
             label = label.to(device)
-            # label = label.type(torch.LongTensor).to(device)
-
-            for optimizer in optimizers:
-                optimizer.zero_grad(set_to_none=True)
 
             output = model(images.to(device))
 
-            # !TODO: Refactor
-            # !TODO: Track separately
             for loss_index, loss_fn in enumerate(loss_fns):
-                loss = loss_fn(output[:, loss_index], label[:, loss_index])
+                # !TODO: Final batch scaling
+                loss = loss_fn(output[:, loss_index], label[:, loss_index]) / gradient_accumulation_per
                 epoch_loss += loss.detach().cpu().item()
                 loss.backward(retain_graph=True)
                 del loss
 
             del output
 
-            for optimizer in optimizers:
-                optimizer.step()
+            # Per gradient accumulation batch or if the last iter
+            if index % gradient_accumulation_per == 0 or index == len(train_loader) - 1:
+                for optimizer in optimizers:
+                    optimizer.step()
+                    optimizer.zero_grad(set_to_none=True)
 
-            #prof.step()
+            # prof.step()
             if index % 20 == 0:
                 torch.cuda.empty_cache()
 
@@ -150,7 +153,6 @@ def train_model_with_validation(model, optimizers, schedulers, loss_fns, train_l
 
         for scheduler in schedulers:
             scheduler.step()
-
 
         if epoch % 5 == 0:
             os.makedirs(f'./models/{model_desc}', exist_ok=True)
