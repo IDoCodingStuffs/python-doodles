@@ -153,13 +153,14 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
     transform_train = TrainingTransform(image_size=CONFIG["img_size"], num_channels=3)
     transform_val = ValidationTransform(image_size=CONFIG["img_size"], num_channels=3)
 
-    trainloader, valloader, len_train, len_val = create_datasets_and_loaders(training_data,
-                                                                             data_subset_label,
-                                                                             transform_train,
-                                                                             transform_val,
-                                                                             num_workers=0,
-                                                                             split_factor=0.05,
-                                                                             batch_size=8)
+    (trainloader, valloader, testloader,
+     trainset, valset, testset) = create_datasets_and_loaders(training_data,
+                                                             data_subset_label,
+                                                             transform_train,
+                                                             transform_val,
+                                                             num_workers=0,
+                                                             split_factor=0.3,
+                                                             batch_size=8)
 
     NUM_EPOCHS = CONFIG["epochs"]
 
@@ -250,7 +251,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tiny_vit_21m_384_transformer_t2stir")
+    model_t2stir = train_model_for_series_per_image("Sagittal T2/STIR", "tiny_vit_21m_384_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 

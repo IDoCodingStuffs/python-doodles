@@ -508,4 +508,6 @@ Ok how about just 1 transformer encoder layer? Not too hopeful but worth trying 
 
 ### 9 AM
 After that, I will try just per-image training again, and then an average pooling layer to pass things to the head.
-Train the backbone separately, after ensuring it can even train after the 
+Train the backbone separately, after ensuring it can even train after the fix.
+
+Also need to figure passing per-image labels since forcing 5 levels per image loses most of the training set lol.

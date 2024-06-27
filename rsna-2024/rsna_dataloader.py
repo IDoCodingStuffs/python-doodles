@@ -393,20 +393,30 @@ def create_datasets_and_loaders(df: pd.DataFrame,
                                 num_workers=0,
                                 batch_size=8):
     filtered_df = df[df['series_description'] == series_description]
-    train_series, val_series = train_test_split(filtered_df["series_id"], test_size=split_factor,
-                                                random_state=random_seed)
-    train_df = filtered_df[filtered_df["series_id"].isin(train_series)].reset_index(drop=True)
-    val_df = filtered_df[filtered_df["series_id"].isin(val_series)].reset_index(drop=True)
+    # By defauly, 8-1.5-.5 split
+    train_studies, val_studies = train_test_split(filtered_df["study_id"].unique(), test_size=split_factor,
+                                                  random_state=random_seed)
+    val_studies, test_studies = train_test_split(val_studies, test_size=0.25, random_state=random_seed)
+
+    train_df = filtered_df[filtered_df["study_id"].isin(train_studies)]
+    val_df = filtered_df[filtered_df["study_id"].isin(val_studies)]
+    test_df = filtered_df[filtered_df["study_id"].isin(test_studies)]
+
+    train_df = train_df.reset_index(drop=True)
+    val_df = val_df.reset_index(drop=True)
+    test_df = test_df.reset_index(drop=True)
 
     train_dataset = PerImageDataset(train_df, transform_train)
     val_dataset = PerImageDataset(val_df, transform_val)
+    test_dataset = PerImageDataset(test_df, transform_val)
 
     train_sampler = WeightedRandomSampler(weights=train_dataset.label["weight"], num_samples=len(train_dataset))
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers, sampler=train_sampler)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False)
 
-    return train_loader, val_loader, train_dataset, val_dataset
+    return train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset
 
 
 def retrieve_image_paths(base_path, study_id, series_id):
