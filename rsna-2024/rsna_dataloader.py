@@ -174,7 +174,7 @@ class SeriesLevelDataset(Dataset):
         label = np.array(self.labels[(curr["study_id"], curr["series_id"])])
 
         # Pad to max 29
-        images = np.array([self.transform(load_dicom(image_path)) if self.transform
+        images = np.array([np.array(self.transform(load_dicom(image_path))) if self.transform
                            else load_dicom(image_path) for image_path in image_paths])
 
         # front_buffer = (29 - len(images)) // 2
@@ -258,7 +258,7 @@ class TrainingTransform(nn.Module):
         image = self.grayscale(image)
         # image = self.hflip(image)
         # image = self.vflip(image)
-        image = self.gaussian_blur(image)
+        # image = self.gaussian_blur(image)
         image = self.to_tensor(image)
 
         return image

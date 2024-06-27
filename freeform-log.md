@@ -484,3 +484,6 @@ Another agenda item is adding competition scoring metrics. It will help provide 
 Seems the loss just started stagnating after the first couple of epochs. I will let it run all the way through to see if it is one of the cases where it takes some time to discover new minima.
 But meanwhile, I should probably train the backbone per image first and then load.
 The other thing is, I should shift focus to preprocessing.
+
+### 6 PM
+Still just predicting the same values regardless of input. I definitely need to shift my approach.
