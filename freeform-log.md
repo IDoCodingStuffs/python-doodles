@@ -493,3 +493,5 @@ Priority is to make the model overfit first. That's how I moved to this stage fr
 ### 7 PM
 Noticed one issue -- conversion from float to uint 8 introduces a bunch of artifacts. And is unnecessary, since the images are loaded fine anyway. 
 So the lesson is, check the dumb code you are copypasting lol. I guess it counts as a preprocess improvement at least.
+
+Yeah now that I am comparing before vs after, it was fucking up the input data big time. Could have saved so much electricity :(
