@@ -511,3 +511,4 @@ After that, I will try just per-image training again, and then an average poolin
 Train the backbone separately, after ensuring it can even train after the fix.
 
 Also need to figure passing per-image labels since forcing 5 levels per image loses most of the training set lol.
+Really hoping it won't also end up with the same "stuck predicting the exact same output" issue

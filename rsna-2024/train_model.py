@@ -89,7 +89,7 @@ class VIT_Model(nn.Module):
         )
 
     def forward(self, x):
-        return self.encoder(x).reshape((-1, CONFIG["n_levels"], CONFIG["out_dim"]))
+        return self.encoder(x).reshape((-1, 5, 3))
 
 
 class NormMLPClassifierHead(nn.Module):
