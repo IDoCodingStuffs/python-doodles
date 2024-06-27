@@ -234,9 +234,7 @@ class TrainingTransform(nn.Module):
         super(TrainingTransform, self).__init__()
         self.image_size = image_size
 
-        self.to_uint8 = transforms.Lambda(lambda x: (x * 255).astype(np.uint8))
         self.to_pil = transforms.ToPILImage()
-        # !TODO: Refactor image dims
         self.resize = transforms.Resize(self.image_size)
         self.hflip = transforms.RandomHorizontalFlip(p=0.5)
         self.vflip = transforms.RandomVerticalFlip(p=0.5)
@@ -252,7 +250,6 @@ class TrainingTransform(nn.Module):
         self.to_tensor = transforms.ToTensor()
 
     def forward(self, image):
-        image = self.to_uint8(image)
         image = self.to_pil(image)
         image = self.resize(image)
         image = self.grayscale(image)
@@ -269,14 +266,12 @@ class ValidationTransform(nn.Module):
         super(ValidationTransform, self).__init__()
         self.image_size = image_size
 
-        self.to_uint8 = transforms.Lambda(lambda x: (x * 255).astype(np.uint8))
         self.to_pil = transforms.ToPILImage()
         self.resize = transforms.Resize(image_size)
         self.grayscale = transforms.Grayscale(num_output_channels=num_channels)
         self.to_tensor = transforms.ToTensor()
 
     def forward(self, image):
-        image = self.to_uint8(image)
         image = self.to_pil(image)
         image = self.resize(image)
         image = self.grayscale(image)

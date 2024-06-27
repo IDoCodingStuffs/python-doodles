@@ -487,3 +487,9 @@ The other thing is, I should shift focus to preprocessing.
 
 ### 6 PM
 Still just predicting the same values regardless of input. I definitely need to shift my approach.
+I think the Gaussians are way too aggressive for one. Since the model is failing to overfit, I should disable them first.
+Priority is to make the model overfit first. That's how I moved to this stage from the per-image stage.
+
+### 7 PM
+Noticed one issue -- conversion from float to uint 8 introduces a bunch of artifacts. And is unnecessary, since the images are loaded fine anyway. 
+So the lesson is, check the dumb code you are copypasting lol. I guess it counts as a preprocess improvement at least.
