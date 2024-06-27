@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 import pandas as pd
-import cv2
 
 import pydicom
 import torch
@@ -46,7 +45,6 @@ class PerImageDataset(Dataset):
         image = load_dicom(image_path)
 
         if self.transform:
-            image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
             image = self.transform(image)
 
         return image, self.label_as_tensor(image_path)
