@@ -131,8 +131,9 @@ class VIT_Model_25D(nn.Module):
             # !TODO: Need to figure this one out
             nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True),
             nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
-            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=576, nhead=8, batch_first=True), num_layers=3),
+            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=576, nhead=8, batch_first=True), num_layers=1),
         )
+        # self.attention_layer = nn.Identity()
         self.head = NormMLPClassifierHead(self.num_classes)
 
     def forward(self, x):
@@ -216,15 +217,15 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     model = VIT_Model_25D(backbone=CONFIG["backbone"]).to(device)
     optimizers = [
-        torch.optim.Adam(model.encoder.parameters(), lr=1e-3),
-        torch.optim.Adam(model.attention_layer.parameters(), lr=1e-3),
-        torch.optim.Adam(model.head.parameters(), lr=1e-3),
+        torch.optim.Adam(model.parameters(), lr=1e-3),
+        #torch.optim.Adam(model.attention_layer.parameters(), lr=1e-3),
+        #torch.optim.Adam(model.head.parameters(), lr=1e-3),
     ]
 
     schedulers = [
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-6),
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=1e-5),
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=1e-5),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-5),
+        #torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=1e-5),
+        #torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=1e-5),
     ]
 
     criteria = [

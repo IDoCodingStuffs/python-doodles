@@ -498,3 +498,10 @@ Yeah now that I am comparing before vs after, it was fucking up the input data b
 
 ### 9 PM
 Figured the bug with the train-test split. So many silly bugs, so much carelessness...
+
+## 6/27
+### 8 AM
+Still not training after fixing that bug with input data. Back to the drawing board -- try disabling the middle layer and make it overfit
+I should go back a few steps actually.
+
+Ok how about just 1 transformer encoder layer? Not too hopeful but worth trying I guess.
