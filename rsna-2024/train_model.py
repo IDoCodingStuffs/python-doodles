@@ -131,7 +131,7 @@ class VIT_Model_25D(nn.Module):
             # !TODO: Need to figure this one out
             nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True),
             nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
-            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=576, nhead=8, batch_first=True), num_layers=6),
+            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=576, nhead=8, batch_first=True), num_layers=3),
         )
         self.head = NormMLPClassifierHead(self.num_classes)
 
