@@ -495,3 +495,6 @@ Noticed one issue -- conversion from float to uint 8 introduces a bunch of artif
 So the lesson is, check the dumb code you are copypasting lol. I guess it counts as a preprocess improvement at least.
 
 Yeah now that I am comparing before vs after, it was fucking up the input data big time. Could have saved so much electricity :(
+
+### 9 PM
+Figured the bug with the train-test split. So many silly bugs, so much carelessness...

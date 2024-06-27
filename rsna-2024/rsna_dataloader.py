@@ -293,23 +293,30 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                              num_workers=0):
     filtered_df = df[df['series_description'] == series_description]
 
-    train_studies, val_studies = train_test_split(filtered_df["study_id"], test_size=split_factor,
-                                                  random_state=random_seed)
+    # By defauly, 8-1.5-.5 split
+    train_studies, val_studies = train_test_split(filtered_df["study_id"].unique(), test_size=split_factor, random_state=random_seed)
+    val_studies, test_studies = train_test_split(val_studies, test_size=0.25, random_state=random_seed)
+
     train_df = filtered_df[filtered_df["study_id"].isin(train_studies)]
     val_df = filtered_df[filtered_df["study_id"].isin(val_studies)]
+    test_df = filtered_df[filtered_df["study_id"].isin(test_studies)]
+
     train_df = train_df.reset_index(drop=True)
     val_df = val_df.reset_index(drop=True)
+    test_df = test_df.reset_index(drop=True)
 
     random.seed(random_seed)
     train_dataset = SeriesLevelDataset(base_path, train_df, transform_train)
     val_dataset = SeriesLevelDataset(base_path, val_df, transform_val)
+    test_dataset = SeriesLevelDataset(base_path, test_df, transform_val)
 
     train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
-
     train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker,num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
-    return train_loader, val_loader, train_dataset, val_dataset
+    # !TODO: Refactor
+    return train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset
 
 
 def create_series_level_coordinate_datasets_and_loaders(df: pd.DataFrame,

@@ -200,7 +200,8 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     transform_train = TrainingTransform(image_size=CONFIG["img_size"], num_channels=3)
     transform_val = ValidationTransform(image_size=CONFIG["img_size"], num_channels=3)
 
-    trainloader, valloader, trainset, valset = create_series_level_datasets_and_loaders(training_data,
+    (trainloader, valloader, test_loader,
+     trainset, valset, testset) = create_series_level_datasets_and_loaders(training_data,
                                                                                         data_subset_label,
                                                                                         transform_train,
                                                                                         transform_val,
@@ -208,7 +209,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                             data_basepath,
                                                                                             "train_images"),
                                                                                         num_workers=12,
-                                                                                        split_factor=0.1,
+                                                                                        split_factor=0.3,
                                                                                         batch_size=1)
 
     NUM_EPOCHS = CONFIG["epochs"]
