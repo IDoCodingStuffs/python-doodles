@@ -16,40 +16,41 @@ import torchvision.transforms as transforms
 from torchvision.transforms import v2
 
 label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
-conditions = ["Left Neural Foraminal Narrowing", "Right Neural Foraminal Narrowing", "Left Subarticular Stenosis",
-              "Right Subarticular Stenosis", "Spinal Canal Stenosis"]
-
+# conditions = ["Left Neural Foraminal Narrowing", "Right Neural Foraminal Narrowing", "Left Subarticular Stenosis",
+#               "Right Subarticular Stenosis", "Spinal Canal Stenosis"]
+conditions = {"Sagittal T2/STIR": ["Spinal Canal Stenosis"]}
 
 class PerImageDataset(Dataset):
-    def __init__(self, dataframe, transform=None):
+    def __init__(self, dataframe, base_path="../data/rsna-2024-lumbar-spine-degenerative-classification/train_images", transform=None):
         self.dataframe = dataframe
         self.transform = transform
-        self.dataframe["image_index"] = self.dataframe["image_path"].str.split("/").str[-1].str.replace(".dcm","").astype(int)
-        self.label = (dataframe[["image_path", "level", "severity"]]
-                      .groupby("image_path")
-                      # !TODO: Unhardcode
-                      .filter(lambda x: len(x) == 5))
 
-        self.label = (self.label.groupby("image_path")
-                      .agg({"image_path": "unique",
+        self.dataframe["image_path"] = self.dataframe.apply(lambda x: retrieve_image_paths(base_path, x[0], x[1]), axis=1)
+        self.dataframe = self._expand_paths(self.dataframe)
+
+        self.label = (self.dataframe.groupby("image_path")
+                      .agg({"image_path": "first",
                             "level": lambda x: ",".join(x),
                             "severity": lambda x: ",".join(x)}))
 
         # !TODO: refactor and properly formulate
-        self.label["weight"] = [sum(2 ** np.argmax(self.label_as_tensor(e[0]).numpy(), axis=1)) + 1 for e in
-                                self.label["image_path"]]
+        self.label["weight"] = [sum(2 ** np.argmax(self.label_as_tensor(e).numpy(), axis=1)) + 1 for e in self.label["image_path"]]
 
     def __len__(self):
         return len(self.label)
 
     def __getitem__(self, index):
-        image_path = self.label['image_path'].iloc[index][0]
+        image_path = self.label['image_path'].iloc[index]
         image = load_dicom(image_path)
 
         if self.transform:
             image = self.transform(image)
 
         return image, self.label_as_tensor(image_path)
+
+    def _expand_paths(self, df):
+        lens = [len(item) for item in df['image_path']]
+        return pd.DataFrame({col: np.repeat(df[col].values, lens) if col != "image_path" else np.concatenate(df[col].values) for col in df.columns})
 
     def label_as_tensor(self, image_path):
         row = self.label[self.label["image_path"] == image_path]
@@ -146,7 +147,6 @@ class SeriesLevelDataset(Dataset):
             for label in label_indices:
                 curr = [0 if label != i else 1 for i in range(3)]
                 self.labels[name].append(curr)
-
 
         # !TODO:Refactor
         # !TODO: Revisit
@@ -294,7 +294,8 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     filtered_df = df[df['series_description'] == series_description]
 
     # By defauly, 8-1.5-.5 split
-    train_studies, val_studies = train_test_split(filtered_df["study_id"].unique(), test_size=split_factor, random_state=random_seed)
+    train_studies, val_studies = train_test_split(filtered_df["study_id"].unique(), test_size=split_factor,
+                                                  random_state=random_seed)
     val_studies, test_studies = train_test_split(val_studies, test_size=0.25, random_state=random_seed)
 
     train_df = filtered_df[filtered_df["study_id"].isin(train_studies)]
@@ -311,7 +312,7 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     test_dataset = SeriesLevelDataset(base_path, test_df, transform_val)
 
     train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker,num_workers=num_workers)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
@@ -328,7 +329,7 @@ def create_series_level_coordinate_datasets_and_loaders(df: pd.DataFrame,
                                                         random_seed=42,
                                                         batch_size=1,
                                                         num_workers=0):
-    filtered_df = df[df['series_description'] == series_description]
+    filtered_df = df[(df['series_description'] == series_description) & (df['condition'].isin(conditions[series_description]))]
 
     train_df, val_df = train_test_split(filtered_df, test_size=split_factor, random_state=random_seed)
     train_df = train_df.reset_index(drop=True)
@@ -392,7 +393,7 @@ def create_datasets_and_loaders(df: pd.DataFrame,
                                 random_seed=42,
                                 num_workers=0,
                                 batch_size=8):
-    filtered_df = df[df['series_description'] == series_description]
+    filtered_df = df[(df['series_description'] == series_description) & (df['condition'].isin(conditions[series_description]))]
     # By defauly, 8-1.5-.5 split
     train_studies, val_studies = train_test_split(filtered_df["study_id"].unique(), test_size=split_factor,
                                                   random_state=random_seed)
@@ -406,9 +407,9 @@ def create_datasets_and_loaders(df: pd.DataFrame,
     val_df = val_df.reset_index(drop=True)
     test_df = test_df.reset_index(drop=True)
 
-    train_dataset = PerImageDataset(train_df, transform_train)
-    val_dataset = PerImageDataset(val_df, transform_val)
-    test_dataset = PerImageDataset(test_df, transform_val)
+    train_dataset = PerImageDataset(train_df, transform=transform_train)
+    val_dataset = PerImageDataset(val_df, transform=transform_val)
+    test_dataset = PerImageDataset(test_df, transform=transform_val)
 
     train_sampler = WeightedRandomSampler(weights=train_dataset.label["weight"], num_samples=len(train_dataset))
 
@@ -484,33 +485,34 @@ def get_bounding_boxes_for_label(label, box_offset_from_center=5):
 
 
 def retrieve_training_data(train_path):
+    # !TODO: refactor
     def reshape_row(row):
-        data = {'study_id': [], 'condition': [], 'level': [], 'severity': [], 'image_paths': []}
+        data = {col: [] for col in row.axes[0] if col in
+                ['study_id', 'series_id', 'instance_number', 'x', 'y', 'series_description', 'image_paths']}
+        data["level"] = []
+        data["condition"] = []
+        data["severity"] = []
 
         for column, value in row.items():
-            if column not in ['study_id', 'series_id', 'instance_number', 'x', 'y', 'series_description', 'image_paths']:
+            if column not in ['study_id', 'series_id', 'instance_number', 'x', 'y', 'series_description',
+                              'image_paths']:
                 parts = column.split('_')
                 condition = ' '.join([word.capitalize() for word in parts[:-2]])
                 level = parts[-2].capitalize() + '/' + parts[-1].capitalize()
-                data['study_id'].append(row['study_id'])
                 data['condition'].append(condition)
                 data['level'].append(level)
                 data['severity'].append(value)
-                data['image_paths'].append(row['image_paths'])
+            else:
+                # !TODO: Seriously, refactor
+                for i in range(25):
+                    data[column].append(value)
 
         return pd.DataFrame(data)
-
-    def add_train_paths(df: pd.DataFrame):
-        for index, row in df.iterrows():
-            image_paths = retrieve_image_paths(os.path.join(train_path, "train_images"), row["study_id"], row["series_id"])
-            df["image_paths"].iloc[index] = image_paths
 
     train = pd.read_csv(train_path + 'train.csv')
     train_desc = pd.read_csv(train_path + 'train_series_descriptions.csv')
 
     train_df = pd.merge(train, train_desc, on="study_id")
-    train_df["image_paths"] = None
-    add_train_paths(train_df)
 
     train_df = pd.concat([reshape_row(row) for _, row in train_df.iterrows()], ignore_index=True)
     train_df['severity'] = train_df['severity'].map(

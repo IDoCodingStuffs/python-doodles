@@ -516,3 +516,6 @@ Really hoping it won't also end up with the same "stuck predicting the exact sam
 ### 11 AM
 Found another copypasta "did not verify" mishap. The training data from the starter notebook was for coordinate viz. So I was discarding whole bunch of training data.
 So embarrassing.
+
+### 12 PM
+Yep, yet again paying the tech debt of laziness lol. I think I finished fixing the per-image set though

@@ -148,7 +148,7 @@ class VIT_Model_25D(nn.Module):
 
 def train_model_for_series_per_image(data_subset_label: str, model_label: str):
     data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
-    training_data = retrieve_coordinate_training_data(data_basepath)
+    training_data = retrieve_training_data(data_basepath)
 
     transform_train = TrainingTransform(image_size=CONFIG["img_size"], num_channels=3)
     transform_val = ValidationTransform(image_size=CONFIG["img_size"], num_channels=3)
