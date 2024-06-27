@@ -241,7 +241,6 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                 trainloader,
                                 valloader,
                                 model_desc=model_label,
-                                gradient_accumulation_per=6,
                                 train_loader_desc=f"Training {data_subset_label}",
                                 epochs=NUM_EPOCHS)
 
