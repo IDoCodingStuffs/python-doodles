@@ -21,7 +21,7 @@ label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
 conditions = {"Sagittal T2/STIR": ["Spinal Canal Stenosis"]}
 
 class PerImageDataset(Dataset):
-    def __init__(self, dataframe, base_path="../data/rsna-2024-lumbar-spine-degenerative-classification/train_images", transform=None):
+    def __init__(self, dataframe, base_path="./data/rsna-2024-lumbar-spine-degenerative-classification/train_images", transform=None):
         self.dataframe = dataframe
         self.transform = transform
 
