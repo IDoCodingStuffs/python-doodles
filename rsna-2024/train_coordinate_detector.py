@@ -34,7 +34,7 @@ class CompleteBoxIOULoss(nn.Module):
 
 def train_model_per_image(data_subset_label: str, model_label: str):
     data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
-    training_data = retrieve_training_data(data_basepath)
+    training_data = retrieve_coordinate_training_data(data_basepath)
 
     transform_train = TrainingTransform()
     transform_val = ValidationTransform()

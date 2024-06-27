@@ -512,3 +512,7 @@ Train the backbone separately, after ensuring it can even train after the fix.
 
 Also need to figure passing per-image labels since forcing 5 levels per image loses most of the training set lol.
 Really hoping it won't also end up with the same "stuck predicting the exact same output" issue
+
+### 11 AM
+Found another copypasta "did not verify" mishap. The training data from the starter notebook was for coordinate viz. So I was discarding whole bunch of training data.
+So embarrassing.

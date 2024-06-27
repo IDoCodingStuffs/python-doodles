@@ -2,9 +2,10 @@ import random
 
 import matplotlib.pyplot as plt
 import os
+from os.path import abspath
 import numpy as np
 import pandas as pd
-
+from glob import glob
 import pydicom
 import torch
 import torch.nn.functional as F
@@ -23,6 +24,7 @@ class PerImageDataset(Dataset):
     def __init__(self, dataframe, transform=None):
         self.dataframe = dataframe
         self.transform = transform
+        self.dataframe["image_index"] = self.dataframe["image_path"].str.split("/").str[-1].str.replace(".dcm","").astype(int)
         self.label = (dataframe[["image_path", "level", "severity"]]
                       .groupby("image_path")
                       # !TODO: Unhardcode
@@ -482,6 +484,42 @@ def get_bounding_boxes_for_label(label, box_offset_from_center=5):
 
 
 def retrieve_training_data(train_path):
+    def reshape_row(row):
+        data = {'study_id': [], 'condition': [], 'level': [], 'severity': [], 'image_paths': []}
+
+        for column, value in row.items():
+            if column not in ['study_id', 'series_id', 'instance_number', 'x', 'y', 'series_description', 'image_paths']:
+                parts = column.split('_')
+                condition = ' '.join([word.capitalize() for word in parts[:-2]])
+                level = parts[-2].capitalize() + '/' + parts[-1].capitalize()
+                data['study_id'].append(row['study_id'])
+                data['condition'].append(condition)
+                data['level'].append(level)
+                data['severity'].append(value)
+                data['image_paths'].append(row['image_paths'])
+
+        return pd.DataFrame(data)
+
+    def add_train_paths(df: pd.DataFrame):
+        for index, row in df.iterrows():
+            image_paths = retrieve_image_paths(os.path.join(train_path, "train_images"), row["study_id"], row["series_id"])
+            df["image_paths"].iloc[index] = image_paths
+
+    train = pd.read_csv(train_path + 'train.csv')
+    train_desc = pd.read_csv(train_path + 'train_series_descriptions.csv')
+
+    train_df = pd.merge(train, train_desc, on="study_id")
+    train_df["image_paths"] = None
+    add_train_paths(train_df)
+
+    train_df = pd.concat([reshape_row(row) for _, row in train_df.iterrows()], ignore_index=True)
+    train_df['severity'] = train_df['severity'].map(
+        {'Normal/Mild': 'normal_mild', 'Moderate': 'moderate', 'Severe': 'severe'})
+
+    return train_df
+
+
+def retrieve_coordinate_training_data(train_path):
     def reshape_row(row):
         data = {'study_id': [], 'condition': [], 'level': [], 'severity': []}
 
