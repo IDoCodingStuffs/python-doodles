@@ -505,3 +505,7 @@ Still not training after fixing that bug with input data. Back to the drawing bo
 I should go back a few steps actually.
 
 Ok how about just 1 transformer encoder layer? Not too hopeful but worth trying I guess.
+
+### 9 AM
+After that, I will try just per-image training again, and then an average pooling layer to pass things to the head.
+Train the backbone separately, after ensuring it can even train after the 
