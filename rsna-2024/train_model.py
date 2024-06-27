@@ -9,25 +9,14 @@ torchvision.disable_beta_transforms_warning()
 
 
 CONFIG = dict(
-    project_name="PL-RSNA-2024-Lumbar-Spine-Classification",
-    artifact_name="rsnaEffNetModel",
-    load_kernel=None,
-    load_last=True,
-    n_folds=5,
+    pretrained=True,
     n_levels=5,
     backbone="tiny_vit_21m_384",
     img_size=(384, 384),
-    n_slice_per_c=16,
-    in_chans=1,
     drop_rate=0.05,
     drop_rate_last=0.3,
     drop_path_rate=0.,
-    p_mixup=0.5,
-    p_rand_order_v1=0.2,
-    lr=1e-3,
-    out_dim=3,
     epochs=200,
-    batch_size=8,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
 )
@@ -76,7 +65,7 @@ class CNN_LSTM_Model(nn.Module):
 
 
 class VIT_Model(nn.Module):
-    def __init__(self, backbone, pretrained=False):
+    def __init__(self, backbone):
         super(VIT_Model, self).__init__()
 
         self.encoder = timm.create_model(
@@ -85,7 +74,7 @@ class VIT_Model(nn.Module):
             features_only=False,
             drop_rate=CONFIG["drop_rate"],
             drop_path_rate=CONFIG["drop_path_rate"],
-            pretrained=pretrained
+            pretrained=CONFIG["pretrained"]
         )
 
     def forward(self, x):
