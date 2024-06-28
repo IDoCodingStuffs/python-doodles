@@ -52,9 +52,6 @@ class CNN_LSTM_Model(nn.Module):
         elif 'convnext' in backbone:
             hdim = self.encoder.head.fc.in_features
             self.encoder.head.fc = nn.Identity()
-        elif 'vit' in backbone:
-            hdim = self.encoder.head.in_features
-            self.encoder.head.fc = nn.Identity()
 
         self.lstm = nn.LSTM(hdim, 256, num_layers=2, dropout=CONFIG["drop_rate"], bidirectional=True, batch_first=True)
         self.heads = nn.ModuleList([
@@ -64,15 +61,14 @@ class CNN_LSTM_Model(nn.Module):
                 nn.Dropout(CONFIG["drop_rate_last"]),
                 nn.LeakyReLU(0.1),
                 nn.Linear(256, CONFIG["out_dim"]),
-                # nn.Softmax(),
+                nn.Softmax(),
             )
             for i in range(CONFIG["n_levels"])])
 
     def forward(self, x):
-        feat = self.encoder(x.squeeze(0))
+        feat = self.encoder(x)
         feat, _ = self.lstm(feat)
-        # !TODO: This is probably incorrect
-        return torch.mean(torch.stack([head(feat) for head in self.heads], dim=1), dim=0).unsqueeze(0)
+        return torch.stack([head(feat) for head in self.heads], dim=1)
 
 
 class VIT_Model(nn.Module):
