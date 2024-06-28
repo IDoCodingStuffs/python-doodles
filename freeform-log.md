@@ -519,3 +519,6 @@ So embarrassing.
 
 ### 12 PM
 Yep, yet again paying the tech debt of laziness lol. I think I finished fixing the per-image set though
+
+### 6 PM
+Well it is still not training. So back to the CNN-LSTM approach, which is much better proven.
