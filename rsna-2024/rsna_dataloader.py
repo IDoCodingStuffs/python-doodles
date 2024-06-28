@@ -1,5 +1,4 @@
 import random
-
 import matplotlib.pyplot as plt
 import os
 from os.path import abspath
@@ -22,9 +21,14 @@ conditions = {"Sagittal T2/STIR": ["Spinal Canal Stenosis"]}
 
 class PerImageDataset(Dataset):
     def __init__(self, dataframe, base_path="./data/rsna-2024-lumbar-spine-degenerative-classification/train_images", transform=None):
-        self.dataframe = dataframe
+        self.to_pil = transforms.ToPILImage()
+        self.to_tensor = transforms.ToTensor()
+        self.grayscale = transforms.Grayscale(num_output_channels=3)
+
         self.transform = transform
 
+
+        self.dataframe = dataframe
         self.dataframe["image_path"] = self.dataframe.apply(lambda x: retrieve_image_paths(base_path, x[0], x[1]), axis=1)
         self.dataframe = self._expand_paths(self.dataframe)
 
@@ -43,10 +47,14 @@ class PerImageDataset(Dataset):
         image_path = self.label['image_path'].iloc[index]
         image = load_dicom(image_path)
 
-        if self.transform:
-            image = self.transform(image)
+        image = self.to_pil(image)
+        image = self.grayscale(image)
+        image = np.asarray(image)
 
-        return image, self.label_as_tensor(image_path)
+        if self.transform:
+            image = self.transform(image=image)['image']
+
+        return self.to_tensor(image), self.label_as_tensor(image_path)
 
     def _expand_paths(self, df):
         lens = [len(item) for item in df['image_path']]
@@ -242,9 +250,15 @@ class TrainingTransform(nn.Module):
         self.gaussian_blur = transforms.RandomChoice([
             transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 3)),
             transforms.GaussianBlur(kernel_size=5, sigma=(0.1, 3)),
-            transforms.GaussianBlur(kernel_size=7, sigma=(0.1, 3)),
             v2.Identity(),
-        ], p=[0.2, 0.2, 0.2, 0.4])
+        ], p=[0.2, 0.2, 0.6])
+
+        self.gaussian_noise = transforms.RandomChoice([
+            transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 3)),
+            transforms.GaussianBlur(kernel_size=5, sigma=(0.1, 3)),
+            v2.Identity(),
+        ], p=[0.2, 0.2, 0.6])
+
 
         self.grayscale = transforms.Grayscale(num_output_channels=num_channels)
         self.to_tensor = transforms.ToTensor()
@@ -255,7 +269,7 @@ class TrainingTransform(nn.Module):
         image = self.grayscale(image)
         # image = self.hflip(image)
         # image = self.vflip(image)
-        # image = self.gaussian_blur(image)
+        image = self.gaussian_blur(image)
         image = self.to_tensor(image)
 
         return image

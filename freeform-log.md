@@ -522,3 +522,7 @@ Yep, yet again paying the tech debt of laziness lol. I think I finished fixing t
 
 ### 6 PM
 Well it is still not training. So back to the CNN-LSTM approach, which is much better proven.
+
+## 6/28
+### 6 AM
+Good news is it can overfit, bad news is it overfits right off the bat. One thing I can do is adding transforms now.

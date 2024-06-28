@@ -1,12 +1,12 @@
 import timm
 import torchvision
+import albumentations as A
 
 from training_utils import *
 from rsna_dataloader import *
 
 _logger = logging.getLogger(__name__)
 torchvision.disable_beta_transforms_warning()
-
 
 CONFIG = dict(
     project_name="PL-RSNA-2024-Lumbar-Spine-Classification",
@@ -23,6 +23,7 @@ CONFIG = dict(
     drop_rate_last=0.3,
     drop_path_rate=0.,
     p_mixup=0.5,
+    aug_prob=0.7,
     p_rand_order_v1=0.2,
     lr=1e-3,
     out_dim=3,
@@ -104,6 +105,7 @@ class NormMLPClassifierHead(nn.Module):
     def forward(self, x):
         return self.head(x)
 
+
 class VIT_Model_25D(nn.Module):
     def __init__(self, backbone, pretrained=False):
         super(VIT_Model_25D, self).__init__()
@@ -179,17 +181,43 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
     data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
     training_data = retrieve_training_data(data_basepath)
 
-    transform_train = TrainingTransform(image_size=CONFIG["img_size"], num_channels=3)
-    transform_val = ValidationTransform(image_size=CONFIG["img_size"], num_channels=3)
+    # transform_train = TrainingTransform(image_size=CONFIG["img_size"], num_channels=3)
+    # transform_val = ValidationTransform(image_size=CONFIG["img_size"], num_channels=3)
+
+    transform_train = A.Compose([
+        A.RandomBrightnessContrast(brightness_limit=(-0.2, 0.2), contrast_limit=(-0.2, 0.2), p=CONFIG["aug_prob"]),
+        A.OneOf([
+            A.MotionBlur(blur_limit=5),
+            A.MedianBlur(blur_limit=5),
+            A.GaussianBlur(blur_limit=5),
+            A.GaussNoise(var_limit=(5.0, 30.0)),
+        ], p=CONFIG["aug_prob"]),
+
+        A.OneOf([
+            A.OpticalDistortion(distort_limit=1.0),
+            A.GridDistortion(num_steps=5, distort_limit=1.),
+            A.ElasticTransform(alpha=3),
+        ], p=CONFIG["aug_prob"]),
+
+        A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=15, border_mode=0, p=CONFIG["aug_prob"]),
+        A.Resize(*CONFIG["img_size"]),
+        A.CoarseDropout(max_holes=16, max_height=64, max_width=64, min_holes=1, min_height=8, min_width=8, p=CONFIG["aug_prob"]),
+        A.Normalize(mean=0.5, std=0.5)
+    ])
+
+    transform_val = A.Compose([
+        A.Resize(*CONFIG["img_size"]),
+        A.Normalize(mean=0.5, std=0.5)
+    ])
 
     (trainloader, valloader, testloader,
      trainset, valset, testset) = create_datasets_and_loaders(training_data,
-                                                             data_subset_label,
-                                                             transform_train,
-                                                             transform_val,
-                                                             num_workers=0,
-                                                             split_factor=0.3,
-                                                             batch_size=8)
+                                                              data_subset_label,
+                                                              transform_train,
+                                                              transform_val,
+                                                              num_workers=24,
+                                                              split_factor=0.3,
+                                                              batch_size=8)
 
     NUM_EPOCHS = CONFIG["epochs"]
 
@@ -241,29 +269,29 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     (trainloader, valloader, test_loader,
      trainset, valset, testset) = create_series_level_datasets_and_loaders(training_data,
-                                                                                        data_subset_label,
-                                                                                        transform_train,
-                                                                                        transform_val,
-                                                                                        base_path=os.path.join(
-                                                                                            data_basepath,
-                                                                                            "train_images"),
-                                                                                        num_workers=12,
-                                                                                        split_factor=0.3,
-                                                                                        batch_size=1)
+                                                                           data_subset_label,
+                                                                           transform_train,
+                                                                           transform_val,
+                                                                           base_path=os.path.join(
+                                                                               data_basepath,
+                                                                               "train_images"),
+                                                                           num_workers=12,
+                                                                           split_factor=0.3,
+                                                                           batch_size=1)
 
     NUM_EPOCHS = CONFIG["epochs"]
 
     model = VIT_Model_25D(backbone=CONFIG["backbone"]).to(device)
     optimizers = [
         torch.optim.Adam(model.parameters(), lr=1e-3),
-        #torch.optim.Adam(model.attention_layer.parameters(), lr=1e-3),
-        #torch.optim.Adam(model.head.parameters(), lr=1e-3),
+        # torch.optim.Adam(model.attention_layer.parameters(), lr=1e-3),
+        # torch.optim.Adam(model.head.parameters(), lr=1e-3),
     ]
 
     schedulers = [
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-5),
-        #torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=1e-5),
-        #torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=1e-5),
+        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=1e-5),
+        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=1e-5),
     ]
 
     criteria = [
