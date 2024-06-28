@@ -526,3 +526,6 @@ Well it is still not training. So back to the CNN-LSTM approach, which is much b
 ## 6/28
 ### 6 AM
 Good news is it can overfit, bad news is it overfits right off the bat. One thing I can do is adding transforms now.
+
+### 11 AM
+It looks far more promising after I add the transforms. Next, to use the alternate oversampling logic.
