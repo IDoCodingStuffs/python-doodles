@@ -25,6 +25,43 @@ CONFIG = dict(
 )
 
 
+class CNN_Model(nn.Module):
+    def __init__(self, backbone, pretrained=False):
+        super(CNN_Model, self).__init__()
+
+        self.encoder = timm.create_model(
+            backbone,
+            num_classes=CONFIG["out_dim"],
+            features_only=False,
+            drop_rate=CONFIG["drop_rate"],
+            drop_path_rate=CONFIG["drop_path_rate"],
+            pretrained=pretrained,
+            in_chans=CONFIG["in_chans"],
+        )
+
+        if 'efficient' in backbone:
+            hdim = self.encoder.conv_head.out_channels
+            self.encoder.classifier = nn.Identity()
+        elif 'convnext' in backbone:
+            hdim = self.encoder.head.fc.in_features
+            self.encoder.head.fc = nn.Identity()
+
+        self.heads = nn.ModuleList([
+            nn.Sequential(
+                nn.Linear(hdim, 256),
+                nn.BatchNorm1d(256),
+                nn.Dropout(CONFIG["drop_rate_last"]),
+                nn.LeakyReLU(0.1),
+                nn.Linear(256, CONFIG["out_dim"]),
+                nn.Softmax(),
+            )
+            for i in range(CONFIG["n_levels"])])
+
+    def forward(self, x):
+        feat = self.encoder(x)
+        return torch.stack([head(feat) for head in self.heads], dim=1)
+
+
 class CNN_LSTM_Model(nn.Module):
     def __init__(self, backbone, pretrained=False):
         super(CNN_LSTM_Model, self).__init__()
@@ -180,11 +217,11 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = CNN_LSTM_Model(backbone=CONFIG["backbone"]).to(device)
+    model = CNN_Model(backbone=CONFIG["backbone"]).to(device)
     # model = VIT_Model(backbone=CONFIG["backbone"]).to(device)
     optimizers = [
         torch.optim.Adam(model.encoder.parameters(), lr=1e-4),
-        torch.optim.Adam(model.lstm.parameters(), lr=5e-4),
+        # torch.optim.Adam(model.lstm.parameters(), lr=5e-4),
     ]
 
     head_optimizers = [torch.optim.Adam(head.parameters(), lr=1e-3) for head in model.heads]
@@ -192,7 +229,7 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
 
     schedulers = [
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-6),
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-5),
+        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-5),
     ]
     schedulers.extend([
         torch.optim.lr_scheduler.CosineAnnealingLR(head_optimizer, NUM_EPOCHS, eta_min=1e-4) for head_optimizer in
@@ -275,7 +312,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series_per_image("Sagittal T2/STIR", "efficientnetv2b0_lstm_t2stir")
+    model_t2stir = train_model_for_series_per_image("Sagittal T2/STIR", "efficientnetv2b0_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 

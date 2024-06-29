@@ -534,3 +534,8 @@ It looks far more promising after I add the transforms. Next, to use the alterna
 Things are looking good so far, although there seems to be a thing with transforms being applied separately per channel.
 
 So let's start over with a 1-channel model this time.
+
+## 6/29
+### 12 PM
+Seems it is overfitting after the 20th epoch or so, which is when val stops going down meaningfully.
+Next, let me see if it does better without the LSTM on per image.
