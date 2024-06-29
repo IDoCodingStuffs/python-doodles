@@ -9,23 +9,14 @@ _logger = logging.getLogger(__name__)
 torchvision.disable_beta_transforms_warning()
 
 CONFIG = dict(
-    project_name="PL-RSNA-2024-Lumbar-Spine-Classification",
-    artifact_name="rsnaEffNetModel",
-    load_kernel=None,
-    load_last=True,
-    n_folds=5,
     n_levels=5,
     backbone="tf_efficientnetv2_b0",
     img_size=(384, 384),
-    n_slice_per_c=16,
     in_chans=1,
     drop_rate=0.05,
     drop_rate_last=0.3,
     drop_path_rate=0.,
-    p_mixup=0.5,
     aug_prob=0.7,
-    p_rand_order_v1=0.2,
-    lr=1e-3,
     out_dim=3,
     epochs=200,
     batch_size=8,
@@ -45,7 +36,7 @@ class CNN_LSTM_Model(nn.Module):
             drop_rate=CONFIG["drop_rate"],
             drop_path_rate=CONFIG["drop_path_rate"],
             pretrained=pretrained,
-            in_chans=1
+            in_chans=CONFIG["in_chans"],
         )
 
         if 'efficient' in backbone:
