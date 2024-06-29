@@ -539,3 +539,6 @@ So let's start over with a 1-channel model this time.
 ### 12 PM
 Seems it is overfitting after the 20th epoch or so, which is when val stops going down meaningfully.
 Next, let me see if it does better without the LSTM on per image.
+
+### 2 PM
+No, it is not learning without the LSTM per image. So next thing is, loading that model from the 20th epoch as the backbone to a series level model.
