@@ -529,3 +529,8 @@ Good news is it can overfit, bad news is it overfits right off the bat. One thin
 
 ### 11 AM
 It looks far more promising after I add the transforms. Next, to use the alternate oversampling logic.
+
+### 9 PM
+Things are looking good so far, although there seems to be a thing with transforms being applied separately per channel.
+
+So let's start over with a 1-channel model this time.

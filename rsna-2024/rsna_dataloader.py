@@ -59,10 +59,6 @@ class PerImageDataset(Dataset):
         image_path = self.label['image_path'].iloc[index]
         image = load_dicom(image_path)
 
-        image = self.to_pil(image)
-        image = self.grayscale(image)
-        image = np.asarray(image)
-
         if self.transform:
             image = self.transform(image=image)['image']
 
