@@ -123,7 +123,7 @@ class CNN_LSTM_Model_Series(nn.Module):
         feat, _ = self.encoder.lstm(feat)
         feat, _ = self.lstm(feat)
         # feat[0] is for the CLS embedding
-        return torch.stack([head(feat[0]) for head in self.heads], dim=0)
+        return torch.stack([head(feat[0]) for head in self.heads], dim=0).unsqueeze(0)
 
 
 class VIT_Model(nn.Module):

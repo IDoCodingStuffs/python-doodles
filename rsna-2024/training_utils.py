@@ -128,7 +128,7 @@ def train_model_with_validation(model,
             images, label = val
             label = label.to(device)
 
-            output = model(images.to(device)).unsqueeze(0)
+            output = model(images.to(device))
 
             for loss_index, loss_fn in enumerate(loss_fns):
                 # !TODO: Final batch scaling
