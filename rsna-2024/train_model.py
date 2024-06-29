@@ -101,6 +101,31 @@ class CNN_LSTM_Model(nn.Module):
         return torch.stack([head(feat) for head in self.heads], dim=1)
 
 
+class CNN_LSTM_Model_Series(nn.Module):
+    def __init__(self, backbone: CNN_LSTM_Model, encoder_feature_size=512):
+        super(CNN_LSTM_Model_Series, self).__init__()
+
+        self.encoder = backbone
+        self.lstm = nn.LSTM(encoder_feature_size, 256, num_layers=2, dropout=CONFIG["drop_rate"], bidirectional=True,
+                            batch_first=True)
+        self.heads = nn.ModuleList([
+            nn.Sequential(
+                nn.Linear(512, 256),
+                # nn.InstanceNorm1d(256),
+                nn.Dropout(CONFIG["drop_rate_last"]),
+                nn.LeakyReLU(0.1),
+                nn.Linear(256, CONFIG["out_dim"]),
+            )
+            for i in range(CONFIG["n_levels"])])
+
+    def forward(self, x):
+        feat = self.encoder.encoder(x.squeeze(0).unsqueeze(1))
+        feat, _ = self.encoder.lstm(feat)
+        feat, _ = self.lstm(feat)
+        # feat[0] is for the CLS embedding
+        return torch.stack([head(feat[0]) for head in self.heads], dim=0)
+
+
 class VIT_Model(nn.Module):
     def __init__(self, backbone, pretrained=False):
         super(VIT_Model, self).__init__()
@@ -177,9 +202,6 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
     data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
     training_data = retrieve_training_data(data_basepath)
 
-    # transform_train = TrainingTransform(image_size=CONFIG["img_size"], num_channels=3)
-    # transform_val = ValidationTransform(image_size=CONFIG["img_size"], num_channels=3)
-
     transform_train = A.Compose([
         A.RandomBrightnessContrast(brightness_limit=(-0.2, 0.2), contrast_limit=(-0.2, 0.2), p=CONFIG["aug_prob"]),
         A.OneOf([
@@ -197,7 +219,8 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
 
         A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=15, border_mode=0, p=CONFIG["aug_prob"]),
         A.Resize(*CONFIG["img_size"]),
-        A.CoarseDropout(max_holes=16, max_height=64, max_width=64, min_holes=1, min_height=8, min_width=8, p=CONFIG["aug_prob"]),
+        A.CoarseDropout(max_holes=16, max_height=64, max_width=64, min_holes=1, min_height=8, min_width=8,
+                        p=CONFIG["aug_prob"]),
         A.Normalize(mean=0.5, std=0.5),
     ])
 
@@ -217,11 +240,11 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = CNN_Model(backbone=CONFIG["backbone"]).to(device)
-    # model = VIT_Model(backbone=CONFIG["backbone"]).to(device)
+    model = CNN_LSTM_Model(backbone=CONFIG["backbone"]).to(device)
+
     optimizers = [
         torch.optim.Adam(model.encoder.parameters(), lr=1e-4),
-        # torch.optim.Adam(model.lstm.parameters(), lr=5e-4),
+        torch.optim.Adam(model.lstm.parameters(), lr=5e-4),
     ]
 
     head_optimizers = [torch.optim.Adam(head.parameters(), lr=1e-3) for head in model.heads]
@@ -229,7 +252,7 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
 
     schedulers = [
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-6),
-        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-5),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-5),
     ]
     schedulers.extend([
         torch.optim.lr_scheduler.CosineAnnealingLR(head_optimizer, NUM_EPOCHS, eta_min=1e-4) for head_optimizer in
@@ -260,8 +283,32 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
     training_data = retrieve_coordinate_training_data(data_basepath)
 
-    transform_train = TrainingTransform(image_size=CONFIG["img_size"], num_channels=3)
-    transform_val = ValidationTransform(image_size=CONFIG["img_size"], num_channels=3)
+    transform_train = A.Compose([
+        A.RandomBrightnessContrast(brightness_limit=(-0.2, 0.2), contrast_limit=(-0.2, 0.2), p=CONFIG["aug_prob"]),
+        A.OneOf([
+            A.MotionBlur(blur_limit=5),
+            A.MedianBlur(blur_limit=5),
+            A.GaussianBlur(blur_limit=5),
+            A.GaussNoise(var_limit=(5.0, 30.0)),
+        ], p=CONFIG["aug_prob"]),
+
+        A.OneOf([
+            A.OpticalDistortion(distort_limit=1.0),
+            A.GridDistortion(num_steps=5, distort_limit=1.),
+            A.ElasticTransform(alpha=3),
+        ], p=CONFIG["aug_prob"]),
+
+        A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=15, border_mode=0, p=CONFIG["aug_prob"]),
+        A.Resize(*CONFIG["img_size"]),
+        A.CoarseDropout(max_holes=16, max_height=64, max_width=64, min_holes=1, min_height=8, min_width=8,
+                        p=CONFIG["aug_prob"]),
+        A.Normalize(mean=0.5, std=0.5),
+    ])
+
+    transform_val = A.Compose([
+        A.Resize(*CONFIG["img_size"]),
+        A.Normalize(mean=0.5, std=0.5),
+    ])
 
     (trainloader, valloader, test_loader,
      trainset, valset, testset) = create_series_level_datasets_and_loaders(training_data,
@@ -271,24 +318,32 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            base_path=os.path.join(
                                                                                data_basepath,
                                                                                "train_images"),
-                                                                           num_workers=12,
+                                                                           num_workers=24,
                                                                            split_factor=0.3,
                                                                            batch_size=1)
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = VIT_Model_25D(backbone=CONFIG["backbone"]).to(device)
+    model_per_image = torch.load("./models/efficientnetv2b0_lstm_t2stir/efficientnetv2b0_lstm_t2stir_20.pt")
+    model = CNN_LSTM_Model_Series(backbone=model_per_image).to(device)
     optimizers = [
-        torch.optim.Adam(model.parameters(), lr=1e-3),
-        # torch.optim.Adam(model.attention_layer.parameters(), lr=1e-3),
-        # torch.optim.Adam(model.head.parameters(), lr=1e-3),
+        torch.optim.Adam(model.encoder.encoder.parameters(), lr=5e-5),
+        torch.optim.Adam(model.encoder.lstm.parameters(), lr=1e-4),
+        torch.optim.Adam(model.lstm.parameters(), lr=5e-4),
     ]
 
+    head_optimizers = [torch.optim.Adam(head.parameters(), lr=1e-3) for head in model.heads]
+    optimizers.extend(head_optimizers)
+
     schedulers = [
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-5),
-        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=1e-5),
-        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=1e-5),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-6),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-4),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=1e-5),
     ]
+    schedulers.extend([
+        torch.optim.lr_scheduler.CosineAnnealingLR(head_optimizer, NUM_EPOCHS, eta_min=1e-4) for head_optimizer in
+        head_optimizers
+    ])
 
     criteria = [
         FocalLoss(alpha=0.2).to(device),
@@ -312,7 +367,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series_per_image("Sagittal T2/STIR", "efficientnetv2b0_t2stir")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnetv2b0_lstm_series_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 

@@ -542,3 +542,7 @@ Next, let me see if it does better without the LSTM on per image.
 
 ### 2 PM
 No, it is not learning without the LSTM per image. So next thing is, loading that model from the 20th epoch as the backbone to a series level model.
+
+Also found a bug where I was softmaxing before the loss function... It was still learning though somehow?
+
+Let's see if LSTM will work with the CLS trick
