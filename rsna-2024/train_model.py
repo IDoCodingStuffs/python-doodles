@@ -111,7 +111,7 @@ class CNN_LSTM_Model_Series(nn.Module):
         self.heads = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(512, 256),
-                # nn.InstanceNorm1d(256),
+                nn.LayerNorm(256),
                 nn.Dropout(CONFIG["drop_rate_last"]),
                 nn.LeakyReLU(0.1),
                 nn.Linear(256, CONFIG["out_dim"]),
