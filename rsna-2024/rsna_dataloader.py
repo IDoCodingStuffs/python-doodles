@@ -191,21 +191,7 @@ class SeriesLevelDataset(Dataset):
                 curr = [0 if label != i else 1 for i in range(3)]
                 self.labels[name].append(curr)
 
-        # !TODO:Refactor
-        # !TODO: Revisit
-        self.weights = []
-        for index, row in self.series.iterrows():
-            curr = self.labels[(row["study_id"], row["series_id"])]
-            if np.argmax(curr[0]) != 0 or np.argmax(curr[-1]) != 0:
-                self.weights.append(20)
-            elif np.argmax(curr[1]) != 0:
-                self.weights.append(10)
-            elif np.argmax(curr[2]) != 0:
-                self.weights.append(5)
-            elif np.argmax(curr[3]) != 0:
-                self.weights.append(3)
-            else:
-                self.weights.append(1)
+        self.weights = self._get_weights()
 
     def __len__(self):
         return len(self.series)
@@ -228,6 +214,46 @@ class SeriesLevelDataset(Dataset):
         images = np.pad(images, ((1, 0), (0, 0), (0, 0)))
 
         return images, torch.tensor(label).type(torch.FloatTensor)
+
+    def _get_weights(self):
+        # !TODO: refactor and properly formulate
+        weights = []
+        for path in self.label["image_path"]:
+            curr = self.label_as_tensor(path).numpy()
+            # L5/S1 severe
+            if np.argmax(curr[-1]) == 2:
+                weights.append(100)
+            # L1/L2 severe
+            elif np.argmax(curr[0]) == 2:
+                weights.append(90)
+            # L5/S1 moderate
+            elif np.argmax(curr[-1]) == 1:
+                weights.append(38)
+            # L2/L3 severe
+            elif np.argmax(curr[1]) == 2:
+                weights.append(34)
+            # L1/L2 moderate
+            elif np.argmax(curr[0]) == 1:
+                weights.append(31)
+            # L3/L4 severe
+            elif np.argmax(curr[2]) == 2:
+                weights.append(13)
+            # L2/L3 moderate
+            elif np.argmax(curr[1]) == 1:
+                weights.append(11)
+            # L3/L4 moderate
+            elif np.argmax(curr[2]) == 1:
+                weights.append(7)
+            # L4/L5 severe
+            elif np.argmax(curr[3]) == 2:
+                weights.append(6)
+            # L4/L5 moderate
+            elif np.argmax(curr[3]) == 1:
+                weights.append(6)
+            # All mild
+            else:
+                weights.append(1)
+        return weights
 
     def _get_image_index(self, image_path):
         return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
