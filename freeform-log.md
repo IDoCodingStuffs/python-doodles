@@ -568,3 +568,6 @@ And as of epoch 20, not great performance. Time to retry ViT
 ViT per image seems to be overfitting after epoch 10. Interestingly, that translates to losing recall in L1/L2 and L5/S1.
 
 Turns out the oversampling is not good enough for those two. Even at a rate of 20:1.
+
+### 11 AM
+Let's see how it behaves with the revamped oversampling
