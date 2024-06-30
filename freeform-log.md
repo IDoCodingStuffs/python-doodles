@@ -546,3 +546,14 @@ No, it is not learning without the LSTM per image. So next thing is, loading tha
 Also found a bug where I was softmaxing before the loss function... It was still learning though somehow?
 
 Let's see if LSTM will work with the CLS trick
+
+### 6 PM
+It's seeming to overfit a lot by epoch 10, although the recall for severe at L4/L5 is sorta promising. I will let it keep running to see if val goes down later on.
+After all the distributions for train and val are different because of oversampling.
+Then I will check the performance without the per-image LSTM layer but with the backbone trained alongside it.
+Afterwards, I will try training a ViT backbone again since its performance was similar.
+
+Another thing to experiment with is LSTM vs transformer for the middle layer.
+
+### 8 PM
+Still no improvement, so I will try without the per-image LSTM and see if that helps things.

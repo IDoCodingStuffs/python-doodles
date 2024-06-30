@@ -102,12 +102,12 @@ class CNN_LSTM_Model(nn.Module):
 
 
 class CNN_LSTM_Model_Series(nn.Module):
-    def __init__(self, backbone: CNN_LSTM_Model, encoder_feature_size=512):
+    def __init__(self, backbone: CNN_LSTM_Model, encoder_feature_size=1280):
         super(CNN_LSTM_Model_Series, self).__init__()
 
         self.encoder = backbone
         self.lstm = nn.LSTM(encoder_feature_size, 256, num_layers=2, dropout=CONFIG["drop_rate"], bidirectional=True,
-                            batch_first=True)
+                             batch_first=True)
         self.heads = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(512, 256),
@@ -120,7 +120,7 @@ class CNN_LSTM_Model_Series(nn.Module):
 
     def forward(self, x):
         feat = self.encoder.encoder(x.squeeze(0).unsqueeze(1))
-        feat, _ = self.encoder.lstm(feat)
+        # feat, _ = self.encoder.lstm(feat)
         feat, _ = self.lstm(feat)
         # feat[0] is for the CLS embedding
         return torch.stack([head(feat[0]) for head in self.heads], dim=0).unsqueeze(0)
@@ -328,7 +328,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     model = CNN_LSTM_Model_Series(backbone=model_per_image).to(device)
     optimizers = [
         torch.optim.Adam(model.encoder.encoder.parameters(), lr=5e-5),
-        torch.optim.Adam(model.encoder.lstm.parameters(), lr=1e-4),
+        # torch.optim.Adam(model.encoder.lstm.parameters(), lr=1e-4),
         torch.optim.Adam(model.lstm.parameters(), lr=5e-4),
     ]
 
@@ -338,7 +338,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     schedulers = [
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-6),
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-4),
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=1e-5),
+        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=1e-5),
     ]
     schedulers.extend([
         torch.optim.lr_scheduler.CosineAnnealingLR(head_optimizer, NUM_EPOCHS, eta_min=1e-4) for head_optimizer in
