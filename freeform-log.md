@@ -562,3 +562,9 @@ Still no improvement, so I will try without the per-image LSTM and see if that h
 I don't know why, but val loss is absurdly unstable with this.
 
 And as of epoch 20, not great performance. Time to retry ViT
+
+## 6/30
+### 10 AM
+ViT per image seems to be overfitting after epoch 10. Interestingly, that translates to losing recall in L1/L2 and L5/S1.
+
+Turns out the oversampling is not good enough for those two. Even at a rate of 20:1.

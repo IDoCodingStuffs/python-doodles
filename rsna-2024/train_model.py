@@ -161,25 +161,12 @@ class NormMLPClassifierHead(nn.Module):
         return self.head(x)
 
 
-class VIT_Model_25D(nn.Module):
+class VIT_Model_Series(nn.Module):
     def __init__(self, backbone, pretrained=False):
-        super(VIT_Model_25D, self).__init__()
+        super(VIT_Model_Series, self).__init__()
 
         self.num_classes = CONFIG["out_dim"] * CONFIG["n_levels"]
-        self.encoder = timm.create_model(
-            backbone,
-            num_classes=self.num_classes,
-            features_only=False,
-            drop_rate=CONFIG["drop_rate"],
-            drop_path_rate=CONFIG["drop_path_rate"],
-            pretrained=pretrained
-        )
-        if 'efficient' in backbone:
-            hdim = self.encoder.conv_head.out_channels
-            self.encoder.classifier = nn.Identity()
-        elif 'vit' in backbone:
-            hdim = 576
-            self.encoder.head.fc = nn.Identity()
+        self.backbone = backbone
         self.attention_layer = nn.Sequential(
             # !TODO: Need to figure this one out
             nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True),
@@ -190,7 +177,7 @@ class VIT_Model_25D(nn.Module):
         self.head = NormMLPClassifierHead(self.num_classes)
 
     def forward(self, x):
-        feat = self.encoder(x.squeeze(0))
+        feat = self.backbone(x.squeeze(0))
         feat = self.attention_layer(feat.unsqueeze(0))
         # BERT-like approach
         feat = self.head(feat[:, 0])
@@ -321,7 +308,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            base_path=os.path.join(
                                                                                data_basepath,
                                                                                "train_images"),
-                                                                           num_workers=24,
+                                                                           num_workers=0,
                                                                            split_factor=0.3,
                                                                            batch_size=1)
 

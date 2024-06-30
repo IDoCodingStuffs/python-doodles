@@ -20,7 +20,7 @@ label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
 conditions = {"Sagittal T2/STIR": ["Spinal Canal Stenosis"]}
 
 class PerImageDataset(Dataset):
-    def __init__(self, dataframe, base_path="./data/rsna-2024-lumbar-spine-degenerative-classification/train_images", transform=None):
+    def __init__(self, dataframe, base_path="../data/rsna-2024-lumbar-spine-degenerative-classification/train_images", transform=None):
         self.to_pil = transforms.ToPILImage()
         self.to_tensor = transforms.ToTensor()
         self.grayscale = transforms.Grayscale(num_output_channels=3)
@@ -42,7 +42,7 @@ class PerImageDataset(Dataset):
         for path in self.label["image_path"]:
             curr = self.label_as_tensor(path).numpy()
             if np.argmax(curr[0]) != 0 or np.argmax(curr[-1]) != 0:
-                self.weights.append(20)
+                self.weights.append(50)
             elif np.argmax(curr[1]) != 0:
                 self.weights.append(10)
             elif np.argmax(curr[2]) != 0:
@@ -313,7 +313,7 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                              random_seed=42,
                                              batch_size=1,
                                              num_workers=0):
-    filtered_df = df[df['series_description'] == series_description]
+    filtered_df = df[(df['series_description'] == series_description) & (df["condition"].isin(conditions[series_description]))]
 
     # By defauly, 8-1.5-.5 split
     train_studies, val_studies = train_test_split(filtered_df["study_id"].unique(), test_size=split_factor,
