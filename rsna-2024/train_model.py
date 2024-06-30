@@ -10,8 +10,9 @@ torchvision.disable_beta_transforms_warning()
 
 CONFIG = dict(
     n_levels=5,
-    backbone="tf_efficientnetv2_b0",
-    img_size=(384, 384),
+    # backbone="tf_efficientnetv2_b0",
+    backbone="tiny_vit_21m_512",
+    img_size=(512, 512),
     in_chans=1,
     drop_rate=0.05,
     drop_rate_last=0.3,
@@ -222,11 +223,13 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
         A.CoarseDropout(max_holes=16, max_height=64, max_width=64, min_holes=1, min_height=8, min_width=8,
                         p=CONFIG["aug_prob"]),
         A.Normalize(mean=0.5, std=0.5),
+        A.ToRGB()
     ])
 
     transform_val = A.Compose([
         A.Resize(*CONFIG["img_size"]),
         A.Normalize(mean=0.5, std=0.5),
+        A.ToRGB()
     ])
 
     (trainloader, valloader, testloader,
@@ -240,24 +243,24 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = CNN_LSTM_Model(backbone=CONFIG["backbone"]).to(device)
+    model = VIT_Model(backbone=CONFIG["backbone"]).to(device)
 
     optimizers = [
         torch.optim.Adam(model.encoder.parameters(), lr=1e-4),
-        torch.optim.Adam(model.lstm.parameters(), lr=5e-4),
+        # torch.optim.Adam(model.lstm.parameters(), lr=5e-4),
     ]
 
-    head_optimizers = [torch.optim.Adam(head.parameters(), lr=1e-3) for head in model.heads]
-    optimizers.extend(head_optimizers)
+    # head_optimizers = [torch.optim.Adam(head.parameters(), lr=1e-3) for head in model.heads]
+    # optimizers.extend(head_optimizers)
 
     schedulers = [
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-6),
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-5),
+        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-5),
     ]
-    schedulers.extend([
-        torch.optim.lr_scheduler.CosineAnnealingLR(head_optimizer, NUM_EPOCHS, eta_min=1e-4) for head_optimizer in
-        head_optimizers
-    ])
+    # schedulers.extend([
+    #     torch.optim.lr_scheduler.CosineAnnealingLR(head_optimizer, NUM_EPOCHS, eta_min=1e-4) for head_optimizer in
+    #     head_optimizers
+    # ])
 
     criteria = [
         FocalLoss(alpha=0.2, gamma=3).to(device),
@@ -367,7 +370,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnetv2b0_lstm_series_t2stir")
+    model_t2stir = train_model_for_series_per_image("Sagittal T2/STIR", "tiny_vit_21m_512_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 
