@@ -557,3 +557,8 @@ Another thing to experiment with is LSTM vs transformer for the middle layer.
 
 ### 8 PM
 Still no improvement, so I will try without the per-image LSTM and see if that helps things.
+
+### 10 PM
+I don't know why, but val loss is absurdly unstable with this.
+
+And as of epoch 20, not great performance. Time to retry ViT
