@@ -570,4 +570,5 @@ ViT per image seems to be overfitting after epoch 10. Interestingly, that transl
 Turns out the oversampling is not good enough for those two. Even at a rate of 20:1.
 
 ### 11 AM
-Let's see how it behaves with the revamped oversampling
+Let's see how it behaves with the revamped oversampling. It is still hardly equal across all labels but at least somewhat better.
+
