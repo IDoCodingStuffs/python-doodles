@@ -572,3 +572,8 @@ Turns out the oversampling is not good enough for those two. Even at a rate of 2
 ### 11 AM
 Let's see how it behaves with the revamped oversampling. It is still hardly equal across all labels but at least somewhat better.
 
+### 3 PM
+So train loss goes down but not val. Let me guess, I should be oversampling val too?
+Also, the oversampling is still not perfect even if better than before. Mild labels still dwarf the other two even if not as badly as before.
+
+
