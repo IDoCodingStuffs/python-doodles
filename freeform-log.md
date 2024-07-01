@@ -576,4 +576,7 @@ Let's see how it behaves with the revamped oversampling. It is still hardly equa
 So train loss goes down but not val. Let me guess, I should be oversampling val too?
 Also, the oversampling is still not perfect even if better than before. Mild labels still dwarf the other two even if not as badly as before.
 
+### 8 PM
+It's looking more promising now. Only L5/S1 is failing to pop up for some reason by epoch 20, but promising results for the rest.
+I will give it a few more hours, and then if L5/S1 features also start getting acquired, I will move on to setting up the 2.5D model next with this backbone.
 
