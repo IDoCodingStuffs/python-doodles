@@ -580,3 +580,7 @@ Also, the oversampling is still not perfect even if better than before. Mild lab
 It's looking more promising now. Only L5/S1 is failing to pop up for some reason by epoch 20, but promising results for the rest.
 I will give it a few more hours, and then if L5/S1 features also start getting acquired, I will move on to setting up the 2.5D model next with this backbone.
 
+### 10 PM
+One idea to explore is, readjusting the final probabilities per the actual data distribution. Let's see how it turns out after the backbone keeps training overnight.
+In the morning, I will take the backbone with the best recalls on all 5 levels and train the series level model with it.
+
