@@ -584,3 +584,12 @@ I will give it a few more hours, and then if L5/S1 features also start getting a
 One idea to explore is, readjusting the final probabilities per the actual data distribution. Let's see how it turns out after the backbone keeps training overnight.
 In the morning, I will take the backbone with the best recalls on all 5 levels and train the series level model with it.
 
+## 7/1
+### 11 AM
+Still training, at epoch 55 now after 23:54 hours. I just want to see some F1 on all categories for all classes, so that I can move on to the next step lol.
+L5S1 still not popping up.
+
+### 3 PM
+I might need a preprocess layer. This is still kinda performant though. 
+It's also stopping learning around 70 epochs, so let's see how it does with the temporal layer.
+
