@@ -621,3 +621,6 @@ And more importantly, if it will fit in memory with series level
 ### 10 AM
 I wonder if I should modify the loss function so that moderate and severe categories are weighted -- trade precision for recall
 Or better yet, just adjust the prediction thresholds
+
+Another thing - instead of 21M ViT, I can try one of the T2T-ViT-7 10 or 12 models which are significantly smaller.
+Or any of the extra-small vits on Timm
