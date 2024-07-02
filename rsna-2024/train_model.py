@@ -162,22 +162,25 @@ class NormMLPClassifierHead(nn.Module):
 
 
 class VIT_Model_Series(nn.Module):
-    def __init__(self, backbone, pretrained=False):
+    def __init__(self, backbone, hdim=576):
         super(VIT_Model_Series, self).__init__()
 
         self.num_classes = CONFIG["out_dim"] * CONFIG["n_levels"]
+
         self.backbone = backbone
+        self.backbone.encoder.head.fc = nn.Identity()
+        self.backbone.forward = lambda x: self.backbone.encoder(x)
+
         self.attention_layer = nn.Sequential(
-            # !TODO: Need to figure this one out
             nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True),
             nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
-            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=576, nhead=8, batch_first=True), num_layers=1),
+            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=576, nhead=8, batch_first=True), num_layers=4),
         )
-        # self.attention_layer = nn.Identity()
         self.head = NormMLPClassifierHead(self.num_classes)
 
     def forward(self, x):
-        feat = self.backbone(x.squeeze(0))
+        # !TODO: Verify
+        feat = self.backbone(x.squeeze(0).swapaxes(1, 3))
         feat = self.attention_layer(feat.unsqueeze(0))
         # BERT-like approach
         feat = self.head(feat[:, 0])
@@ -293,11 +296,13 @@ def train_model_for_series(data_subset_label: str, model_label: str):
         A.CoarseDropout(max_holes=16, max_height=64, max_width=64, min_holes=1, min_height=8, min_width=8,
                         p=CONFIG["aug_prob"]),
         A.Normalize(mean=0.5, std=0.5),
+        A.ToRGB()
     ])
 
     transform_val = A.Compose([
         A.Resize(*CONFIG["img_size"]),
         A.Normalize(mean=0.5, std=0.5),
+        A.ToRGB()
     ])
 
     (trainloader, valloader, test_loader,
@@ -308,32 +313,25 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            base_path=os.path.join(
                                                                                data_basepath,
                                                                                "train_images"),
-                                                                           num_workers=0,
+                                                                           num_workers=24,
                                                                            split_factor=0.3,
                                                                            batch_size=1)
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model_per_image = torch.load("./models/efficientnetv2b0_lstm_t2stir/efficientnetv2b0_lstm_t2stir_20.pt")
-    model = CNN_LSTM_Model_Series(backbone=model_per_image).to(device)
+    model_per_image = torch.load("./models/tiny_vit_21m_512_t2stir/tiny_vit_21m_512_t2stir_70.pt")
+    model = VIT_Model_Series(backbone=model_per_image).to(device)
     optimizers = [
-        torch.optim.Adam(model.encoder.encoder.parameters(), lr=5e-5),
-        # torch.optim.Adam(model.encoder.lstm.parameters(), lr=1e-4),
-        torch.optim.Adam(model.lstm.parameters(), lr=5e-4),
+        torch.optim.Adam(model.backbone.parameters(), lr=5e-5),
+        torch.optim.Adam(model.attention_layer.parameters(), lr=5e-4),
+        torch.optim.Adam(model.head.parameters(), lr=1e-3)
     ]
-
-    head_optimizers = [torch.optim.Adam(head.parameters(), lr=1e-3) for head in model.heads]
-    optimizers.extend(head_optimizers)
 
     schedulers = [
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-6),
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-4),
-        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=1e-5),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=1e-4),
     ]
-    schedulers.extend([
-        torch.optim.lr_scheduler.CosineAnnealingLR(head_optimizer, NUM_EPOCHS, eta_min=1e-4) for head_optimizer in
-        head_optimizers
-    ])
 
     criteria = [
         FocalLoss(alpha=0.2).to(device),
@@ -357,7 +355,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series_per_image("Sagittal T2/STIR", "tiny_vit_21m_512_t2stir")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tiny_vit_21m_512_t2stir_series")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 

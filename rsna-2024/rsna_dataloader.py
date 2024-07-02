@@ -211,15 +211,15 @@ class SeriesLevelDataset(Dataset):
 
         # +1 is for the BERT-like pooling
         # images = np.pad(images, ((front_buffer + 1, rear_buffer), (0, 0), (0, 0), (0, 0)))
-        images = np.pad(images, ((1, 0), (0, 0), (0, 0)))
+        images = np.pad(images, ((1, 0), (0, 0), (0, 0), (0, 0)))
 
         return images, torch.tensor(label).type(torch.FloatTensor)
 
     def _get_weights(self):
         # !TODO: refactor and properly formulate
         weights = []
-        for path in self.label["image_path"]:
-            curr = self.label_as_tensor(path).numpy()
+        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
+            curr = self.labels[name]
             # L5/S1 severe
             if np.argmax(curr[-1]) == 2:
                 weights.append(100)

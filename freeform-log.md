@@ -591,5 +591,12 @@ L5S1 still not popping up.
 
 ### 3 PM
 I might need a preprocess layer. This is still kinda performant though. 
-It's also stopping learning around 70 epochs, so let's see how it does with the temporal layer.
 
+### 5 PM
+As of epoch 70, it is looking promising except for L5/S1. I wonder if it will eventually start picking up? Let's have it run till 100 why not.
+1500 seconds per epoch...
+
+### 9 PM
+Damn thing crashed on its own. I should probably address that...
+
+But I don't think it was going anywhere anyway. Next thing will be trying the series level training on a promising backbone.
