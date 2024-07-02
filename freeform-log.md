@@ -606,3 +606,7 @@ Might increase that 10 to 20 or 30 depending on if loss seems to keep going down
 
 ### 10 PM
 Realized I am probably ending up rotating the image with the swapaxes call lol. Let's see if my fix translates to better loss on the first 10 epochs.
+
+## 11 PM
+I think this will end up being way too slow. Let's see what it looks like in the morning, but I probably will revert to an efficientnet backbone.
+ViT will probably require a machine off RunPod.
