@@ -597,6 +597,9 @@ As of epoch 70, it is looking promising except for L5/S1. I wonder if it will ev
 1500 seconds per epoch...
 
 ### 9 PM
-Damn thing crashed on its own. I should probably address that...
-
+Damn thing crashed on its own. I should probably address that... I was curious what it would look like by epoch 200.
 But I don't think it was going anywhere anyway. Next thing will be trying the series level training on a promising backbone.
+
+So 4 layer transformer encoder, take the 576 features per image and run those through, see if it can learn anything.
+Also freezing the backbone for the first 10 epochs so that the attention layer and head gets a good start instead of passing gradients breaking everything.
+Might increase that 10 to 20 or 30 depending on if loss seems to keep going down for that first 10.
