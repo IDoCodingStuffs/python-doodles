@@ -113,7 +113,7 @@ def train_model_with_validation(model,
                                 model_desc="my_model",
                                 gradient_accumulation_per=1,
                                 epochs=10,
-                                freeze_backbone_initial_epochs=1,
+                                freeze_backbone_initial_epochs=0,
                                 empty_cache_every_n_iterations=2):
     epoch_losses = []
     epoch_validation_losses = []
