@@ -614,6 +614,6 @@ ViT will probably require a machine off RunPod.
 ## 7/2
 
 ### 8 AM
-Efficientnet backbone seems to have comparable performance to the ViT backbone if not better, at least by epoch 35. 
-And it seems to be fitting faster.
+Efficientnet backbone seems to have comparable performance to the ViT backbone.
 I wonder if it will capture the L5/S1 features with further training.
+And more importantly, if it will fit in memory with series level
