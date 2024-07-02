@@ -317,7 +317,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            base_path=os.path.join(
                                                                                data_basepath,
                                                                                "train_images"),
-                                                                           num_workers=24,
+                                                                           num_workers=0,
                                                                            split_factor=0.3,
                                                                            batch_size=1)
 

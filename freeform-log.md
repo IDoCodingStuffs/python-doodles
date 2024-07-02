@@ -603,3 +603,6 @@ But I don't think it was going anywhere anyway. Next thing will be trying the se
 So 4 layer transformer encoder, take the 576 features per image and run those through, see if it can learn anything.
 Also freezing the backbone for the first 10 epochs so that the attention layer and head gets a good start instead of passing gradients breaking everything.
 Might increase that 10 to 20 or 30 depending on if loss seems to keep going down for that first 10.
+
+### 10 PM
+Realized I am probably ending up rotating the image with the swapaxes call lol. Let's see if my fix translates to better loss on the first 10 epochs.
