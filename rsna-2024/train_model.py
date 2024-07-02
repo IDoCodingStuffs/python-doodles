@@ -184,7 +184,7 @@ class VIT_Model_Series(nn.Module):
 
     def forward(self, x):
         # !TODO: Verify
-        feat = self.backbone(x.squeeze(0).swapaxes(1, 3))
+        feat = self.backbone(x.squeeze(0).swapaxes(1, 3).swapaxes(2, 3))
         feat = self.attention_layer(feat.unsqueeze(0))
         # BERT-like approach
         feat = self.head(feat[:, 0])
@@ -317,7 +317,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            base_path=os.path.join(
                                                                                data_basepath,
                                                                                "train_images"),
-                                                                           num_workers=4,
+                                                                           num_workers=24,
                                                                            split_factor=0.3,
                                                                            batch_size=1)
 
