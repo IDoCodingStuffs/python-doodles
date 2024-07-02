@@ -617,3 +617,7 @@ ViT will probably require a machine off RunPod.
 Efficientnet backbone seems to have comparable performance to the ViT backbone.
 I wonder if it will capture the L5/S1 features with further training.
 And more importantly, if it will fit in memory with series level
+
+### 10 AM
+I wonder if I should modify the loss function so that moderate and severe categories are weighted -- trade precision for recall
+Or better yet, just adjust the prediction thresholds
