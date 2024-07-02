@@ -10,10 +10,11 @@ torchvision.disable_beta_transforms_warning()
 
 CONFIG = dict(
     n_levels=5,
-    # backbone="tf_efficientnetv2_b0",
-    backbone="tiny_vit_21m_512",
+    backbone="tf_efficientnetv2_b2",
+    # backbone="tiny_vit_21m_512",
     vit_backbone_path="./models/tiny_vit_21m_512_t2stir/tiny_vit_21m_512_t2stir_70.pt",
-    img_size=(512, 512),
+    # img_size=(512, 512),
+    img_size=(384, 384),
     in_chans=1,
     drop_rate=0.05,
     drop_rate_last=0.3,
@@ -28,12 +29,12 @@ CONFIG = dict(
 
 
 class CNN_Model(nn.Module):
-    def __init__(self, backbone, pretrained=False):
+    def __init__(self, backbone="tf_efficientnetv2_b2", pretrained=False):
         super(CNN_Model, self).__init__()
 
         self.encoder = timm.create_model(
             backbone,
-            num_classes=CONFIG["out_dim"],
+            num_classes=CONFIG["out_dim"] * CONFIG["n_levels"],
             features_only=False,
             drop_rate=CONFIG["drop_rate"],
             drop_path_rate=CONFIG["drop_path_rate"],
@@ -41,27 +42,8 @@ class CNN_Model(nn.Module):
             in_chans=CONFIG["in_chans"],
         )
 
-        if 'efficient' in backbone:
-            hdim = self.encoder.conv_head.out_channels
-            self.encoder.classifier = nn.Identity()
-        elif 'convnext' in backbone:
-            hdim = self.encoder.head.fc.in_features
-            self.encoder.head.fc = nn.Identity()
-
-        self.heads = nn.ModuleList([
-            nn.Sequential(
-                nn.Linear(hdim, 256),
-                nn.BatchNorm1d(256),
-                nn.Dropout(CONFIG["drop_rate_last"]),
-                nn.LeakyReLU(0.1),
-                nn.Linear(256, CONFIG["out_dim"]),
-                nn.Softmax(),
-            )
-            for i in range(CONFIG["n_levels"])])
-
     def forward(self, x):
-        feat = self.encoder(x)
-        return torch.stack([head(feat) for head in self.heads], dim=1)
+        return self.encoder(x).reshape((-1, 5, 3))
 
 
 class CNN_LSTM_Model(nn.Module):
@@ -129,7 +111,7 @@ class CNN_LSTM_Model_Series(nn.Module):
 
 
 class VIT_Model(nn.Module):
-    def __init__(self, backbone, pretrained=False):
+    def __init__(self, backbone="tiny_vit_21m_512", pretrained=False):
         super(VIT_Model, self).__init__()
 
         self.encoder = timm.create_model(
@@ -217,13 +199,13 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
         A.CoarseDropout(max_holes=16, max_height=64, max_width=64, min_holes=1, min_height=8, min_width=8,
                         p=CONFIG["aug_prob"]),
         A.Normalize(mean=0.5, std=0.5),
-        A.ToRGB()
+        # A.ToRGB()
     ])
 
     transform_val = A.Compose([
         A.Resize(*CONFIG["img_size"]),
         A.Normalize(mean=0.5, std=0.5),
-        A.ToRGB()
+        # A.ToRGB()
     ])
 
     (trainloader, valloader, testloader,
@@ -237,32 +219,21 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = VIT_Model(backbone=CONFIG["backbone"]).to(device)
+    # model = VIT_Model().to(device)
+    model = CNN_Model().to(device)
 
     optimizers = [
-        torch.optim.Adam(model.encoder.parameters(), lr=1e-4),
-        # torch.optim.Adam(model.lstm.parameters(), lr=5e-4),
+        torch.optim.Adam(model.encoder.parameters(), lr=1e-3),
     ]
-
-    # head_optimizers = [torch.optim.Adam(head.parameters(), lr=1e-3) for head in model.heads]
-    # optimizers.extend(head_optimizers)
 
     schedulers = [
         torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-6),
-        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-5),
     ]
-    # schedulers.extend([
-    #     torch.optim.lr_scheduler.CosineAnnealingLR(head_optimizer, NUM_EPOCHS, eta_min=1e-4) for head_optimizer in
-    #     head_optimizers
-    # ])
 
     criteria = [
-        FocalLoss(alpha=0.2, gamma=3).to(device),
-        FocalLoss(alpha=0.2, gamma=3).to(device),
-        FocalLoss(alpha=0.2, gamma=3).to(device),
-        FocalLoss(alpha=0.2, gamma=3).to(device),
-        FocalLoss(alpha=0.2, gamma=3).to(device),
+        FocalLoss(alpha=0.2, gamma=3).to(device) for i in range(CONFIG["n_levels"])
     ]
+
     train_model_with_validation(model,
                                 optimizers,
                                 schedulers,
@@ -317,7 +288,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            base_path=os.path.join(
                                                                                data_basepath,
                                                                                "train_images"),
-                                                                           num_workers=0,
+                                                                           num_workers=2,
                                                                            split_factor=0.3,
                                                                            batch_size=1)
 
@@ -354,13 +325,13 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                 model_desc=model_label,
                                 train_loader_desc=f"Training {data_subset_label}",
                                 epochs=NUM_EPOCHS,
-                                freeze_backbone_initial_epochs=10)
+                                freeze_backbone_initial_epochs=0)
 
     return model
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tiny_vit_21m_512_t2stir_series")
+    model_t2stir = train_model_for_series_per_image("Sagittal T2/STIR", "tf_efficientnetv2_b2_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 
