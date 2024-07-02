@@ -170,7 +170,7 @@ class VIT_Model_Series(nn.Module):
 
         self.backbone = backbone
         self.backbone.encoder.head.fc = nn.Identity()
-        self.backbone.forward = lambda x: self.backbone.encoder(x)
+        self.backbone.forward = self._backbone_forward
 
         self.attention_layer = nn.Sequential(
             nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True),
@@ -178,6 +178,9 @@ class VIT_Model_Series(nn.Module):
             nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=hdim, nhead=8, batch_first=True), num_layers=4),
         )
         self.head = NormMLPClassifierHead(self.num_classes)
+
+    def _backbone_forward(self, x):
+        return self.backbone.encoder(x)
 
     def forward(self, x):
         # !TODO: Verify
