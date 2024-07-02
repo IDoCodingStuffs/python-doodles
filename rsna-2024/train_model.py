@@ -10,7 +10,7 @@ torchvision.disable_beta_transforms_warning()
 
 CONFIG = dict(
     n_levels=5,
-    backbone="tf_efficientnetv2_b2",
+    backbone="tf_efficientnetv2_b3",
     # backbone="tiny_vit_21m_512",
     vit_backbone_path="./models/tiny_vit_21m_512_t2stir/tiny_vit_21m_512_t2stir_70.pt",
     # img_size=(512, 512),
@@ -29,7 +29,7 @@ CONFIG = dict(
 
 
 class CNN_Model(nn.Module):
-    def __init__(self, backbone="tf_efficientnetv2_b2", pretrained=False):
+    def __init__(self, backbone="tf_efficientnetv2_b3", pretrained=False):
         super(CNN_Model, self).__init__()
 
         self.encoder = timm.create_model(
@@ -331,7 +331,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series_per_image("Sagittal T2/STIR", "tf_efficientnetv2_b2_t2stir")
+    model_t2stir = train_model_for_series_per_image("Sagittal T2/STIR", "tf_efficientnetv2_b3_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 
