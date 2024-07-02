@@ -12,6 +12,7 @@ CONFIG = dict(
     n_levels=5,
     # backbone="tf_efficientnetv2_b0",
     backbone="tiny_vit_21m_512",
+    vit_backbone_path="./models/tiny_vit_21m_512_t2stir/tiny_vit_21m_512_t2stir_70.pt",
     img_size=(512, 512),
     in_chans=1,
     drop_rate=0.05,
@@ -174,7 +175,7 @@ class VIT_Model_Series(nn.Module):
         self.attention_layer = nn.Sequential(
             nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True),
             nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
-            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=576, nhead=8, batch_first=True), num_layers=4),
+            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=hdim, nhead=8, batch_first=True), num_layers=4),
         )
         self.head = NormMLPClassifierHead(self.num_classes)
 
@@ -319,7 +320,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model_per_image = torch.load("./models/tiny_vit_21m_512_t2stir/tiny_vit_21m_512_t2stir_70.pt")
+    model_per_image = torch.load(CONFIG["vit_backbone_path"])
     model = VIT_Model_Series(backbone=model_per_image).to(device)
     optimizers = [
         torch.optim.Adam(model.backbone.parameters(), lr=5e-5),
