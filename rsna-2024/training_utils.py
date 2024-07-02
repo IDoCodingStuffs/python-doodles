@@ -40,15 +40,12 @@ class FocalLoss(nn.Module):
 
 # !TODO: Optional
 def freeze_model_backbone(model: nn.Module):
-    for param in model.backbone.model.parameters():
+    for param in model.backbone.parameters():
         param.requires_grad = False
-    # for param in model.backbone.model.fc.parameters():
-    #     param.requires_grad = True
 
 
-# !TODO: Optional
 def unfreeze_model_backbone(model: nn.Module):
-    for param in model.backbone.model.parameters():
+    for param in model.backbone.parameters():
         param.requires_grad = True
 
 
@@ -115,13 +112,20 @@ def train_model_with_validation(model,
                                 train_loader_desc=None,
                                 model_desc="my_model",
                                 gradient_accumulation_per=1,
-                                epochs=10):
+                                epochs=10,
+                                freeze_backbone_initial_epochs=0):
     epoch_losses = []
     epoch_validation_losses = []
+
+    if freeze_backbone_initial_epochs > 0:
+        freeze_model_backbone(model)
 
     for epoch in tqdm(range(epochs), desc=train_loader_desc):
         epoch_loss = 0
         model.train()
+
+        if freeze_backbone_initial_epochs > 0 and epoch == freeze_backbone_initial_epochs:
+            unfreeze_model_backbone(model)
 
         # with  as prof:
         for index, val in enumerate(tqdm(train_loader, desc=f"Epoch {epoch}")):
