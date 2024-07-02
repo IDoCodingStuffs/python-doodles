@@ -610,3 +610,10 @@ Realized I am probably ending up rotating the image with the swapaxes call lol. 
 ## 11 PM
 I think this will end up being way too slow. Let's see what it looks like in the morning, but I probably will revert to an efficientnet backbone.
 ViT will probably require a machine off RunPod.
+
+## 7/2
+
+### 8 AM
+Efficientnet backbone seems to have comparable performance to the ViT backbone if not better, at least by epoch 35. 
+And it seems to be fitting faster.
+I wonder if it will capture the L5/S1 features with further training.
