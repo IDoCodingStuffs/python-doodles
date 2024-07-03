@@ -675,3 +675,4 @@ No such luck. Time to explore other options. Let's see if architecture change he
 
 ## 9 AM
 I should go through this https://www.kaggle.com/code/hugowjd/rsna2024-lsdc-training-densenet
+Also, need to learn about K-Fold Cross Validation.
