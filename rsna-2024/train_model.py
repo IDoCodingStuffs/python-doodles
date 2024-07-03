@@ -315,6 +315,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                 model_desc=model_label,
                                 train_loader_desc=f"Training {data_subset_label}",
                                 epochs=NUM_EPOCHS,
+                                empty_cache_every_n_iterations=50,
                                 freeze_backbone_initial_epochs=0)
 
     return model

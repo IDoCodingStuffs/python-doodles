@@ -653,4 +653,6 @@ The model can finally start learning in series. And I can finally start adding t
 
 ### 10 PM
 Turns out it was too early to celebrate -- model just predicts the same value for all input, so no learning done.
-Let's see if a different architecture does better
+Let's see if a different architecture does better.
+
+Efficientvit requires resize down to 224 which will probably not do great, but let's see
