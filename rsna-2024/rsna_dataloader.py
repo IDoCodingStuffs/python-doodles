@@ -209,10 +209,12 @@ class SeriesLevelDataset(Dataset):
         # front_buffer = (29 - len(images)) // 2
         # rear_buffer = (29 - len(images)) // 2 + ((29 - len(images)) % 2)
 
-        # +1 is for the BERT-like pooling
-        # images = np.pad(images, ((front_buffer + 1, rear_buffer), (0, 0), (0, 0), (0, 0)))
-        images = np.pad(images, ((1, 0), (0, 0), (0, 0), (0, 0)))
+        # +1 is for the CLS
+        # images = np.pad(images, ((1, 0), (0, 0), (0, 0)))
 
+        # Pad to get dim to 256
+        pad_size = 256 - len(images)
+        images = np.pad(images, ((0, pad_size), (0, 0), (0, 0)))
         return images, torch.tensor(label).type(torch.FloatTensor)
 
     def _get_weights(self):

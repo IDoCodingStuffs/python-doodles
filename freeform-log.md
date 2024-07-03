@@ -641,7 +641,37 @@ timm_3d lib refusing to work out so far. Btw, worth looking at `volumentations` 
 Might have to pad or 3D resize the loaded data to stretch to 256 depth for the 3D models
 
 ### 5 PM
-More architectures to consider: `deit`, 
+More architectures to consider: `deit`
+
+### 6 PM
+Starting to train series-level for `efficientnetv2b3` -- backbone from epoch 85 plus 4-layer transformer encoder plus head.
+It takes up like 12G of memory during training with this approach, so this is a good gauge for the upper level of model size.
+
+### 9 PM
+I just realized -- why am I adding a whole transformer encoder block where I can just add a single self-attention layer?
+The model can finally start learning in series. And I can finally start adding the other series data types, then submit and finally start iterating through model architectures and extra data and shit.
+
+### 10 PM
+Turns out it was too early to celebrate -- model just predicts the same value for all input, so no learning done.
+
+### 11 PM
+I guess missing normalization can lead to that? Let's see how it behaves with layernorm before the self attention layer.
+
+Similar, at least for the initial epochs. Let's see if it is one of those "hard to learn" cases where it will take some hours before it can start continuing to learn.
 
 ## 7/3
+### 12 AM
+So one problem I can now check for -- head weights are all 0 in that faulty case, so whatever comes before is failing. 
+Maybe due to the attention head approach being incorrect? In any case, it's just learning the bias at least for now.
+
+Yeah no, the normalization is not helping at least initially. Time to leave it overnight.
+
+### 1 AM
+One other discovery -- the sampling weights are not working as well as expected. Somewhat better, but the first, second and last joints still get overrepresented mild.
+Oh well, at least the model is not immediately overfitting like it did without normalization. Really hoping it does manage to pick something up eventually.
+
+### 8 AM
+No such luck. Time to explore other options. Let's see if architecture change helps -- 3D model vs 2.5
+
+## 9 AM
 I should go through this https://www.kaggle.com/code/hugowjd/rsna2024-lsdc-training-densenet
