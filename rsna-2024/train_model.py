@@ -325,7 +325,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientvit_m4_series_t2stir")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tf_efficientnetv2_b3_series_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 

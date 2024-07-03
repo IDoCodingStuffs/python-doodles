@@ -656,3 +656,5 @@ Turns out it was too early to celebrate -- model just predicts the same value fo
 
 ### 11 PM
 I guess missing normalization can lead to that? Let's see how it behaves with layernorm before the self attention layer.
+
+Similar, at least for the initial epochs. Let's see if it is one of those "hard to learn" cases where it will take some hours before it can start continuing to learn.
