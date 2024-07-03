@@ -17,7 +17,7 @@ CONFIG = dict(
     vit_backbone_path="./models/tiny_vit_21m_512_t2stir/tiny_vit_21m_512_t2stir_70.pt",
     efficientnet_backbone_path="./models/tf_efficientnetv2_b3_t2stir/tf_efficientnetv2_b3_t2stir_85.pt",
     # img_size=(512, 512),
-    img_size=(256, 256),
+    img_size=(384, 384),
     in_chans=1,
     drop_rate=0.05,
     drop_rate_last=0.3,
@@ -81,11 +81,10 @@ class PositionalEncoding(nn.Module):
         pe = pe.unsqueeze(0).transpose(0, 1)
         self.register_buffer('pe', pe)
 
-    def forward(self, x, seq_len=50, mask=None):
-        pos_emb = self.pe[:, :seq_len]
-        x = x * mask[:, :, None].float()
+    def forward(self, x):
+        pos_emb = self.pe[:x.size(0)]
         x = x + pos_emb
-        return x
+        return self.dropout(x)
 
 
 class EfficientNetModel_Series(nn.Module):
@@ -99,12 +98,10 @@ class EfficientNetModel_Series(nn.Module):
 
         hdim = self.backbone.encoder.conv_head.out_channels
         self.pos_emb = PositionalEncoding(d_model=hdim, dropout=CONFIG["drop_rate"])
-        self.layer_norm = nn.Sequential(
-            nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True)
-        )
-        self.attention_layer = nn.ModuleList(
-            [nn.TransformerEncoderLayer(hdim, nhead=8, dropout=CONFIG["drop_rate"]) for _ in
-             range(self.num_inter_layers)]
+        self.attention_layer = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(hdim, nhead=8, dropout=CONFIG["drop_rate"]),
+            num_layers=self.num_inter_layers,
+            norm=nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True)
         )
         self.head = NormMLPClassifierHead(hdim, CONFIG["n_levels"] * CONFIG["out_dim"])
 
@@ -115,12 +112,8 @@ class EfficientNetModel_Series(nn.Module):
         feat = self.backbone(x.squeeze(0).unsqueeze(1))
         feat = feat.unsqueeze(0)
 
-        pos_emb = self.pos_emb.pe[:, :feat.shape[1]]
-        feat = feat + pos_emb
-
-        feat = self.layer_norm(feat)
-        for i in range(self.num_inter_layers):
-            feat = self.attention_layer[i](i, feat, feat, 1)  # all_tokens * max_tokens * dim
+        feat = self.pos_emb(feat)
+        feat = self.attention_layer(feat)
 
         feat = self.head(feat[:, 0])
 
@@ -203,7 +196,7 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
                                                               data_subset_label,
                                                               transform_train,
                                                               transform_val,
-                                                              num_workers=24,
+                                                              num_workers=0,
                                                               split_factor=0.3,
                                                               batch_size=8)
 
@@ -278,7 +271,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            base_path=os.path.join(
                                                                                data_basepath,
                                                                                "train_images"),
-                                                                           num_workers=24,
+                                                                           num_workers=0,
                                                                            split_factor=0.3,
                                                                            batch_size=1)
 
@@ -359,7 +352,7 @@ def train_model_3d(data_subset_label: str, model_label: str):
                                                                            base_path=os.path.join(
                                                                                data_basepath,
                                                                                "train_images"),
-                                                                           num_workers=24,
+                                                                           num_workers=0,
                                                                            split_factor=0.3,
                                                                            batch_size=1)
 
@@ -395,7 +388,7 @@ def train_model_3d(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_3d("Sagittal T2/STIR", "tf_efficientnet_b0_3d_t2stir")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tf_efficientnetv2_b3_series_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 

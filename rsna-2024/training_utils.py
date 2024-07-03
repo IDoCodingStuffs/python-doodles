@@ -128,7 +128,6 @@ def train_model_with_validation(model,
         if freeze_backbone_initial_epochs > 0 and epoch == freeze_backbone_initial_epochs:
             unfreeze_model_backbone(model)
 
-        # with  as prof:
         for index, val in enumerate(tqdm(train_loader, desc=f"Epoch {epoch}")):
             images, label = val
             label = label.to(device)

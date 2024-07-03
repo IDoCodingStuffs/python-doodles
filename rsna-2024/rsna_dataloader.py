@@ -210,11 +210,8 @@ class SeriesLevelDataset(Dataset):
         # rear_buffer = (29 - len(images)) // 2 + ((29 - len(images)) % 2)
 
         # +1 is for the CLS
-        # images = np.pad(images, ((1, 0), (0, 0), (0, 0)))
+        images = np.pad(images, ((1, 0), (0, 0), (0, 0)))
 
-        # Pad to get dim to 256
-        pad_size = 256 - len(images)
-        images = np.pad(images, ((0, pad_size), (0, 0), (0, 0)))
         return images, torch.tensor(label).type(torch.FloatTensor)
 
     def _get_weights(self):
