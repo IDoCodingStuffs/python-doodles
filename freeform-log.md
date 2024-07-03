@@ -626,7 +626,7 @@ Another thing - instead of 21M ViT, I can try one of the T2T-ViT-7 10 or 12 mode
 Or any of the extra-small vits on Timm
 
 ### 2 PM
-There is also an efficientvit... Param counts are comfortably below 10M for the m models, or even b0/b1, so should be good enough for training on the 4090.
+There is also an `efficientvit`... Param counts are comfortably below 10M for the m models, or even b0/b1, so should be good enough for training on the 4090.
 Wow there is also a timm_3d lib. I can use the 3D variants like that??? Of course the efficientvits are not available, as the downside.
 
 And the models are large at the tiniest around 10M params, but the flipside is, I don't have to duplicate gradients per image as in the 2.5D approach.
@@ -637,5 +637,8 @@ Downside of 3D -- might have to sacrifice the flexibility with the series length
 Series size might be too small for 3D models as well -- getting "height must be divisible by 8 errors"
 
 ### 3 PM
-timm_2d lib refusing to work out so far. Btw, worth looking at `volumentations` for training augs.
+timm_3d lib refusing to work out so far. Btw, worth looking at `volumentations` for training augs.
 Might have to pad or 3D resize the loaded data to stretch to 256 depth for the 3D models
+
+### 5 PM
+More architectures to consider: `deit`, 
