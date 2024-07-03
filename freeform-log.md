@@ -673,6 +673,9 @@ Oh well, at least the model is not immediately overfitting like it did without n
 ### 8 AM
 No such luck. Time to explore other options. Let's see if architecture change helps -- 3D model vs 2.5
 
-## 9 AM
+### 9 AM
 I should go through this https://www.kaggle.com/code/hugowjd/rsna2024-lsdc-training-densenet
 Also, need to learn about K-Fold Cross Validation.
+
+### 11 AM
+Another approach to explore: pass in each image in the series in a different channel. Might work especially well with ViTs.
