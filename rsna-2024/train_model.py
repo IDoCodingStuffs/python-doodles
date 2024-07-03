@@ -55,12 +55,13 @@ class EfficientNetModel_Series(nn.Module):
         self.backbone.encoder.classifier = nn.Identity()
         self.backbone.forward = self._backbone_forward
 
-        hdim =self.backbone.encoder.conv_head.out_channels
-        self.attention_layer = nn.Sequential(
-            nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True),
-            nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
-            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=hdim, nhead=8, batch_first=True), num_layers=4),
-        )
+        hdim = self.backbone.encoder.conv_head.out_channels
+        # self.attention_layer = nn.Sequential(
+        #     # nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True),
+        #     # nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
+        #     # nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=hdim, nhead=8, batch_first=True), num_layers=4),
+        # )
+        self.attention_layer = nn.MultiheadAttention(embed_dim=hdim, num_heads=8)
         self.head = NormMLPClassifierHead(hdim, CONFIG["n_levels"] * CONFIG["out_dim"])
 
 
@@ -69,7 +70,8 @@ class EfficientNetModel_Series(nn.Module):
 
     def forward(self, x):
         feat = self.backbone(x.squeeze(0).unsqueeze(1))
-        feat = self.attention_layer(feat.unsqueeze(0))
+        feat = feat.unsqueeze(0)
+        feat, _ = self.attention_layer(feat, feat, feat)
         feat = self.head(feat[:, 0])
 
         # !TODO: This is likely incorrect
@@ -263,8 +265,8 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     model_per_image = torch.load(CONFIG["efficientnet_backbone_path"])
     model = EfficientNetModel_Series(backbone=model_per_image).to(device)
     optimizers = [
-        torch.optim.Adam(model.backbone.parameters(), lr=5e-5),
-        torch.optim.Adam(model.attention_layer.parameters(), lr=5e-4),
+        torch.optim.Adam(model.backbone.parameters(), lr=5e-4),
+        torch.optim.Adam(model.attention_layer.parameters(), lr=1e-3),
         torch.optim.Adam(model.head.parameters(), lr=1e-3)
     ]
 
