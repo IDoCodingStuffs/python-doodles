@@ -641,4 +641,8 @@ timm_3d lib refusing to work out so far. Btw, worth looking at `volumentations` 
 Might have to pad or 3D resize the loaded data to stretch to 256 depth for the 3D models
 
 ### 5 PM
-More architectures to consider: `deit`, 
+More architectures to consider: `deit`
+
+### 6 PM
+Starting to train series-level for `efficientnetv2b3` -- backbone from epoch 85 plus 4-layer transformer encoder plus head.
+It takes up like 12G of memory during training with this approach, so this is a good gauge for the upper level of model size.
