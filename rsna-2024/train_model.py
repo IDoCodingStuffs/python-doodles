@@ -63,7 +63,6 @@ class EfficientNetModel_Series(nn.Module):
         self.attention_layer = nn.MultiheadAttention(embed_dim=hdim, num_heads=8)
         self.head = NormMLPClassifierHead(hdim, CONFIG["n_levels"] * CONFIG["out_dim"])
 
-
     def _backbone_forward(self, x):
         return self.backbone.encoder(x)
 
@@ -123,6 +122,12 @@ class NormMLPClassifierHead(nn.Module):
             nn.Dropout(p=CONFIG["drop_rate_last"], inplace=True),
             nn.Linear(in_features=in_dim, out_features=out_dim, bias=True),
         )
+        self.head.apply(self._init_weights)
+
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            torch.nn.init.xavier_uniform_(m.weight)
+            torch.nn.init.zeros_(m.bias)
 
     def forward(self, x):
         return self.head(x)
@@ -255,13 +260,13 @@ def train_model_for_series(data_subset_label: str, model_label: str):
         A.CoarseDropout(max_holes=16, max_height=64, max_width=64, min_holes=1, min_height=8, min_width=8,
                         p=CONFIG["aug_prob"]),
         A.Normalize(mean=0.5, std=0.5),
-        #A.ToRGB()
+        # A.ToRGB()
     ])
 
     transform_val = A.Compose([
         A.Resize(*CONFIG["img_size"]),
         A.Normalize(mean=0.5, std=0.5),
-        #A.ToRGB()
+        # A.ToRGB()
     ])
 
     (trainloader, valloader, test_loader,

@@ -665,3 +665,9 @@ So one problem I can now check for -- head weights are all 0 in that faulty case
 Maybe due to the attention head approach being incorrect? In any case, it's just learning the bias at least for now.
 
 Yeah no, the normalization is not helping at least initially. Time to leave it overnight.
+
+### 1 AM
+One other discovery -- the sampling weights are not working as well as expected. Somewhat better, but the first, second and last joints still get overrepresented mild.
+Oh well, at least the model is not immediately overfitting like it did without normalization. Really hoping it does manage to pick something up eventually.
+
+Ooh I should do something other than 0 init for the linear layer.
