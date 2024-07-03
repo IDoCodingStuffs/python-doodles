@@ -646,3 +646,7 @@ More architectures to consider: `deit`
 ### 6 PM
 Starting to train series-level for `efficientnetv2b3` -- backbone from epoch 85 plus 4-layer transformer encoder plus head.
 It takes up like 12G of memory during training with this approach, so this is a good gauge for the upper level of model size.
+
+### 9 PM
+I just realized -- why am I adding a whole transformer encoder block where I can just add a single self-attention layer?
+The model can finally start learning in series. And I can finally start adding the other series data types, then submit and finally start iterating through model architectures and extra data and shit.
