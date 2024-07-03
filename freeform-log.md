@@ -682,3 +682,6 @@ Another approach to explore: pass in each image in the series in a different cha
 For the attention layer, this can come in handy: https://stackoverflow.com/questions/61619007/pytorch-how-to-add-a-self-attention-to-another-architecture
 
 3D Model is not doing great. Time to retry the transformer with some positional embeddings this time.
+
+### 3 PM
+No luck so far as of epoch 25. At least it's not overfitting though, so let's see if might eventually overcome the barrier.

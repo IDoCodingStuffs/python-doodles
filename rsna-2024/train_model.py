@@ -271,7 +271,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            base_path=os.path.join(
                                                                                data_basepath,
                                                                                "train_images"),
-                                                                           num_workers=0,
+                                                                           num_workers=24,
                                                                            split_factor=0.3,
                                                                            batch_size=1)
 
@@ -305,7 +305,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                 model_desc=model_label,
                                 train_loader_desc=f"Training {data_subset_label}",
                                 epochs=NUM_EPOCHS,
-                                empty_cache_every_n_iterations=2,
+                                empty_cache_every_n_iterations=12,
                                 freeze_backbone_initial_epochs=0)
 
     return model
