@@ -658,3 +658,8 @@ Turns out it was too early to celebrate -- model just predicts the same value fo
 I guess missing normalization can lead to that? Let's see how it behaves with layernorm before the self attention layer.
 
 Similar, at least for the initial epochs. Let's see if it is one of those "hard to learn" cases where it will take some hours before it can start continuing to learn.
+
+## 7/3
+### 12 AM
+So one problem I can now check for -- head weights are all 0 in that faulty case, so whatever comes before is failing. 
+Maybe due to the attention head approach being incorrect? In any case, it's just learning the bias at least for now.
