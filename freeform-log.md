@@ -650,3 +650,7 @@ It takes up like 12G of memory during training with this approach, so this is a 
 ### 9 PM
 I just realized -- why am I adding a whole transformer encoder block where I can just add a single self-attention layer?
 The model can finally start learning in series. And I can finally start adding the other series data types, then submit and finally start iterating through model architectures and extra data and shit.
+
+### 10 PM
+Turns out it was too early to celebrate -- model just predicts the same value for all input, so no learning done.
+Let's see if a different architecture does better
