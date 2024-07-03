@@ -669,5 +669,3 @@ Yeah no, the normalization is not helping at least initially. Time to leave it o
 ### 1 AM
 One other discovery -- the sampling weights are not working as well as expected. Somewhat better, but the first, second and last joints still get overrepresented mild.
 Oh well, at least the model is not immediately overfitting like it did without normalization. Really hoping it does manage to pick something up eventually.
-
-Ooh I should do something other than 0 init for the linear layer.
