@@ -679,3 +679,4 @@ Also, need to learn about K-Fold Cross Validation.
 
 ### 11 AM
 Another approach to explore: pass in each image in the series in a different channel. Might work especially well with ViTs.
+For the attention layer, this can come in handy: https://stackoverflow.com/questions/61619007/pytorch-how-to-add-a-self-attention-to-another-architecture
