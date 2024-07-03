@@ -1,6 +1,7 @@
 import timm
 import torchvision
 import albumentations as A
+import timm_3d
 
 from training_utils import *
 from rsna_dataloader import *
@@ -15,7 +16,7 @@ CONFIG = dict(
     vit_backbone_path="./models/tiny_vit_21m_512_t2stir/tiny_vit_21m_512_t2stir_70.pt",
     efficientnet_backbone_path="./models/tf_efficientnetv2_b3_t2stir/tf_efficientnetv2_b3_t2stir_85.pt",
     # img_size=(512, 512),
-    img_size=(224, 224),
+    img_size=(256, 256),
     in_chans=1,
     drop_rate=0.05,
     drop_rate_last=0.3,
@@ -45,6 +46,23 @@ class CNN_Model(nn.Module):
 
     def forward(self, x):
         return self.encoder(x).reshape((-1, 5, 3))
+
+class CNN_Model_3D(nn.Module):
+    def __init__(self, backbone="tf_efficientnet_b0", pretrained=False):
+        super(CNN_Model_3D, self).__init__()
+
+        self.encoder = timm_3d.create_model(
+            backbone,
+            num_classes=CONFIG["out_dim"] * CONFIG["n_levels"],
+            features_only=False,
+            drop_rate=CONFIG["drop_rate"],
+            drop_path_rate=CONFIG["drop_path_rate"],
+            pretrained=pretrained,
+            in_chans=CONFIG["in_chans"],
+        ).to(CONFIG["device"])
+
+    def forward(self, x):
+        return self.encoder(x.unsqueeze(1)).reshape((-1, 5, 3))
 
 
 class EfficientNetModel_Series(nn.Module):
@@ -283,8 +301,8 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model_per_image = torch.load(CONFIG["efficientnet_backbone_path"])
-    model = EfficientNetModel_Series(backbone=model_per_image).to(device)
+    # model_per_image = torch.load(CONFIG["efficientnet_backbone_path"])
+    # model = EfficientNetModel_Series(backbone=model_per_image).to(device)
     # model_per_image = timm.create_model(
     #     "efficientvit_m4",
     #     num_classes=CONFIG["out_dim"] * CONFIG["n_levels"],
@@ -294,16 +312,20 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     #     in_chans=CONFIG["in_chans"],
     # )
     # model = EfficientVitModel_Series(backbone=model_per_image).to(device)
+
+    model = CNN_Model_3D()
+
     optimizers = [
-        torch.optim.Adam(model.backbone.parameters(), lr=1e-4),
-        torch.optim.Adam(model.attention_layer.parameters(), lr=1e-3),
-        torch.optim.Adam(model.head.parameters(), lr=1e-3)
+        # torch.optim.Adam(model.backbone.parameters(), lr=1e-4),
+        # torch.optim.Adam(model.attention_layer.parameters(), lr=1e-3),
+        # torch.optim.Adam(model.head.parameters(), lr=1e-3)
+        torch.optim.Adam(model.parameters(), lr=1e-3),
     ]
 
     schedulers = [
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-6),
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-4),
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=1e-4),
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-5),
+        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-4),
+        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=1e-4),
     ]
 
     criteria = [
@@ -323,14 +345,14 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                 model_desc=model_label,
                                 train_loader_desc=f"Training {data_subset_label}",
                                 epochs=NUM_EPOCHS,
-                                empty_cache_every_n_iterations=50,
+                                empty_cache_every_n_iterations=2,
                                 freeze_backbone_initial_epochs=0)
 
     return model
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tf_efficientnetv2_b3_series_t2stir")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tf_efficientnet_b0_3d_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 

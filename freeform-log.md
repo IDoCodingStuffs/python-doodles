@@ -669,3 +669,6 @@ Yeah no, the normalization is not helping at least initially. Time to leave it o
 ### 1 AM
 One other discovery -- the sampling weights are not working as well as expected. Somewhat better, but the first, second and last joints still get overrepresented mild.
 Oh well, at least the model is not immediately overfitting like it did without normalization. Really hoping it does manage to pick something up eventually.
+
+### 8 AM
+No such luck. Time to explore other options. Let's see if architecture change helps -- 3D model vs 2.5
