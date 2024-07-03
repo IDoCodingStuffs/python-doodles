@@ -2,6 +2,7 @@ import timm
 import torchvision
 import albumentations as A
 import timm_3d
+import math
 
 from training_utils import *
 from rsna_dataloader import *
@@ -47,6 +48,7 @@ class CNN_Model(nn.Module):
     def forward(self, x):
         return self.encoder(x).reshape((-1, 5, 3))
 
+
 class CNN_Model_3D(nn.Module):
     def __init__(self, backbone="tf_efficientnet_b0", pretrained=False):
         super(CNN_Model_3D, self).__init__()
@@ -65,20 +67,45 @@ class CNN_Model_3D(nn.Module):
         return self.encoder(x.unsqueeze(1)).reshape((-1, 5, 3))
 
 
+class PositionalEncoding(nn.Module):
+    def __init__(self, d_model, dropout=0.1, max_len=100):
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(p=dropout)
+        self.d_model = d_model
+
+        pe = torch.zeros(max_len, d_model)
+        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0).transpose(0, 1)
+        self.register_buffer('pe', pe)
+
+    def forward(self, x, seq_len=50, mask=None):
+        pos_emb = self.pe[:, :seq_len]
+        x = x * mask[:, :, None].float()
+        x = x + pos_emb
+        return x
+
+
 class EfficientNetModel_Series(nn.Module):
-    def __init__(self, backbone: CNN_Model):
+    def __init__(self, backbone: CNN_Model, num_inter_layers=4):
         super(EfficientNetModel_Series, self).__init__()
 
         self.backbone = backbone
         self.backbone.encoder.classifier = nn.Identity()
         self.backbone.forward = self._backbone_forward
+        self.num_inter_layers = num_inter_layers
 
         hdim = self.backbone.encoder.conv_head.out_channels
-        self.attention_layer_norm = nn.Sequential(
-            nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True),
-            nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
+        self.pos_emb = PositionalEncoding(d_model=hdim, dropout=CONFIG["drop_rate"])
+        self.layer_norm = nn.Sequential(
+            nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True)
         )
-        self.attention_layer = nn.MultiheadAttention(embed_dim=hdim, num_heads=8)
+        self.attention_layer = nn.ModuleList(
+            [nn.TransformerEncoderLayer(hdim, nhead=8, dropout=CONFIG["drop_rate"]) for _ in
+             range(self.num_inter_layers)]
+        )
         self.head = NormMLPClassifierHead(hdim, CONFIG["n_levels"] * CONFIG["out_dim"])
 
     def _backbone_forward(self, x):
@@ -87,8 +114,14 @@ class EfficientNetModel_Series(nn.Module):
     def forward(self, x):
         feat = self.backbone(x.squeeze(0).unsqueeze(1))
         feat = feat.unsqueeze(0)
-        feat = self.attention_layer_norm(feat)
-        feat, _ = self.attention_layer(feat, feat, feat)
+
+        pos_emb = self.pos_emb.pe[:, :feat.shape[1]]
+        feat = feat + pos_emb
+
+        feat = self.layer_norm(feat)
+        for i in range(self.num_inter_layers):
+            feat = self.attention_layer[i](i, feat, feat, 1)  # all_tokens * max_tokens * dim
+
         feat = self.head(feat[:, 0])
 
         return feat.reshape((-1, CONFIG["n_levels"], CONFIG["out_dim"]))
@@ -130,7 +163,6 @@ class NormMLPClassifierHead(nn.Module):
 
     def forward(self, x):
         return self.head(x)
-
 
 
 def train_model_for_series_per_image(data_subset_label: str, model_label: str):
