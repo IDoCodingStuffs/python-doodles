@@ -13,6 +13,7 @@ CONFIG = dict(
     backbone="tf_efficientnetv2_b3",
     # backbone="tiny_vit_21m_512",
     vit_backbone_path="./models/tiny_vit_21m_512_t2stir/tiny_vit_21m_512_t2stir_70.pt",
+    efficientnet_backbone_path="./models/tf_efficientnetv2_b3_t2stir/tf_efficientnetv2_b3_t2stir_85.pt",
     # img_size=(512, 512),
     img_size=(384, 384),
     in_chans=1,
@@ -46,68 +47,33 @@ class CNN_Model(nn.Module):
         return self.encoder(x).reshape((-1, 5, 3))
 
 
-class CNN_LSTM_Model(nn.Module):
-    def __init__(self, backbone, pretrained=False):
-        super(CNN_LSTM_Model, self).__init__()
+class EfficientNetModel_Series(nn.Module):
+    def __init__(self, backbone: CNN_Model):
+        super(EfficientNetModel_Series, self).__init__()
 
-        self.encoder = timm.create_model(
-            backbone,
-            num_classes=CONFIG["out_dim"],
-            features_only=False,
-            drop_rate=CONFIG["drop_rate"],
-            drop_path_rate=CONFIG["drop_path_rate"],
-            pretrained=pretrained,
-            in_chans=CONFIG["in_chans"],
+        self.backbone = backbone
+        self.backbone.encoder.classifier = nn.Identity()
+        self.backbone.forward = self._backbone_forward
+
+        hdim =self.backbone.encoder.conv_head.out_channels
+        self.attention_layer = nn.Sequential(
+            nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True),
+            nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
+            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=hdim, nhead=8, batch_first=True), num_layers=4),
         )
+        self.head = NormMLPClassifierHead(hdim, CONFIG["n_levels"] * CONFIG["out_dim"])
 
-        if 'efficient' in backbone:
-            hdim = self.encoder.conv_head.out_channels
-            self.encoder.classifier = nn.Identity()
-        elif 'convnext' in backbone:
-            hdim = self.encoder.head.fc.in_features
-            self.encoder.head.fc = nn.Identity()
 
-        self.lstm = nn.LSTM(hdim, 256, num_layers=2, dropout=CONFIG["drop_rate"], bidirectional=True, batch_first=True)
-        self.heads = nn.ModuleList([
-            nn.Sequential(
-                nn.Linear(512, 256),
-                nn.BatchNorm1d(256),
-                nn.Dropout(CONFIG["drop_rate_last"]),
-                nn.LeakyReLU(0.1),
-                nn.Linear(256, CONFIG["out_dim"]),
-                nn.Softmax(),
-            )
-            for i in range(CONFIG["n_levels"])])
+    def _backbone_forward(self, x):
+        return self.backbone.encoder(x)
 
     def forward(self, x):
-        feat = self.encoder(x)
-        feat, _ = self.lstm(feat)
-        return torch.stack([head(feat) for head in self.heads], dim=1)
+        feat = self.backbone(x.squeeze(0).unsqueeze(1))
+        feat = self.attention_layer(feat.unsqueeze(0))
+        feat = self.head(feat[:, 0])
 
-
-class CNN_LSTM_Model_Series(nn.Module):
-    def __init__(self, backbone: CNN_LSTM_Model, encoder_feature_size=1280):
-        super(CNN_LSTM_Model_Series, self).__init__()
-
-        self.encoder = backbone
-        self.lstm = nn.LSTM(encoder_feature_size, 256, num_layers=2, dropout=CONFIG["drop_rate"], bidirectional=True,
-                             batch_first=True)
-        self.heads = nn.ModuleList([
-            nn.Sequential(
-                nn.Linear(512, 256),
-                nn.LayerNorm(256),
-                nn.Dropout(CONFIG["drop_rate_last"]),
-                nn.LeakyReLU(0.1),
-                nn.Linear(256, CONFIG["out_dim"]),
-            )
-            for i in range(CONFIG["n_levels"])])
-
-    def forward(self, x):
-        feat = self.encoder.encoder(x.squeeze(0).unsqueeze(1))
-        # feat, _ = self.encoder.lstm(feat)
-        feat, _ = self.lstm(feat)
-        # feat[0] is for the CLS embedding
-        return torch.stack([head(feat[0]) for head in self.heads], dim=0).unsqueeze(0)
+        # !TODO: This is likely incorrect
+        return feat.reshape((-1, CONFIG["n_levels"], CONFIG["out_dim"]))
 
 
 class VIT_Model(nn.Module):
@@ -128,15 +94,15 @@ class VIT_Model(nn.Module):
 
 
 class NormMLPClassifierHead(nn.Module):
-    def __init__(self, out_dim):
+    def __init__(self, in_dim, out_dim):
         super(NormMLPClassifierHead, self).__init__()
 
         self.out_dim = out_dim
         self.head = nn.Sequential(
-            nn.LayerNorm(576, eps=1e-05, elementwise_affine=True),
+            nn.LayerNorm(in_dim, eps=1e-05, elementwise_affine=True),
             # nn.Flatten(start_dim=1, end_dim=-1),
             nn.Dropout(p=CONFIG["drop_rate_last"], inplace=True),
-            nn.Linear(in_features=576, out_features=15, bias=True),
+            nn.Linear(in_features=in_dim, out_features=out_dim, bias=True),
             # nn.Softmax()
         )
 
@@ -271,13 +237,13 @@ def train_model_for_series(data_subset_label: str, model_label: str):
         A.CoarseDropout(max_holes=16, max_height=64, max_width=64, min_holes=1, min_height=8, min_width=8,
                         p=CONFIG["aug_prob"]),
         A.Normalize(mean=0.5, std=0.5),
-        A.ToRGB()
+        #A.ToRGB()
     ])
 
     transform_val = A.Compose([
         A.Resize(*CONFIG["img_size"]),
         A.Normalize(mean=0.5, std=0.5),
-        A.ToRGB()
+        #A.ToRGB()
     ])
 
     (trainloader, valloader, test_loader,
@@ -288,14 +254,14 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            base_path=os.path.join(
                                                                                data_basepath,
                                                                                "train_images"),
-                                                                           num_workers=2,
+                                                                           num_workers=24,
                                                                            split_factor=0.3,
                                                                            batch_size=1)
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model_per_image = torch.load(CONFIG["vit_backbone_path"])
-    model = VIT_Model_Series(backbone=model_per_image).to(device)
+    model_per_image = torch.load(CONFIG["efficientnet_backbone_path"])
+    model = EfficientNetModel_Series(backbone=model_per_image).to(device)
     optimizers = [
         torch.optim.Adam(model.backbone.parameters(), lr=5e-5),
         torch.optim.Adam(model.attention_layer.parameters(), lr=5e-4),
@@ -331,7 +297,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series_per_image("Sagittal T2/STIR", "tf_efficientnetv2_b3_t2stir")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tf_efficientnetv2_b3_series_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 
