@@ -663,3 +663,5 @@ Similar, at least for the initial epochs. Let's see if it is one of those "hard 
 ### 12 AM
 So one problem I can now check for -- head weights are all 0 in that faulty case, so whatever comes before is failing. 
 Maybe due to the attention head approach being incorrect? In any case, it's just learning the bias at least for now.
+
+Yeah no, the normalization is not helping at least initially. Time to leave it overnight.
