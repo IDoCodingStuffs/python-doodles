@@ -642,3 +642,6 @@ Might have to pad or 3D resize the loaded data to stretch to 256 depth for the 3
 
 ### 5 PM
 More architectures to consider: `deit`, 
+
+## 7/3
+I should go through this https://www.kaggle.com/code/hugowjd/rsna2024-lsdc-training-densenet
