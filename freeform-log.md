@@ -708,3 +708,6 @@ For the handed dataset -- vertical mirror is an awesome way to augment the data.
 
 ### 1 AM
 Another TODO before I call it a night: dump the confusion and prec/recall/f1 graphs automatically
+Also to consider, using the same model for both sagittal series?
+
+Shit, also, turns out the per-channel approach won't support the axial series. So that one needs a 3D model. How exciting!

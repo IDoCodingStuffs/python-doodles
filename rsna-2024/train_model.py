@@ -51,7 +51,7 @@ class CNN_Model(nn.Module):
 
 
 class CNN_Model_Multichannel(nn.Module):
-    def __init__(self, backbone="tf_efficientnetv2_b3", num_levels=5, pretrained=False):
+    def __init__(self, backbone="tf_efficientnetv2_b3", in_chans=29, num_levels=5, pretrained=False):
         super(CNN_Model_Multichannel, self).__init__()
 
         self.num_levels = num_levels
@@ -63,7 +63,7 @@ class CNN_Model_Multichannel(nn.Module):
             drop_path_rate=CONFIG["drop_path_rate"],
             pretrained=pretrained,
             # !TODO: Refactor
-            in_chans=CONFIG["in_chans"] * 29,
+            in_chans=CONFIG["in_chans"] * in_chans,
         )
 
     def forward(self, x):
@@ -302,7 +302,9 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     # model_per_image = torch.load(CONFIG["efficientnet_backbone_path"])
     # model = EfficientNetModel_Series(backbone=model_per_image).to(device)
-    model = CNN_Model_Multichannel(backbone=CONFIG["backbone"], num_levels=(5 if "T2/STIR" in data_subset_label else 10)).to(device)
+    model = CNN_Model_Multichannel(backbone=CONFIG["backbone"],
+                                   in_chans=MAX_IMAGES_IN_SERIES[data_subset_label],
+                                   num_levels=(5 if "T2/STIR" in data_subset_label else 10)).to(device)
 
     optimizers = [
         # torch.optim.Adam(model.backbone.parameters(), lr=1e-4),
@@ -414,8 +416,8 @@ def train_model_3d(data_subset_label: str, model_label: str):
 
 def train():
     # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_t2stir")
+    #model_t2 = train_model_for_series("Axial T2", "efficientnet_b4_multichannel_t2")
     model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b4_multichannel_t1")
-    model_t2 = train_model_for_series("Axial T2", "efficientnet_b4_multichannel_t2")
 
 
 if __name__ == '__main__':

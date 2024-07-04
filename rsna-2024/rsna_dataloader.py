@@ -23,9 +23,9 @@ CONDITIONS = {
 }
 MAX_IMAGES_IN_SERIES = {
     "Sagittal T2/STIR": 29,
-    # !TODO: Actual numbers
-    "Axial T2": 29,
-    "Sagittal T1": 29,
+    # !TODO: Might need a 3D model for this one
+    "Axial T2": 192,
+    "Sagittal T1": 38,
 }
 
 
