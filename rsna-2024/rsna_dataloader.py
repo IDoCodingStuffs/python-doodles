@@ -23,9 +23,9 @@ CONDITIONS = {
 }
 MAX_IMAGES_IN_SERIES = {
     "Sagittal T2/STIR": 29,
-    "Axial T2": ["Left Subarticular Stenosis", "Right Subarticular Stenosis"],
-    "Sagittal T1": ["Left Neural Foraminal Narrowing", "Right Neural Foraminal Narrowing"],
-
+    # !TODO: Actual numbers
+    "Axial T2": 29,
+    "Sagittal T1": 29,
 }
 
 
@@ -192,8 +192,8 @@ class SeriesLevelDataset(Dataset):
                  data_series="Sagittal T2/STIR",
                  transform=None):
         self.base_path = base_path
-
         self.type = data_type
+        self.data_series = data_series
 
         self.dataframe = (dataframe[['study_id', "series_id", "condition", "severity", "level"]]
                           .drop_duplicates())
@@ -228,8 +228,9 @@ class SeriesLevelDataset(Dataset):
                            else load_dicom(image_path) for image_path in image_paths])
 
         if self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH:
-            front_buffer = (29 - len(images)) // 2
-            rear_buffer = (29 - len(images)) // 2 + ((29 - len(images)) % 2)
+            front_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2
+            rear_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2 + (
+                        (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) % 2)
 
             images = np.pad(images, ((front_buffer, rear_buffer), (0, 0), (0, 0)))
 
@@ -238,7 +239,7 @@ class SeriesLevelDataset(Dataset):
 
         elif self.type == SeriesDataType.CUBE_3D:
             width = len(images[0])
-            images = np.pad(images, ((0, width-len(images)), (0, 0), (0, 0)))
+            images = np.pad(images, ((0, width - len(images)), (0, 0), (0, 0)))
 
         return images, torch.tensor(label).type(torch.FloatTensor)
 
@@ -275,7 +276,6 @@ class SeriesLevelDataset(Dataset):
 
         return labels
 
-
     def _get_t2_labels(self):
         labels = dict()
         for name, group in self.dataframe.groupby(["study_id", "series_id"]):
@@ -292,7 +292,6 @@ class SeriesLevelDataset(Dataset):
                 self.labels[name].append(curr)
 
         return labels
-
 
     def _get_t2stir_weights(self):
         # !TODO: refactor and properly formulate
