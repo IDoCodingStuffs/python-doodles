@@ -235,9 +235,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train_model_3d(data_subset_label: str, model_label: str):
-    data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
-    training_data = retrieve_coordinate_training_data(data_basepath)
-
+    # !TODO: Use volumentations not albumentations
     transform_train = A.Compose([
         A.RandomBrightnessContrast(brightness_limit=(-0.2, 0.2), contrast_limit=(-0.2, 0.2), p=CONFIG["aug_prob"]),
         A.OneOf([
@@ -258,22 +256,21 @@ def train_model_3d(data_subset_label: str, model_label: str):
         A.CoarseDropout(max_holes=16, max_height=64, max_width=64, min_holes=1, min_height=8, min_width=8,
                         p=CONFIG["aug_prob"]),
         A.Normalize(mean=0.5, std=0.5),
-        # A.ToRGB()
     ])
 
     transform_val = A.Compose([
         A.Resize(*CONFIG["img_size"]),
         A.Normalize(mean=0.5, std=0.5),
-        # A.ToRGB()
     ])
 
+    # !TODO: Get new dataset type and loader for 3D
     (trainloader, valloader, test_loader,
-     trainset, valset, testset) = create_series_level_datasets_and_loaders(training_data,
+     trainset, valset, testset) = create_series_level_datasets_and_loaders(TRAINING_DATA,
                                                                            data_subset_label,
                                                                            transform_train,
                                                                            transform_val,
                                                                            base_path=os.path.join(
-                                                                               data_basepath,
+                                                                               DATA_BASEPATH,
                                                                                "train_images"),
                                                                            num_workers=0,
                                                                            split_factor=0.3,
@@ -288,11 +285,10 @@ def train_model_3d(data_subset_label: str, model_label: str):
     ]
 
     schedulers = [
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-5),
     ]
 
     criteria = [
-        FocalLoss(alpha=0.2).to(device) for i in range(CONFIG["n_levels"])
+        FocalLoss(alpha=0.1).to(device) for i in range(CONFIG["n_levels"] * 2)
     ]
 
     train_model_with_validation(model,
@@ -304,16 +300,15 @@ def train_model_3d(data_subset_label: str, model_label: str):
                                 model_desc=model_label,
                                 train_loader_desc=f"Training {data_subset_label}",
                                 epochs=NUM_EPOCHS,
-                                empty_cache_every_n_iterations=2,
                                 freeze_backbone_initial_epochs=0)
 
     return model
 
 
 def train():
-    # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_t2stir")
-    #model_t2 = train_model_for_series("Axial T2", "efficientnet_b4_multichannel_t2")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_t2stir")
     model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b4_multichannel_t1")
+    model_t2 = train_model_3d("Axial T2", "efficientnet_b4_multichannel_t2")
 
 
 if __name__ == '__main__':
