@@ -224,7 +224,8 @@ class SeriesLevelDataset(Dataset):
         image_paths = sorted(image_paths, key=lambda x: self._get_image_index(x))
         label = np.array(self.labels[(curr["study_id"], curr["series_id"])])
 
-        images = np.array([np.array(self.transform(image=load_dicom(image_path))['image']) if self.transform
+        images = np.array([np.array(self.transform(image=load_dicom(image_path))['image'])
+                           if self.transform and self.type != SeriesDataType.CUBE_3D
                            else load_dicom(image_path) for image_path in image_paths])
 
         if self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH:
@@ -239,6 +240,7 @@ class SeriesLevelDataset(Dataset):
 
         elif self.type == SeriesDataType.CUBE_3D:
             width = len(images[0])
+            # !TODO: Use volumentations resize instead of padding
             images = np.pad(images, ((0, width - len(images)), (0, 0), (0, 0)))
 
         return images, torch.tensor(label).type(torch.FloatTensor)
@@ -393,71 +395,10 @@ class SeriesLevelDataset(Dataset):
                 weights.append(1)
         return weights
 
-    def _get_t2_weights(self):
-        # !TODO: refactor and properly formulate
-        weights = []
-        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
-            curr = self.labels[name]
-            # L1/L2 L severe
-            if np.argmax(curr[0]) == 2:
-                weights.append(700)
-            # L2/L3 R severe
-            elif np.argmax(curr[3]) == 2:
-                weights.append(650)
-            # L2/L3 L severe
-            elif np.argmax(curr[2]) == 2:
-                weights.append(280)
-            # L3/L4 R severe
-            elif np.argmax(curr[5]) == 2:
-                weights.append(40)
-            # L3/L4 L severe
-            elif np.argmax(curr[4]) == 2:
-                weights.append(38)
-            # L1/L2 L or R moderate
-            elif np.argmax(curr[0]) == 1:
-                weights.append(30)
-            elif np.argmax(curr[1]) == 1:
-                weights.append(30)
-            # L4/L5 L or R severe
-            elif np.argmax(curr[6]) == 2:
-                weights.append(15)
-            elif np.argmax(curr[7]) == 2:
-                weights.append(15)
-            # L2/L3 L or R moderate
-            elif np.argmax(curr[2]) == 1:
-                weights.append(10)
-            elif np.argmax(curr[3]) == 1:
-                weights.append(10)
-            # L5/S1 L or R severe
-            elif np.argmax(curr[8]) == 2:
-                weights.append(8)
-            elif np.argmax(curr[9]) == 2:
-                weights.append(8)
-            # L3/L4 L or R moderate
-            elif np.argmax(curr[4]) == 1:
-                weights.append(5)
-            elif np.argmax(curr[5]) == 1:
-                weights.append(5)
-            # L5/S1 L or R moderate
-            elif np.argmax(curr[8]) == 1:
-                weights.append(3)
-            elif np.argmax(curr[9]) == 1:
-                weights.append(3)
-            # L4/L5 L or R moderate
-            elif np.argmax(curr[6]) == 1:
-                weights.append(2)
-            elif np.argmax(curr[7]) == 1:
-                weights.append(2)
-            # All mild
-            else:
-                weights.append(1)
-        return weights
-
     def _get_image_index(self, image_path):
         return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
 
 
-# !TODO: Use inheritance
 class SeriesLevelCoordinateDataset(Dataset):
     def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
         self.base_path = base_path
