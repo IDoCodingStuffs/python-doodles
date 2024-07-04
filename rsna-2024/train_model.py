@@ -25,7 +25,7 @@ CONFIG = dict(
     drop_path_rate=0.,
     aug_prob=0.7,
     out_dim=3,
-    epochs=200,
+    epochs=100,
     batch_size=8,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
@@ -51,12 +51,13 @@ class CNN_Model(nn.Module):
 
 
 class CNN_Model_Multichannel(nn.Module):
-    def __init__(self, backbone="tf_efficientnetv2_b3", pretrained=False):
+    def __init__(self, backbone="tf_efficientnetv2_b3", num_levels=5, pretrained=False):
         super(CNN_Model_Multichannel, self).__init__()
 
+        self.num_levels = num_levels
         self.encoder = timm.create_model(
             backbone,
-            num_classes=CONFIG["out_dim"] * CONFIG["n_levels"],
+            num_classes=CONFIG["out_dim"] * self.num_levels,
             features_only=False,
             drop_rate=CONFIG["drop_rate"],
             drop_path_rate=CONFIG["drop_path_rate"],
@@ -66,7 +67,7 @@ class CNN_Model_Multichannel(nn.Module):
         )
 
     def forward(self, x):
-        return self.encoder(x).reshape((-1, 5, 3))
+        return self.encoder(x).reshape((-1, self.num_levels, 3))
 
 
 class CNN_Model_3D(nn.Module):
@@ -291,7 +292,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            base_path=os.path.join(
                                                                                data_basepath,
                                                                                "train_images"),
-                                                                           num_workers=0,
+                                                                           num_workers=18,
                                                                            split_factor=0.3,
                                                                            batch_size=8,
                                                                            data_type=SeriesDataType.SEQUENTIAL_FIXED_LENGTH
@@ -301,7 +302,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
     # model_per_image = torch.load(CONFIG["efficientnet_backbone_path"])
     # model = EfficientNetModel_Series(backbone=model_per_image).to(device)
-    model = CNN_Model_Multichannel(backbone=CONFIG["backbone"]).to(device)
+    model = CNN_Model_Multichannel(backbone=CONFIG["backbone"], num_levels=(5 if "T2/STIR" in data_subset_label else 10)).to(device)
 
     optimizers = [
         # torch.optim.Adam(model.backbone.parameters(), lr=1e-4),
@@ -317,7 +318,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     ]
 
     criteria = [
-        FocalLoss(alpha=0.2).to(device) for i in range(CONFIG["n_levels"])
+        FocalLoss(alpha=(0.2 if "T2/STIR" in data_subset_label else 0.1)).to(device) for i in range(CONFIG["n_levels"] * (1 if "T2/STIR" in data_subset_label else 2))
     ]
 
     train_model_with_validation(model,

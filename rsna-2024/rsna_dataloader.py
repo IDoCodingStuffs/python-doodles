@@ -252,10 +252,10 @@ class SeriesLevelDataset(Dataset):
                     label_index = self.levels.index(row["level"])
                     label_indices[label_index] = LABEL_MAP[row["severity"]]
 
-            self.labels[name] = []
+            labels[name] = []
             for label in label_indices:
                 curr = [0 if label != i else 1 for i in range(3)]
-                self.labels[name].append(curr)
+                labels[name].append(curr)
 
         return labels
 
@@ -268,11 +268,11 @@ class SeriesLevelDataset(Dataset):
                     label_index = self.levels.index(row["level"]) * 2 + (0 if "Left" in row["condition"] else 1)
                     label_indices[label_index] = LABEL_MAP[row["severity"]]
 
-            self.labels[name] = []
+            labels[name] = []
             for label in label_indices:
                 # One hot encode
                 curr = [0 if label != i else 1 for i in range(3)]
-                self.labels[name].append(curr)
+                labels[name].append(curr)
 
         return labels
 
@@ -285,11 +285,11 @@ class SeriesLevelDataset(Dataset):
                     label_index = self.levels.index(row["level"]) * 2 + (0 if "Left" in row["condition"] else 1)
                     label_indices[label_index] = LABEL_MAP[row["severity"]]
 
-            self.labels[name] = []
+            labels[name] = []
             for label in label_indices:
                 # One hot encode
                 curr = [0 if label != i else 1 for i in range(3)]
-                self.labels[name].append(curr)
+                labels[name].append(curr)
 
         return labels
 
