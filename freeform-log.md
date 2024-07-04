@@ -701,3 +701,7 @@ Ditto for quantization aware training. Later though, let's get a submission out 
 ### 11 PM
 It's working! It's finally fucking working!
 Next thing is training the other two series and submitting this shit!
+
+## 7/4
+### 12 AM
+For the handed dataset -- vertical mirror is an awesome way to augment the data. It will be the exact next thing I will try after the initial submission in fact!
