@@ -15,10 +15,18 @@ import torchvision.transforms as transforms
 from torchvision.transforms import v2
 from enum import Enum
 
-label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
-# conditions = ["Left Neural Foraminal Narrowing", "Right Neural Foraminal Narrowing", "Left Subarticular Stenosis",
-#               "Right Subarticular Stenosis", "Spinal Canal Stenosis"]
-conditions = {"Sagittal T2/STIR": ["Spinal Canal Stenosis"]}
+LABEL_MAP = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
+CONDITIONS = {
+    "Sagittal T2/STIR": ["Spinal Canal Stenosis"],
+    "Axial T2": ["Left Subarticular Stenosis", "Right Subarticular Stenosis"],
+    "Sagittal T1": ["Left Neural Foraminal Narrowing", "Right Neural Foraminal Narrowing"],
+}
+MAX_IMAGES_IN_SERIES = {
+    "Sagittal T2/STIR": 29,
+    "Axial T2": ["Left Subarticular Stenosis", "Right Subarticular Stenosis"],
+    "Sagittal T1": ["Left Neural Foraminal Narrowing", "Right Neural Foraminal Narrowing"],
+
+}
 
 
 class PerImageDataset(Dataset):
@@ -106,7 +114,7 @@ class PerImageDataset(Dataset):
         levels = sorted([(val, index) for index, val in enumerate(levels)])
 
         label = row["severity"].values[0].split(",")
-        label = [label_map[label[index]] for level, index in levels]
+        label = [LABEL_MAP[label[index]] for level, index in levels]
 
         label = self._one_hot_encode_multihead(label)
 
@@ -181,35 +189,31 @@ class SeriesLevelDataset(Dataset):
                  base_path: str,
                  dataframe: pd.DataFrame,
                  data_type=SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS,
+                 data_series="Sagittal T2/STIR",
                  transform=None):
         self.base_path = base_path
 
         self.type = data_type
 
-        self.dataframe = dataframe.groupby(['study_id', "series_id"]).filter(lambda x: len(x["level"].unique()) == 5)
-        self.dataframe = (self.dataframe[['study_id', "series_id", "severity", "level"]]
+        self.dataframe = (dataframe[['study_id', "series_id", "condition", "severity", "level"]]
                           .drop_duplicates())
         self.series = self.dataframe[['study_id', "series_id"]].drop_duplicates().reset_index(drop=True)
 
         self.transform = transform
 
         self.levels = sorted(self.dataframe["level"].unique())
-        self.labels = dict()
 
-        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
-            # !TODO: Better imputation
-            label_indices = [0 for e in range(len(self.levels))]
-            for index, row in group.iterrows():
-                if row["severity"] in label_map:  # and row["condition"] in conditions:
-                    label_index = self.levels.index(row["level"])
-                    label_indices[label_index] = label_map[row["severity"]]
+        if data_series == "Sagittal T2/STIR":
+            self.labels = self._get_t2stir_labels()
+            self.weights = self._get_t2stir_weights()
 
-            self.labels[name] = []
-            for label in label_indices:
-                curr = [0 if label != i else 1 for i in range(3)]
-                self.labels[name].append(curr)
+        elif data_series == "Sagittal T1":
+            self.labels = self._get_t1_labels()
+            self.weights = self._get_t1_weights()
 
-        self.weights = self._get_weights()
+        if data_series == "Axial T2":
+            self.labels = self._get_t2_labels()
+            self.weights = self._get_t2_weights()
 
     def __len__(self):
         return len(self.series)
@@ -238,7 +242,59 @@ class SeriesLevelDataset(Dataset):
 
         return images, torch.tensor(label).type(torch.FloatTensor)
 
-    def _get_weights(self):
+    def _get_t2stir_labels(self):
+        labels = dict()
+        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
+            label_indices = [0 for e in range(len(self.levels))]
+            for index, row in group.iterrows():
+                if row["severity"] in LABEL_MAP:  # and row["condition"] in conditions:
+                    label_index = self.levels.index(row["level"])
+                    label_indices[label_index] = LABEL_MAP[row["severity"]]
+
+            self.labels[name] = []
+            for label in label_indices:
+                curr = [0 if label != i else 1 for i in range(3)]
+                self.labels[name].append(curr)
+
+        return labels
+
+    def _get_t1_labels(self):
+        labels = dict()
+        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
+            label_indices = [0 for e in range(len(self.levels) * 2)]
+            for index, row in group.iterrows():
+                if row["severity"] in LABEL_MAP:
+                    label_index = self.levels.index(row["level"]) * 2 + (0 if "Left" in row["condition"] else 1)
+                    label_indices[label_index] = LABEL_MAP[row["severity"]]
+
+            self.labels[name] = []
+            for label in label_indices:
+                # One hot encode
+                curr = [0 if label != i else 1 for i in range(3)]
+                self.labels[name].append(curr)
+
+        return labels
+
+
+    def _get_t2_labels(self):
+        labels = dict()
+        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
+            label_indices = [0 for e in range(len(self.levels) * 2)]
+            for index, row in group.iterrows():
+                if row["severity"] in LABEL_MAP:
+                    label_index = self.levels.index(row["level"]) * 2 + (0 if "Left" in row["condition"] else 1)
+                    label_indices[label_index] = LABEL_MAP[row["severity"]]
+
+            self.labels[name] = []
+            for label in label_indices:
+                # One hot encode
+                curr = [0 if label != i else 1 for i in range(3)]
+                self.labels[name].append(curr)
+
+        return labels
+
+
+    def _get_t2stir_weights(self):
         # !TODO: refactor and properly formulate
         weights = []
         for name, group in self.dataframe.groupby(["study_id", "series_id"]):
@@ -273,6 +329,126 @@ class SeriesLevelDataset(Dataset):
             # L4/L5 moderate
             elif np.argmax(curr[3]) == 1:
                 weights.append(6)
+            # All mild
+            else:
+                weights.append(1)
+        return weights
+
+    def _get_t1_weights(self):
+        # !TODO: refactor and properly formulate
+        weights = []
+        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
+            curr = self.labels[name]
+            # L1/L2 L severe
+            if np.argmax(curr[0]) == 2:
+                weights.append(700)
+            # L2/L3 R severe
+            elif np.argmax(curr[3]) == 2:
+                weights.append(650)
+            # L2/L3 L severe
+            elif np.argmax(curr[2]) == 2:
+                weights.append(280)
+            # L3/L4 R severe
+            elif np.argmax(curr[5]) == 2:
+                weights.append(40)
+            # L3/L4 L severe
+            elif np.argmax(curr[4]) == 2:
+                weights.append(38)
+            # L1/L2 L or R moderate
+            elif np.argmax(curr[0]) == 1:
+                weights.append(30)
+            elif np.argmax(curr[1]) == 1:
+                weights.append(30)
+            # L4/L5 L or R severe
+            elif np.argmax(curr[6]) == 2:
+                weights.append(15)
+            elif np.argmax(curr[7]) == 2:
+                weights.append(15)
+            # L2/L3 L or R moderate
+            elif np.argmax(curr[2]) == 1:
+                weights.append(10)
+            elif np.argmax(curr[3]) == 1:
+                weights.append(10)
+            # L5/S1 L or R severe
+            elif np.argmax(curr[8]) == 2:
+                weights.append(8)
+            elif np.argmax(curr[9]) == 2:
+                weights.append(8)
+            # L3/L4 L or R moderate
+            elif np.argmax(curr[4]) == 1:
+                weights.append(5)
+            elif np.argmax(curr[5]) == 1:
+                weights.append(5)
+            # L5/S1 L or R moderate
+            elif np.argmax(curr[8]) == 1:
+                weights.append(3)
+            elif np.argmax(curr[9]) == 1:
+                weights.append(3)
+            # L4/L5 L or R moderate
+            elif np.argmax(curr[6]) == 1:
+                weights.append(2)
+            elif np.argmax(curr[7]) == 1:
+                weights.append(2)
+            # All mild
+            else:
+                weights.append(1)
+        return weights
+
+    def _get_t2_weights(self):
+        # !TODO: refactor and properly formulate
+        weights = []
+        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
+            curr = self.labels[name]
+            # L1/L2 L severe
+            if np.argmax(curr[0]) == 2:
+                weights.append(700)
+            # L2/L3 R severe
+            elif np.argmax(curr[3]) == 2:
+                weights.append(650)
+            # L2/L3 L severe
+            elif np.argmax(curr[2]) == 2:
+                weights.append(280)
+            # L3/L4 R severe
+            elif np.argmax(curr[5]) == 2:
+                weights.append(40)
+            # L3/L4 L severe
+            elif np.argmax(curr[4]) == 2:
+                weights.append(38)
+            # L1/L2 L or R moderate
+            elif np.argmax(curr[0]) == 1:
+                weights.append(30)
+            elif np.argmax(curr[1]) == 1:
+                weights.append(30)
+            # L4/L5 L or R severe
+            elif np.argmax(curr[6]) == 2:
+                weights.append(15)
+            elif np.argmax(curr[7]) == 2:
+                weights.append(15)
+            # L2/L3 L or R moderate
+            elif np.argmax(curr[2]) == 1:
+                weights.append(10)
+            elif np.argmax(curr[3]) == 1:
+                weights.append(10)
+            # L5/S1 L or R severe
+            elif np.argmax(curr[8]) == 2:
+                weights.append(8)
+            elif np.argmax(curr[9]) == 2:
+                weights.append(8)
+            # L3/L4 L or R moderate
+            elif np.argmax(curr[4]) == 1:
+                weights.append(5)
+            elif np.argmax(curr[5]) == 1:
+                weights.append(5)
+            # L5/S1 L or R moderate
+            elif np.argmax(curr[8]) == 1:
+                weights.append(3)
+            elif np.argmax(curr[9]) == 1:
+                weights.append(3)
+            # L4/L5 L or R moderate
+            elif np.argmax(curr[6]) == 1:
+                weights.append(2)
+            elif np.argmax(curr[7]) == 1:
+                weights.append(2)
             # All mild
             else:
                 weights.append(1)
@@ -390,7 +566,7 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                              num_workers=0,
                                              data_type=SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS):
     filtered_df = df[
-        (df['series_description'] == series_description) & (df["condition"].isin(conditions[series_description]))]
+        (df['series_description'] == series_description) & (df["condition"].isin(CONDITIONS[series_description]))]
 
     # By defauly, 8-1.5-.5 split
     train_studies, val_studies = train_test_split(filtered_df["study_id"].unique(), test_size=split_factor,
@@ -406,9 +582,12 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     test_df = test_df.reset_index(drop=True)
 
     random.seed(random_seed)
-    train_dataset = SeriesLevelDataset(base_path, train_df, transform=transform_train, data_type=data_type)
-    val_dataset = SeriesLevelDataset(base_path, val_df, transform=transform_val, data_type=data_type)
-    test_dataset = SeriesLevelDataset(base_path, test_df, transform=transform_val, data_type=data_type)
+    train_dataset = SeriesLevelDataset(base_path, train_df,
+                                       transform=transform_train, data_type=data_type, data_series=series_description)
+    val_dataset = SeriesLevelDataset(base_path, val_df,
+                                     transform=transform_val, data_type=data_type, data_series=series_description)
+    test_dataset = SeriesLevelDataset(base_path, test_df,
+                                      transform=transform_val, data_type=data_type, data_series=series_description)
 
     train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
     train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker, num_workers=num_workers)
@@ -429,7 +608,7 @@ def create_series_level_coordinate_datasets_and_loaders(df: pd.DataFrame,
                                                         batch_size=1,
                                                         num_workers=0):
     filtered_df = df[
-        (df['series_description'] == series_description) & (df['condition'].isin(conditions[series_description]))]
+        (df['series_description'] == series_description) & (df['condition'].isin(CONDITIONS[series_description]))]
 
     train_df, val_df = train_test_split(filtered_df, test_size=split_factor, random_state=random_seed)
     train_df = train_df.reset_index(drop=True)
@@ -494,7 +673,7 @@ def create_datasets_and_loaders(df: pd.DataFrame,
                                 num_workers=0,
                                 batch_size=8):
     filtered_df = df[
-        (df['series_description'] == series_description) & (df['condition'].isin(conditions[series_description]))]
+        (df['series_description'] == series_description) & (df['condition'].isin(CONDITIONS[series_description]))]
     # By defauly, 8-1.5-.5 split
     train_studies, val_studies = train_test_split(filtered_df["study_id"].unique(), test_size=split_factor,
                                                   random_state=random_seed)
