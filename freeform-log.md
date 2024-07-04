@@ -685,3 +685,7 @@ For the attention layer, this can come in handy: https://stackoverflow.com/quest
 
 ### 3 PM
 No luck so far as of epoch 25. At least it's not overfitting though, so let's see if might eventually overcome the barrier.
+
+### 5 PM
+Still no luck. Let me see if there is some loss function bug on some off chance, however unlikely.
+If not, I will focus on passing the sequence across channels. And setting up the eval pipeline for 3D.

@@ -293,7 +293,8 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     ]
 
     criteria = [
-        FocalLoss(alpha=0.2).to(device) for i in range(CONFIG["n_levels"])
+        # FocalLoss(alpha=0.2).to(device) for i in range(CONFIG["n_levels"])
+        nn.BCEWithLogitsLoss().to(device) for i in range(CONFIG["n_levels"])
     ]
 
     train_model_with_validation(model,
