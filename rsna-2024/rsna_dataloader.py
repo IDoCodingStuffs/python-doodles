@@ -13,23 +13,26 @@ from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from sklearn.model_selection import train_test_split
 import torchvision.transforms as transforms
 from torchvision.transforms import v2
+from enum import Enum
 
 label_map = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
 # conditions = ["Left Neural Foraminal Narrowing", "Right Neural Foraminal Narrowing", "Left Subarticular Stenosis",
 #               "Right Subarticular Stenosis", "Spinal Canal Stenosis"]
 conditions = {"Sagittal T2/STIR": ["Spinal Canal Stenosis"]}
 
+
 class PerImageDataset(Dataset):
-    def __init__(self, dataframe, base_path="./data/rsna-2024-lumbar-spine-degenerative-classification/train_images", transform=None):
+    def __init__(self, dataframe, base_path="./data/rsna-2024-lumbar-spine-degenerative-classification/train_images",
+                 transform=None):
         self.to_pil = transforms.ToPILImage()
         self.to_tensor = transforms.ToTensor()
         self.grayscale = transforms.Grayscale(num_output_channels=3)
 
         self.transform = transform
 
-
         self.dataframe = dataframe
-        self.dataframe["image_path"] = self.dataframe.apply(lambda x: retrieve_image_paths(base_path, x[0], x[1]), axis=1)
+        self.dataframe["image_path"] = self.dataframe.apply(lambda x: retrieve_image_paths(base_path, x[0], x[1]),
+                                                            axis=1)
         self.dataframe = self._expand_paths(self.dataframe)
 
         self.label = (self.dataframe.groupby("image_path")
@@ -93,7 +96,9 @@ class PerImageDataset(Dataset):
 
     def _expand_paths(self, df):
         lens = [len(item) for item in df['image_path']]
-        return pd.DataFrame({col: np.repeat(df[col].values, lens) if col != "image_path" else np.concatenate(df[col].values) for col in df.columns})
+        return pd.DataFrame(
+            {col: np.repeat(df[col].values, lens) if col != "image_path" else np.concatenate(df[col].values) for col in
+             df.columns})
 
     def label_as_tensor(self, image_path):
         row = self.label[self.label["image_path"] == image_path]
@@ -163,11 +168,24 @@ class CoordinateDataset(Dataset):
         return ret
 
 
+class SeriesDataType(Enum):
+    SEQUENTIAL_VARIABLE_LENGTH = 1
+    SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS = 2
+    # Max 29 for T2/STIR
+    SEQUENTIAL_FIXED_LENGTH = 3
+    CUBE_3D = 4
+
+
 class SeriesLevelDataset(Dataset):
-    def __init__(self, base_path: str, dataframe: pd.DataFrame, transform=None):
+    def __init__(self,
+                 base_path: str,
+                 dataframe: pd.DataFrame,
+                 data_type=SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS,
+                 transform=None):
         self.base_path = base_path
 
-        # !TODO: Impute later
+        self.type = data_type
+
         self.dataframe = dataframe.groupby(['study_id', "series_id"]).filter(lambda x: len(x["level"].unique()) == 5)
         self.dataframe = (self.dataframe[['study_id', "series_id", "severity", "level"]]
                           .drop_duplicates())
@@ -202,15 +220,21 @@ class SeriesLevelDataset(Dataset):
         image_paths = sorted(image_paths, key=lambda x: self._get_image_index(x))
         label = np.array(self.labels[(curr["study_id"], curr["series_id"])])
 
-        # Pad to max 29
         images = np.array([np.array(self.transform(image=load_dicom(image_path))['image']) if self.transform
                            else load_dicom(image_path) for image_path in image_paths])
 
-        # front_buffer = (29 - len(images)) // 2
-        # rear_buffer = (29 - len(images)) // 2 + ((29 - len(images)) % 2)
+        if self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH:
+            front_buffer = (29 - len(images)) // 2
+            rear_buffer = (29 - len(images)) // 2 + ((29 - len(images)) % 2)
 
-        # +1 is for the CLS
-        images = np.pad(images, ((1, 0), (0, 0), (0, 0)))
+            images = np.pad(images, ((front_buffer, rear_buffer), (0, 0), (0, 0)))
+
+        elif self.type == SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS:
+            images = np.pad(images, ((1, 0), (0, 0), (0, 0)))
+
+        elif self.type == SeriesDataType.CUBE_3D:
+            width = len(images[0])
+            images = np.pad(images, ((0, width-len(images)), (0, 0), (0, 0)))
 
         return images, torch.tensor(label).type(torch.FloatTensor)
 
@@ -319,7 +343,6 @@ class TrainingTransform(nn.Module):
             v2.Identity(),
         ], p=[0.2, 0.2, 0.6])
 
-
         self.grayscale = transforms.Grayscale(num_output_channels=num_channels)
         self.to_tensor = transforms.ToTensor()
 
@@ -365,7 +388,8 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                              random_seed=42,
                                              batch_size=1,
                                              num_workers=0):
-    filtered_df = df[(df['series_description'] == series_description) & (df["condition"].isin(conditions[series_description]))]
+    filtered_df = df[
+        (df['series_description'] == series_description) & (df["condition"].isin(conditions[series_description]))]
 
     # By defauly, 8-1.5-.5 split
     train_studies, val_studies = train_test_split(filtered_df["study_id"].unique(), test_size=split_factor,
@@ -403,7 +427,8 @@ def create_series_level_coordinate_datasets_and_loaders(df: pd.DataFrame,
                                                         random_seed=42,
                                                         batch_size=1,
                                                         num_workers=0):
-    filtered_df = df[(df['series_description'] == series_description) & (df['condition'].isin(conditions[series_description]))]
+    filtered_df = df[
+        (df['series_description'] == series_description) & (df['condition'].isin(conditions[series_description]))]
 
     train_df, val_df = train_test_split(filtered_df, test_size=split_factor, random_state=random_seed)
     train_df = train_df.reset_index(drop=True)
@@ -467,7 +492,8 @@ def create_datasets_and_loaders(df: pd.DataFrame,
                                 random_seed=42,
                                 num_workers=0,
                                 batch_size=8):
-    filtered_df = df[(df['series_description'] == series_description) & (df['condition'].isin(conditions[series_description]))]
+    filtered_df = df[
+        (df['series_description'] == series_description) & (df['condition'].isin(conditions[series_description]))]
     # By defauly, 8-1.5-.5 split
     train_studies, val_studies = train_test_split(filtered_df["study_id"].unique(), test_size=split_factor,
                                                   random_state=random_seed)
