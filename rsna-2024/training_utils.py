@@ -114,7 +114,7 @@ def train_model_with_validation(model,
                                 gradient_accumulation_per=1,
                                 epochs=10,
                                 freeze_backbone_initial_epochs=0,
-                                empty_cache_every_n_iterations=24):
+                                empty_cache_every_n_iterations=0):
     epoch_losses = []
     epoch_validation_losses = []
 
@@ -150,7 +150,7 @@ def train_model_with_validation(model,
                     optimizer.zero_grad(set_to_none=True)
 
             # prof.step()
-            if index % empty_cache_every_n_iterations == 0:
+            if empty_cache_every_n_iterations > 0 and index % empty_cache_every_n_iterations == 0:
                 torch.cuda.empty_cache()
 
                 # !TODO: Refactor
