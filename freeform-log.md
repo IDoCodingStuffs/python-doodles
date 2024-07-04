@@ -715,3 +715,7 @@ Shit, also, turns out the per-channel approach won't support the axial series. S
 ### 10 AM
 So, turns out that is not feasible for memory reasons. And the median is like 50 slices, 25th percentile is 20 something.
 Meaning I will either need to downsample or get way elaborate with it. Well, at least the multichannel model can accommodate.
+
+### 3 PM
+Trying resizing to 100 channels for T2 this time. Hoping it will work out better.
+Training is still bottlenecked and GPU utilization sucks, but at least training time does not completely suck.

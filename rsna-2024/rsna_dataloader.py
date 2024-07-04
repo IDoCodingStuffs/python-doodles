@@ -13,6 +13,7 @@ from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from sklearn.model_selection import train_test_split
 import torchvision.transforms as transforms
 from torchvision.transforms import v2
+from scipy import ndimage
 from enum import Enum
 
 LABEL_MAP = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
@@ -28,6 +29,12 @@ MAX_IMAGES_IN_SERIES = {
     "Sagittal T1": 38,
 }
 
+RESIZING_CHANNELS = {
+    "Sagittal T2/STIR": 25,
+    # !TODO: Might need a 3D model for this one
+    "Axial T2": 100,
+    "Sagittal T1": 35,
+}
 
 class PerImageDataset(Dataset):
     def __init__(self, dataframe, base_path="./data/rsna-2024-lumbar-spine-degenerative-classification/train_images",
@@ -180,8 +187,9 @@ class SeriesDataType(Enum):
     SEQUENTIAL_VARIABLE_LENGTH = 1
     SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS = 2
     # Max 29 for T2/STIR
-    SEQUENTIAL_FIXED_LENGTH = 3
-    CUBE_3D = 4
+    SEQUENTIAL_FIXED_LENGTH_PADDED = 3
+    SEQUENTIAL_FIXED_LENGTH_RESIZED = 4
+    CUBE_3D = 5
 
 
 class SeriesLevelDataset(Dataset):
@@ -228,19 +236,29 @@ class SeriesLevelDataset(Dataset):
                            if self.transform else
                            load_dicom(image_path) for image_path in image_paths])
 
-        if self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH:
+        if self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_PADDED:
             front_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2
             rear_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2 + (
                         (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) % 2)
 
             images = np.pad(images, ((front_buffer, rear_buffer), (0, 0), (0, 0)))
 
+        elif self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_RESIZED:
+            resize_target = RESIZING_CHANNELS[self.data_series]
+            images = ndimage.zoom(images, (len(images) / resize_target, 1, 1))
+            # Clip last
+            images = images[:resize_target]
+            # Pad offset
+            images = np.pad(images, ((0, resize_target - len(images)), (0, 0), (0, 0)))
+
+
         elif self.type == SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS:
             images = np.pad(images, ((1, 0), (0, 0), (0, 0)))
 
         elif self.type == SeriesDataType.CUBE_3D:
             width = len(images[0])
-            # !TODO: Use volumentations resize instead of padding
+            images = ndimage.zoom(images, (len(images) / width, 1, 1))
+            # Pad offset
             images = np.pad(images, ((0, width - len(images)), (0, 0), (0, 0)))
 
         return images, torch.tensor(label).type(torch.FloatTensor)
