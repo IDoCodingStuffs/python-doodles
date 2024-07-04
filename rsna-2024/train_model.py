@@ -30,6 +30,8 @@ CONFIG = dict(
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
 )
+DATA_BASEPATH = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
+TRAINING_DATA = retrieve_coordinate_training_data(DATA_BASEPATH)
 
 
 class CNN_Model(nn.Module):
@@ -252,9 +254,6 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
 
 
 def train_model_for_series(data_subset_label: str, model_label: str):
-    data_basepath = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
-    training_data = retrieve_coordinate_training_data(data_basepath)
-
     transform_train = A.Compose([
         A.RandomBrightnessContrast(brightness_limit=(-0.2, 0.2), contrast_limit=(-0.2, 0.2), p=CONFIG["aug_prob"]),
         A.OneOf([
@@ -275,22 +274,20 @@ def train_model_for_series(data_subset_label: str, model_label: str):
         A.CoarseDropout(max_holes=16, max_height=64, max_width=64, min_holes=1, min_height=8, min_width=8,
                         p=CONFIG["aug_prob"]),
         A.Normalize(mean=0.5, std=0.5),
-        # A.ToRGB()
     ])
 
     transform_val = A.Compose([
         A.Resize(*CONFIG["img_size"]),
         A.Normalize(mean=0.5, std=0.5),
-        # A.ToRGB()
     ])
 
     (trainloader, valloader, test_loader,
-     trainset, valset, testset) = create_series_level_datasets_and_loaders(training_data,
+     trainset, valset, testset) = create_series_level_datasets_and_loaders(TRAINING_DATA,
                                                                            data_subset_label,
                                                                            transform_train,
                                                                            transform_val,
                                                                            base_path=os.path.join(
-                                                                               data_basepath,
+                                                                               DATA_BASEPATH,
                                                                                "train_images"),
                                                                            num_workers=18,
                                                                            split_factor=0.3,
@@ -299,24 +296,15 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            )
 
     NUM_EPOCHS = CONFIG["epochs"]
-
-    # model_per_image = torch.load(CONFIG["efficientnet_backbone_path"])
-    # model = EfficientNetModel_Series(backbone=model_per_image).to(device)
     model = CNN_Model_Multichannel(backbone=CONFIG["backbone"],
                                    in_chans=MAX_IMAGES_IN_SERIES[data_subset_label],
                                    num_levels=(5 if "T2/STIR" in data_subset_label else 10)).to(device)
 
     optimizers = [
-        # torch.optim.Adam(model.backbone.parameters(), lr=1e-4),
-        # torch.optim.Adam(model.attention_layer.parameters(), lr=1e-3),
-        # torch.optim.Adam(model.head.parameters(), lr=1e-3)
         torch.optim.Adam(model.parameters(), lr=1e-3)
     ]
 
     schedulers = [
-        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-5),
-        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-4),
-        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=1e-4),
     ]
 
     criteria = [
