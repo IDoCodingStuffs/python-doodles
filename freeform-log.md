@@ -705,3 +705,6 @@ Next thing is training the other two series and submitting this shit!
 ## 7/4
 ### 12 AM
 For the handed dataset -- vertical mirror is an awesome way to augment the data. It will be the exact next thing I will try after the initial submission in fact!
+
+### 1 AM
+Another TODO before I call it a night: dump the confusion and prec/recall/f1 graphs automatically
