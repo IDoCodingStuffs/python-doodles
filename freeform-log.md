@@ -693,3 +693,11 @@ If not, I will focus on passing the sequence across channels. And setting up the
 ### 8 PM
 Passing sequence across channels shows promise for efficientnet. Not so much for tinyvit.
 So let's train this baby with b4 efficientnet.
+
+For some reason training tends to have a lot of hiccups -- keeps pausing and resuming a lot. Wonder why.
+I should also look into cuda amp stuff. Might enable me to train beefier models.
+Ditto for quantization aware training. Later though, let's get a submission out of this all this week.
+
+### 11 PM
+It's working! It's finally fucking working!
+Next thing is training the other two series and submitting this shit!
