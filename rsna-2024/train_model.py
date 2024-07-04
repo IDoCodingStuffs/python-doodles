@@ -64,7 +64,6 @@ class CNN_Model_Multichannel(nn.Module):
             drop_rate=CONFIG["drop_rate"],
             drop_path_rate=CONFIG["drop_path_rate"],
             pretrained=pretrained,
-            # !TODO: Refactor
             in_chans=CONFIG["in_chans"] * in_chans,
         )
 
@@ -88,97 +87,6 @@ class CNN_Model_3D(nn.Module):
 
     def forward(self, x):
         return self.encoder(x.unsqueeze(1)).reshape((-1, 5, 3))
-
-
-class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, dropout=0.1, max_len=100):
-        super(PositionalEncoding, self).__init__()
-        self.dropout = nn.Dropout(p=dropout)
-        self.d_model = d_model
-
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0).transpose(0, 1)
-        self.register_buffer('pe', pe)
-
-    def forward(self, x):
-        pos_emb = self.pe[:x.size(0)]
-        x = x + pos_emb
-        return self.dropout(x)
-
-
-class EfficientNetModel_Series(nn.Module):
-    def __init__(self, backbone: CNN_Model, num_inter_layers=4):
-        super(EfficientNetModel_Series, self).__init__()
-
-        self.backbone = backbone
-        self.backbone.encoder.classifier = nn.Identity()
-        self.backbone.forward = self._backbone_forward
-        self.num_inter_layers = num_inter_layers
-
-        hdim = self.backbone.encoder.conv_head.out_channels
-        self.pos_emb = PositionalEncoding(d_model=hdim, dropout=CONFIG["drop_rate"])
-        self.attention_layer = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(hdim, nhead=8, dropout=CONFIG["drop_rate"]),
-            num_layers=self.num_inter_layers,
-            norm=nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True)
-        )
-        self.head = NormMLPClassifierHead(hdim, CONFIG["n_levels"] * CONFIG["out_dim"])
-
-    def _backbone_forward(self, x):
-        return self.backbone.encoder(x)
-
-    def forward(self, x):
-        feat = self.backbone(x.squeeze(0).unsqueeze(1))
-        feat = feat.unsqueeze(0)
-
-        feat = self.pos_emb(feat)
-        feat = self.attention_layer(feat)
-
-        feat = self.head(feat[:, 0])
-
-        return feat.reshape((-1, CONFIG["n_levels"], CONFIG["out_dim"]))
-
-
-class VIT_Model(nn.Module):
-    def __init__(self, backbone="tiny_vit_21m_512", pretrained=False):
-        super(VIT_Model, self).__init__()
-
-        self.encoder = timm.create_model(
-            backbone,
-            num_classes=CONFIG["out_dim"] * CONFIG["n_levels"],
-            features_only=False,
-            drop_rate=CONFIG["drop_rate"],
-            drop_path_rate=CONFIG["drop_path_rate"],
-            pretrained=pretrained
-        )
-
-    def forward(self, x):
-        return self.encoder(x).reshape((-1, 5, 3))
-
-
-class NormMLPClassifierHead(nn.Module):
-    def __init__(self, in_dim, out_dim):
-        super(NormMLPClassifierHead, self).__init__()
-
-        self.out_dim = out_dim
-        self.head = nn.Sequential(
-            nn.LayerNorm(in_dim, eps=1e-05, elementwise_affine=True),
-            nn.Dropout(p=CONFIG["drop_rate_last"], inplace=True),
-            nn.Linear(in_features=in_dim, out_features=out_dim, bias=True),
-        )
-        self.head.apply(self._init_weights)
-
-    def _init_weights(self, m):
-        if isinstance(m, nn.Linear):
-            torch.nn.init.xavier_uniform_(m.weight)
-            torch.nn.init.zeros_(m.bias)
-
-    def forward(self, x):
-        return self.head(x)
 
 
 def train_model_for_series_per_image(data_subset_label: str, model_label: str):
