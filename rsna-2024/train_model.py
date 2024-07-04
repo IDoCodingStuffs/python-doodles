@@ -49,6 +49,25 @@ class CNN_Model(nn.Module):
         return self.encoder(x).reshape((-1, 5, 3))
 
 
+class CNN_Model_Multichannel(nn.Module):
+    def __init__(self, backbone="tf_efficientnetv2_b3", pretrained=False):
+        super(CNN_Model_Multichannel, self).__init__()
+
+        self.encoder = timm.create_model(
+            backbone,
+            num_classes=CONFIG["out_dim"] * CONFIG["n_levels"],
+            features_only=False,
+            drop_rate=CONFIG["drop_rate"],
+            drop_path_rate=CONFIG["drop_path_rate"],
+            pretrained=pretrained,
+            # !TODO: Refactor
+            in_chans=CONFIG["in_chans"] * 29,
+        )
+
+    def forward(self, x):
+        return self.encoder(x).reshape((-1, 5, 3))
+
+
 class CNN_Model_3D(nn.Module):
     def __init__(self, backbone="tf_efficientnet_b0", pretrained=False):
         super(CNN_Model_3D, self).__init__()
@@ -273,28 +292,31 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                                "train_images"),
                                                                            num_workers=24,
                                                                            split_factor=0.3,
-                                                                           batch_size=1)
+                                                                           batch_size=1,
+                                                                           data_type=SeriesDataType.SEQUENTIAL_FIXED_LENGTH
+                                                                           )
 
     NUM_EPOCHS = CONFIG["epochs"]
 
     model_per_image = torch.load(CONFIG["efficientnet_backbone_path"])
-    model = EfficientNetModel_Series(backbone=model_per_image).to(device)
+    # model = EfficientNetModel_Series(backbone=model_per_image).to(device)
+    model = CNN_Model_Multichannel().to(device)
 
     optimizers = [
-        torch.optim.Adam(model.backbone.parameters(), lr=1e-4),
-        torch.optim.Adam(model.attention_layer.parameters(), lr=1e-3),
-        torch.optim.Adam(model.head.parameters(), lr=1e-3)
+        # torch.optim.Adam(model.backbone.parameters(), lr=1e-4),
+        # torch.optim.Adam(model.attention_layer.parameters(), lr=1e-3),
+        # torch.optim.Adam(model.head.parameters(), lr=1e-3)
+        torch.optim.Adam(model.parameters(), lr=1e-3)
     ]
 
     schedulers = [
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-5),
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-4),
-        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=1e-4),
+        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=1e-5),
+        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[1], NUM_EPOCHS, eta_min=5e-4),
+        # torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[2], NUM_EPOCHS, eta_min=1e-4),
     ]
 
     criteria = [
-        # FocalLoss(alpha=0.2).to(device) for i in range(CONFIG["n_levels"])
-        nn.BCEWithLogitsLoss().to(device) for i in range(CONFIG["n_levels"])
+        FocalLoss(alpha=0.2).to(device) for i in range(CONFIG["n_levels"])
     ]
 
     train_model_with_validation(model,
@@ -389,7 +411,7 @@ def train_model_3d(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tf_efficientnetv2_b3_series_t2stir")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "tf_efficientnetv2_b3_multichannel_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b0_lstm_t1")
     # model_t2 = train_model_for_series("Axial T2", "efficientnet_b0_lstm_t2")
 

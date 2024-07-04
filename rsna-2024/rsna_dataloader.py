@@ -387,7 +387,8 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                              split_factor=0.2,
                                              random_seed=42,
                                              batch_size=1,
-                                             num_workers=0):
+                                             num_workers=0,
+                                             data_type=SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS):
     filtered_df = df[
         (df['series_description'] == series_description) & (df["condition"].isin(conditions[series_description]))]
 
@@ -405,9 +406,9 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     test_df = test_df.reset_index(drop=True)
 
     random.seed(random_seed)
-    train_dataset = SeriesLevelDataset(base_path, train_df, transform_train)
-    val_dataset = SeriesLevelDataset(base_path, val_df, transform_val)
-    test_dataset = SeriesLevelDataset(base_path, test_df, transform_val)
+    train_dataset = SeriesLevelDataset(base_path, train_df, transform=transform_train, data_type=data_type)
+    val_dataset = SeriesLevelDataset(base_path, val_df, transform=transform_val, data_type=data_type)
+    test_dataset = SeriesLevelDataset(base_path, test_df, transform=transform_val, data_type=data_type)
 
     train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
     train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker, num_workers=num_workers)
