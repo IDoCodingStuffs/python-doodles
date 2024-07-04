@@ -711,3 +711,7 @@ Another TODO before I call it a night: dump the confusion and prec/recall/f1 gra
 Also to consider, using the same model for both sagittal series?
 
 Shit, also, turns out the per-channel approach won't support the axial series. So that one needs a 3D model. How exciting!
+
+### 10 AM
+So, turns out that is not feasible for memory reasons. And the median is like 50 slices, 25th percentile is 20 something.
+Meaning I will either need to downsample or get way elaborate with it. Well, at least the multichannel model can accommodate.

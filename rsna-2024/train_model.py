@@ -72,12 +72,12 @@ class CNN_Model_Multichannel(nn.Module):
 
 
 class CNN_Model_3D(nn.Module):
-    def __init__(self, backbone="tf_efficientnet_b0", pretrained=False):
+    def __init__(self, backbone="efficientnet_b4", pretrained=False):
         super(CNN_Model_3D, self).__init__()
 
         self.encoder = timm_3d.create_model(
             backbone,
-            num_classes=CONFIG["out_dim"] * CONFIG["n_levels"],
+            num_classes=CONFIG["out_dim"] * CONFIG["n_levels"] * 2,
             features_only=False,
             drop_rate=CONFIG["drop_rate"],
             drop_path_rate=CONFIG["drop_path_rate"],
@@ -86,7 +86,7 @@ class CNN_Model_3D(nn.Module):
         ).to(CONFIG["device"])
 
     def forward(self, x):
-        return self.encoder(x.unsqueeze(1)).reshape((-1, 5, 3))
+        return self.encoder(x.unsqueeze(1)).reshape((-1, 10, 3))
 
 
 def train_model_for_series_per_image(data_subset_label: str, model_label: str):
@@ -197,7 +197,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            base_path=os.path.join(
                                                                                DATA_BASEPATH,
                                                                                "train_images"),
-                                                                           num_workers=18,
+                                                                           num_workers=8,
                                                                            split_factor=0.3,
                                                                            batch_size=8,
                                                                            data_type=SeriesDataType.SEQUENTIAL_FIXED_LENGTH
@@ -235,7 +235,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train_model_3d(data_subset_label: str, model_label: str):
-    # !TODO: Use volumentations not albumentations
+    # !TODO: Use volumentations
     transform_train = A.Compose([
         A.RandomBrightnessContrast(brightness_limit=(-0.2, 0.2), contrast_limit=(-0.2, 0.2), p=CONFIG["aug_prob"]),
         A.OneOf([
@@ -263,7 +263,6 @@ def train_model_3d(data_subset_label: str, model_label: str):
         A.Normalize(mean=0.5, std=0.5),
     ])
 
-    # !TODO: Get new dataset type and loader for 3D
     (trainloader, valloader, test_loader,
      trainset, valset, testset) = create_series_level_datasets_and_loaders(TRAINING_DATA,
                                                                            data_subset_label,
@@ -274,7 +273,8 @@ def train_model_3d(data_subset_label: str, model_label: str):
                                                                                "train_images"),
                                                                            num_workers=0,
                                                                            split_factor=0.3,
-                                                                           batch_size=1)
+                                                                           batch_size=1,
+                                                                           data_type=SeriesDataType.CUBE_3D)
 
     NUM_EPOCHS = CONFIG["epochs"]
 
@@ -306,9 +306,9 @@ def train_model_3d(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_t2stir")
-    model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b4_multichannel_t1")
-    model_t2 = train_model_3d("Axial T2", "efficientnet_b4_multichannel_t2")
+    #model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_t2stir")
+    #model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b4_multichannel_t1")
+    model_t2 = train_model_for_series("Axial T2", "efficientnet_b4_multichannel_t2")
 
 
 if __name__ == '__main__':
