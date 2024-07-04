@@ -689,3 +689,7 @@ No luck so far as of epoch 25. At least it's not overfitting though, so let's se
 ### 5 PM
 Still no luck. Let me see if there is some loss function bug on some off chance, however unlikely.
 If not, I will focus on passing the sequence across channels. And setting up the eval pipeline for 3D.
+
+### 8 PM
+Passing sequence across channels shows promise for efficientnet. Not so much for tinyvit.
+So let's train this baby with b4 efficientnet.
