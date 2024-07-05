@@ -727,3 +727,6 @@ Switched back to padding. The memory bottleneck sucks... Wondering if I can move
 ### 11 AM
 The performance is kinda meh if I have to be honest. I should probably introduce 3D transforms and also figure 3D model use instead of multichannel.
 Also, I should check if there is some leakage between train and val just in case.
+
+### 2 PM
+Finally made a submission with the 3 multichannel models. Fingers crossed on no bugs, hoping to get something better than random.
