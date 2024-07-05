@@ -72,7 +72,7 @@ class CNN_Model_Multichannel(nn.Module):
 
 
 class CNN_Model_3D(nn.Module):
-    def __init__(self, backbone="efficientnet_b4", pretrained=False):
+    def __init__(self, backbone="efficientnet_lite0", pretrained=False):
         super(CNN_Model_3D, self).__init__()
 
         self.encoder = timm_3d.create_model(
@@ -273,7 +273,7 @@ def train_model_3d(data_subset_label: str, model_label: str):
                                                                                "train_images"),
                                                                            num_workers=2,
                                                                            split_factor=0.3,
-                                                                           batch_size=4,
+                                                                           batch_size=1,
                                                                            data_type=SeriesDataType.CUBE_3D)
 
     NUM_EPOCHS = CONFIG["epochs"]
@@ -300,7 +300,8 @@ def train_model_3d(data_subset_label: str, model_label: str):
                                 model_desc=model_label,
                                 train_loader_desc=f"Training {data_subset_label}",
                                 epochs=NUM_EPOCHS,
-                                freeze_backbone_initial_epochs=0)
+                                freeze_backbone_initial_epochs=0,
+                                empty_cache_every_n_iterations=2)
 
     return model
 
@@ -308,7 +309,7 @@ def train_model_3d(data_subset_label: str, model_label: str):
 def train():
     #model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_t2stir")
     #model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b4_multichannel_t1")
-    model_t2 = train_model_for_series("Axial T2", "efficientnet_b4_multichannel_t2")
+    model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 
 
 if __name__ == '__main__':
