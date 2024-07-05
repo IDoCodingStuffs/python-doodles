@@ -719,3 +719,6 @@ Meaning I will either need to downsample or get way elaborate with it. Well, at 
 ### 3 PM
 Trying resizing to 100 channels for T2 this time. Hoping it will work out better.
 Training is still bottlenecked and GPU utilization sucks, but at least training time does not completely suck.
+
+### 5 PM
+Switched back to padding. The memory bottleneck sucks... Wondering if I can move the transforms to GPU or something.

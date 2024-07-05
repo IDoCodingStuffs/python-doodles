@@ -197,15 +197,15 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            base_path=os.path.join(
                                                                                DATA_BASEPATH,
                                                                                "train_images"),
-                                                                           num_workers=16,
+                                                                           num_workers=4,
                                                                            split_factor=0.3,
                                                                            batch_size=8,
-                                                                           data_type=SeriesDataType.SEQUENTIAL_FIXED_LENGTH_RESIZED
+                                                                           data_type=SeriesDataType.SEQUENTIAL_FIXED_LENGTH_PADDED
                                                                            )
 
     NUM_EPOCHS = CONFIG["epochs"]
     model = CNN_Model_Multichannel(backbone=CONFIG["backbone"],
-                                   in_chans=RESIZING_CHANNELS[data_subset_label],
+                                   in_chans=MAX_IMAGES_IN_SERIES[data_subset_label],
                                    num_levels=(5 if "T2/STIR" in data_subset_label else 10)).to(device)
 
     optimizers = [
@@ -228,7 +228,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                 model_desc=model_label,
                                 train_loader_desc=f"Training {data_subset_label}",
                                 epochs=NUM_EPOCHS,
-                                freeze_backbone_initial_epochs=0
+                                freeze_backbone_initial_epochs=0,
                                 )
 
     return model
