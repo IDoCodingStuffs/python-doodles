@@ -743,3 +743,12 @@ Starting training from pretrained and using avg pool, and suddenly validation lo
 That makes more sense, I think default pooling was making it fail to generalize or something.
 
 Let's try random sampling 10 images per series.
+
+## 7/6
+### 1 AM
+Shuffling the order is yielding better results. My initial assumption of passing it the images in order was incorrect, and it was overfitting like crazy.
+
+Now I am seeing the val loss going down properly for the initial 10 or so epochs at least.
+
+### 2 AM
+I wonder how it will behave with volumentations too. I can make another submission and see how the score changes either way, at least for the sagittal series.

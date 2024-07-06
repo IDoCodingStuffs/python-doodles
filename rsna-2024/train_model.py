@@ -208,7 +208,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            data_subset_label,
                                                                            transform_train,
                                                                            transform_val,
-                                                                           transform_3d_train=None,
+                                                                           transform_3d_train=transform_3d_train,
                                                                            base_path=os.path.join(
                                                                                DATA_BASEPATH,
                                                                                "train_images"),
@@ -323,7 +323,7 @@ def train_model_3d(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_nondownsampled_shuffled_t2stir")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_shuffled_volumented_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b4_multichannel_t1")
     # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 
