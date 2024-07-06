@@ -730,3 +730,10 @@ Also, I should check if there is some leakage between train and val just in case
 
 ### 2 PM
 Finally made a submission with the 3 multichannel models. Fingers crossed on no bugs, hoping to get something better than random.
+
+### 5 PM
+Working on volumetric transforms now.
+
+Newsflash, I did not get something better than random. Fuck.
+
+Next thing is revamping my whole approach I guess. I should also set up the competition metric on local so that I am not flying blind and spending 2 weeks to end up not even beating random.

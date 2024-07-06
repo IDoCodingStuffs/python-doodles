@@ -198,7 +198,8 @@ class SeriesLevelDataset(Dataset):
                  dataframe: pd.DataFrame,
                  data_type=SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS,
                  data_series="Sagittal T2/STIR",
-                 transform=None):
+                 transform=None,
+                 transform_3d=None):
         self.base_path = base_path
         self.type = data_type
         self.data_series = data_series
@@ -208,6 +209,7 @@ class SeriesLevelDataset(Dataset):
         self.series = self.dataframe[['study_id', "series_id"]].drop_duplicates().reset_index(drop=True)
 
         self.transform = transform
+        self.transform_3d = transform_3d
 
         self.levels = sorted(self.dataframe["level"].unique())
 
@@ -260,6 +262,9 @@ class SeriesLevelDataset(Dataset):
             images = ndimage.zoom(images, (len(images) / width, 1, 1))
             # Pad offset
             images = np.pad(images, ((0, width - len(images)), (0, 0), (0, 0)))
+
+        if self.transform_3d is not None:
+            images = self.transform_3d(image=images)["image"]
 
         return images, torch.tensor(label).type(torch.FloatTensor)
 
@@ -578,6 +583,7 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                              transform_train,
                                              transform_val,
                                              base_path: str,
+                                             transform_3d_train=None,
                                              split_factor=0.2,
                                              random_seed=42,
                                              batch_size=1,
@@ -601,7 +607,10 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
 
     random.seed(random_seed)
     train_dataset = SeriesLevelDataset(base_path, train_df,
-                                       transform=transform_train, data_type=data_type, data_series=series_description)
+                                       transform=transform_train,
+                                       transform_3d=transform_3d_train,
+                                       data_type=data_type,
+                                       data_series=series_description)
     val_dataset = SeriesLevelDataset(base_path, val_df,
                                      transform=transform_val, data_type=data_type, data_series=series_description)
     test_dataset = SeriesLevelDataset(base_path, test_df,

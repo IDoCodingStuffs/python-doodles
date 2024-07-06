@@ -1,8 +1,10 @@
+import math
+
 import timm
 import timm_3d
 import torchvision
 import albumentations as A
-#import volumentations as V
+import volumentations as V
 
 from training_utils import *
 from rsna_dataloader import *
@@ -189,11 +191,22 @@ def train_model_for_series(data_subset_label: str, model_label: str):
         A.Normalize(mean=0.5, std=0.5),
     ])
 
+    transform_3d_train = V.Compose([
+        V.OneOf(
+            [
+                V.RotateAroundAxis3d(rotation_limit=math.pi / 4, axis=(1, 0, 0)),
+                V.RotateAroundAxis3d(rotation_limit=math.pi / 4, axis=(0, 1, 0)),
+                V.RotateAroundAxis3d(rotation_limit=math.pi / 4, axis=(0, 0, 1))
+            ], p=CONFIG["aug_prob"]
+        )
+    ])
+
     (trainloader, valloader, test_loader,
      trainset, valset, testset) = create_series_level_datasets_and_loaders(TRAINING_DATA,
                                                                            data_subset_label,
                                                                            transform_train,
                                                                            transform_val,
+                                                                           transform_3d_train=transform_3d_train,
                                                                            base_path=os.path.join(
                                                                                DATA_BASEPATH,
                                                                                "train_images"),
@@ -216,7 +229,8 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     ]
 
     criteria = [
-        FocalLoss(alpha=(0.2 if "T2/STIR" in data_subset_label else 0.1)).to(device) for i in range(CONFIG["n_levels"] * (1 if "T2/STIR" in data_subset_label else 2))
+        FocalLoss(alpha=(0.2 if "T2/STIR" in data_subset_label else 0.1)).to(device) for i in
+        range(CONFIG["n_levels"] * (1 if "T2/STIR" in data_subset_label else 2))
     ]
 
     train_model_with_validation(model,
