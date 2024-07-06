@@ -4,7 +4,7 @@ import os
 from os.path import abspath
 import numpy as np
 import pandas as pd
-from glob import glob
+import glob
 import pydicom
 import torch
 import torch.nn.functional as F
@@ -42,6 +42,7 @@ DOWNSAMPLING_TARGETS = {
     "Axial T2": 10,
     "Sagittal T1": 10,
 }
+
 
 class PerImageDataset(Dataset):
     def __init__(self, dataframe, base_path="./data/rsna-2024-lumbar-spine-degenerative-classification/train_images",
@@ -208,7 +209,8 @@ class SeriesLevelDataset(Dataset):
                  data_series="Sagittal T2/STIR",
                  transform=None,
                  transform_3d=None,
-                 is_train=False):
+                 is_train=False,
+                 downsample_ratio=1):
         self.base_path = base_path
         self.type = data_type
         self.data_series = data_series
@@ -228,6 +230,7 @@ class SeriesLevelDataset(Dataset):
 
         self.transform = transform
         self.transform_3d = transform_3d
+        self.downsample_ratio = downsample_ratio
 
         self.levels = sorted(self.dataframe["level"].unique())
 
@@ -248,18 +251,13 @@ class SeriesLevelDataset(Dataset):
 
     def __getitem__(self, index):
         curr = self.series.iloc[index]
-        image_paths = retrieve_image_paths(self.base_path, curr["study_id"], curr["series_id"])
-        image_paths = sorted(image_paths, key=lambda x: self._get_image_index(x))
         label = np.array(self.labels[(curr["study_id"], curr["series_id"], curr["mirrored"])])
+        images_basepath = os.path.join(self.base_path, str(curr["study_id"]), str(curr["series_id"]))
 
-        if not curr["mirrored"]:
-            images = np.array([np.array(self.transform(image=load_dicom(image_path))['image'])
-                               if self.transform else
-                               load_dicom(image_path) for image_path in image_paths])
-        else:
-            images = np.array([cv2.flip(self.transform(image=load_dicom(image_path))['image'], 1)
-                               if self.transform else
-                               cv2.flip(load_dicom(image_path), 1) for image_path in image_paths])
+        images = load_dicom_series(images_basepath, self.transform, self.downsample_ratio)
+
+        if curr["mirrored"]:
+            images = np.array([cv2.flip(image, 1) for image in images])
 
         images = self._reshape_by_data_type(images)
 
@@ -272,7 +270,7 @@ class SeriesLevelDataset(Dataset):
         if self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_PADDED:
             front_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2
             rear_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2 + (
-                        (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) % 2)
+                    (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) % 2)
 
             images = np.pad(images, ((front_buffer, rear_buffer), (0, 0), (0, 0)))
             if self.is_train and self.data_series == "Sagittal T2/STIR":
@@ -515,9 +513,6 @@ class SeriesLevelDataset(Dataset):
             else:
                 weights.append(1)
         return weights
-
-    def _get_image_index(self, image_path):
-        return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
 
 
 class SeriesLevelCoordinateDataset(Dataset):
@@ -800,18 +795,27 @@ def display_dicom_with_coordinates(image_paths: list, label_df: pd.DataFrame):
     plt.show()
 
 
-# Load DICOM files from a folder
-def load_dicom_files(path_to_folder):
-    files = [os.path.join(path_to_folder, f) for f in os.listdir(path_to_folder) if f.endswith('.dcm')]
-    files.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split('-')[-1]))
-    return files
-
-
 def load_dicom(path):
     dicom = pydicom.read_file(path)
     data = dicom.pixel_array
-    data = (data - data.min()) / (data.max() - data.min() +1e-6) * 255
+    data = (data - data.min()) / (data.max() - data.min() + 1e-6) * 255
     data = np.uint8(data)
+    return data
+
+
+def load_dicom_series(path, transform=None, downsampling_rate=1):
+    files = glob.glob(os.path.join(path, '*.dcm'))
+    slices = [pydicom.dcmread(fname) for fname in files]
+    slices = sorted(slices, key=lambda s: s.SliceLocation)
+    if transform is not None:
+        data = np.array([transform(image=slice.pixel_array.astype(np.uint8))["image"] for slice in slices])
+    else:
+        data = np.array([slice.pixel_array for slice in slices])
+
+    if downsampling_rate > 1:
+        data = np.array([slice[::downsampling_rate, ::downsampling_rate] for slice in data])
+
+    data = np.array(data)
     return data
 
 

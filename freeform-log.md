@@ -758,3 +758,8 @@ It improved by a .1 so not terrible, probably mostly improvements from the T2/ST
 I think I need a 3D model for sure. Which requires some preprocessing step so that I am not processing massive volumes.
 Maybe I can start with 64^3 voxels then pass them to a channel per condition. Just rough clipping through the middle for a start.
 
+### 2 PM
+I finally started looking into PyDicom docs... Boy have I been doing this all wrong all along.
+There is a bunch of MRI metadata 3D reconstruction and also downsampling vs resizing...
+So if I downsample width and height by 4, then it will be in the same order of magnitude as a 384^3
+Time to test it out
