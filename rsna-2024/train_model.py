@@ -208,19 +208,19 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            data_subset_label,
                                                                            transform_train,
                                                                            transform_val,
-                                                                           transform_3d_train=transform_3d_train,
+                                                                           transform_3d_train=None,
                                                                            base_path=os.path.join(
                                                                                DATA_BASEPATH,
                                                                                "train_images"),
                                                                            num_workers=12,
                                                                            split_factor=0.3,
                                                                            batch_size=8,
-                                                                           data_type=SeriesDataType.SEQUENTIAL_FIXED_LENGTH_DOWNSAMPLED
+                                                                           data_type=SeriesDataType.SEQUENTIAL_FIXED_LENGTH_PADDED
                                                                            )
 
     NUM_EPOCHS = CONFIG["epochs"]
     model = CNN_Model_Multichannel(backbone=CONFIG["backbone"],
-                                   in_chans=DOWNSAMPLING_TARGETS[data_subset_label],
+                                   in_chans=MAX_IMAGES_IN_SERIES[data_subset_label],
                                    num_levels=(5 if "T2/STIR" in data_subset_label else 10)).to(device)
 
     optimizers = [
@@ -323,7 +323,7 @@ def train_model_3d(data_subset_label: str, model_label: str):
 
 
 def train():
-    model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_downsampled_t2stir")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_nondownsampled_shuffled_t2stir")
     # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b4_multichannel_t1")
     # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 

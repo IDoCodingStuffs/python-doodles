@@ -37,7 +37,7 @@ RESIZING_CHANNELS = {
 }
 
 DOWNSAMPLING_TARGETS = {
-    "Sagittal T2/STIR": 10,
+    "Sagittal T2/STIR": 25,
     "Axial T2": 10,
     "Sagittal T1": 10,
 }
@@ -206,10 +206,12 @@ class SeriesLevelDataset(Dataset):
                  data_type=SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS,
                  data_series="Sagittal T2/STIR",
                  transform=None,
-                 transform_3d=None):
+                 transform_3d=None,
+                 is_train=False):
         self.base_path = base_path
         self.type = data_type
         self.data_series = data_series
+        self.is_train = is_train
 
         self.dataframe = (dataframe[['study_id', "series_id", "condition", "severity", "level"]]
                           .drop_duplicates())
@@ -251,6 +253,8 @@ class SeriesLevelDataset(Dataset):
                         (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) % 2)
 
             images = np.pad(images, ((front_buffer, rear_buffer), (0, 0), (0, 0)))
+            if self.is_train:
+                np.random.shuffle(images)
 
         elif self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_RESIZED:
             resize_target = RESIZING_CHANNELS[self.data_series]
@@ -623,7 +627,9 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                        transform=transform_train,
                                        transform_3d=transform_3d_train,
                                        data_type=data_type,
-                                       data_series=series_description)
+                                       data_series=series_description,
+                                       is_train=True
+                                       )
     val_dataset = SeriesLevelDataset(base_path, val_df,
                                      transform=transform_val, data_type=data_type, data_series=series_description)
     test_dataset = SeriesLevelDataset(base_path, test_df,
