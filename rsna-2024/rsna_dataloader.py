@@ -15,6 +15,7 @@ import torchvision.transforms as transforms
 from torchvision.transforms import v2
 from scipy import ndimage
 from enum import Enum
+import cv2
 
 LABEL_MAP = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
 CONDITIONS = {
@@ -215,7 +216,16 @@ class SeriesLevelDataset(Dataset):
 
         self.dataframe = (dataframe[['study_id', "series_id", "condition", "severity", "level"]]
                           .drop_duplicates())
-        self.series = self.dataframe[['study_id', "series_id"]].drop_duplicates().reset_index(drop=True)
+
+        # For handed conditions
+        self.dataframe["mirrored"] = False
+
+        if is_train and data_series != "Sagittal T2/STIR":
+            df_copy = self.dataframe.copy()
+            df_copy["mirrored"] = True
+            self.dataframe = pd.concat([self.dataframe, df_copy])
+
+        self.series = self.dataframe[['study_id', "series_id", "mirrored"]].drop_duplicates().reset_index(drop=True)
 
         self.transform = transform
         self.transform_3d = transform_3d
@@ -241,12 +251,25 @@ class SeriesLevelDataset(Dataset):
         curr = self.series.iloc[index]
         image_paths = retrieve_image_paths(self.base_path, curr["study_id"], curr["series_id"])
         image_paths = sorted(image_paths, key=lambda x: self._get_image_index(x))
-        label = np.array(self.labels[(curr["study_id"], curr["series_id"])])
+        label = np.array(self.labels[(curr["study_id"], curr["series_id"], curr["mirrored"])])
 
-        images = np.array([np.array(self.transform(image=load_dicom(image_path))['image'])
-                           if self.transform else
-                           load_dicom(image_path) for image_path in image_paths])
+        if not curr["mirrored"]:
+            images = np.array([np.array(self.transform(image=load_dicom(image_path))['image'])
+                               if self.transform else
+                               load_dicom(image_path) for image_path in image_paths])
+        else:
+            images = np.array([cv2.flip(self.transform(image=load_dicom(image_path))['image'], 1)
+                               if self.transform else
+                               cv2.flip(load_dicom(image_path), 1) for image_path in image_paths])
 
+        images = self._reshape_by_data_type(images)
+
+        if self.transform_3d is not None:
+            images = self.transform_3d(image=images)["image"]
+
+        return images, torch.tensor(label).type(torch.FloatTensor)
+
+    def _reshape_by_data_type(self, images):
         if self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_PADDED:
             front_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2
             rear_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2 + (
@@ -264,7 +287,6 @@ class SeriesLevelDataset(Dataset):
             # Pad offset
             images = np.pad(images, ((0, resize_target - len(images)), (0, 0), (0, 0)))
 
-
         elif self.type == SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS:
             images = np.pad(images, ((1, 0), (0, 0), (0, 0)))
 
@@ -280,14 +302,11 @@ class SeriesLevelDataset(Dataset):
             np.random.shuffle(images)
             images = images[:DOWNSAMPLING_TARGETS[self.data_series]]
 
-        if self.transform_3d is not None:
-            images = self.transform_3d(image=images)["image"]
-
-        return images, torch.tensor(label).type(torch.FloatTensor)
+        return images
 
     def _get_t2stir_labels(self):
         labels = dict()
-        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
+        for name, group in self.dataframe.groupby(["study_id", "series_id", "mirrored"]):
             label_indices = [0 for e in range(len(self.levels))]
             for index, row in group.iterrows():
                 if row["severity"] in LABEL_MAP:  # and row["condition"] in conditions:
@@ -303,11 +322,14 @@ class SeriesLevelDataset(Dataset):
 
     def _get_t1_labels(self):
         labels = dict()
-        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
+        for name, group in self.dataframe.groupby(["study_id", "series_id", "mirrored"]):
             label_indices = [0 for e in range(len(self.levels) * 2)]
             for index, row in group.iterrows():
                 if row["severity"] in LABEL_MAP:
-                    label_index = self.levels.index(row["level"]) * 2 + (0 if "Left" in row["condition"] else 1)
+                    if not row["mirrored"]:
+                        label_index = self.levels.index(row["level"]) * 2 + (0 if "Left" in row["condition"] else 1)
+                    else:
+                        label_index = self.levels.index(row["level"]) * 2 + (1 if "Left" in row["condition"] else 0)
                     label_indices[label_index] = LABEL_MAP[row["severity"]]
 
             labels[name] = []
@@ -320,7 +342,7 @@ class SeriesLevelDataset(Dataset):
 
     def _get_t2_labels(self):
         labels = dict()
-        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
+        for name, group in self.dataframe.groupby(["study_id", "series_id", "mirrored"]):
             label_indices = [0 for e in range(len(self.levels) * 2)]
             for index, row in group.iterrows():
                 if row["severity"] in LABEL_MAP:
@@ -338,7 +360,7 @@ class SeriesLevelDataset(Dataset):
     def _get_t2stir_weights(self):
         # !TODO: refactor and properly formulate
         weights = []
-        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
+        for name, group in self.dataframe.groupby(["study_id", "series_id", "mirrored"]):
             curr = self.labels[name]
             # L5/S1 severe
             if np.argmax(curr[-1]) == 2:
@@ -378,7 +400,7 @@ class SeriesLevelDataset(Dataset):
     def _get_t1_weights(self):
         # !TODO: refactor and properly formulate
         weights = []
-        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
+        for name, group in self.dataframe.groupby(["study_id", "series_id", "mirrored"]):
             curr = self.labels[name]
             # L1/L2 L severe
             if np.argmax(curr[0]) == 2:
@@ -438,7 +460,7 @@ class SeriesLevelDataset(Dataset):
     def _get_t2_weights(self):
         # !TODO: refactor and properly formulate
         weights = []
-        for name, group in self.dataframe.groupby(["study_id", "series_id"]):
+        for name, group in self.dataframe.groupby(["study_id", "series_id", "mirrored"]):
             curr = self.labels[name]
             # L1/L2 L severe
             if np.argmax(curr[0]) == 2:
