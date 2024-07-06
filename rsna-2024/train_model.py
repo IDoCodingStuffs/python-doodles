@@ -197,7 +197,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            base_path=os.path.join(
                                                                                DATA_BASEPATH,
                                                                                "train_images"),
-                                                                           num_workers=4,
+                                                                           num_workers=12,
                                                                            split_factor=0.3,
                                                                            batch_size=8,
                                                                            data_type=SeriesDataType.SEQUENTIAL_FIXED_LENGTH_PADDED
@@ -307,9 +307,9 @@ def train_model_3d(data_subset_label: str, model_label: str):
 
 
 def train():
-    #model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_t2stir")
-    #model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b4_multichannel_t1")
-    model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
+    model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_volumented_t2stir")
+    # model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b4_multichannel_t1")
+    # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 
 
 if __name__ == '__main__':

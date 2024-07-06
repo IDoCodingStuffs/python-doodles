@@ -575,8 +575,8 @@ class ValidationTransform(nn.Module):
 # !TODO: Avoid duplication
 def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                              series_description: str,
-                                             transform_train: nn.Module,
-                                             transform_val: nn.Module,
+                                             transform_train,
+                                             transform_val,
                                              base_path: str,
                                              split_factor=0.2,
                                              random_seed=42,
