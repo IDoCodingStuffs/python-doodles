@@ -752,3 +752,9 @@ Now I am seeing the val loss going down properly for the initial 10 or so epochs
 
 ### 2 AM
 I wonder how it will behave with volumentations too. I can make another submission and see how the score changes either way, at least for the sagittal series.
+
+### 1 PM
+It improved by a .1 so not terrible, probably mostly improvements from the T2/STIR. 
+I think I need a 3D model for sure. Which requires some preprocessing step so that I am not processing massive volumes.
+Maybe I can start with 64^3 voxels then pass them to a channel per condition. Just rough clipping through the middle for a start.
+

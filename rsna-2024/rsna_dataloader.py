@@ -275,7 +275,7 @@ class SeriesLevelDataset(Dataset):
                         (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) % 2)
 
             images = np.pad(images, ((front_buffer, rear_buffer), (0, 0), (0, 0)))
-            if self.is_train:
+            if self.is_train and self.data_series == "Sagittal T2/STIR":
                 np.random.shuffle(images)
 
         elif self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_RESIZED:
