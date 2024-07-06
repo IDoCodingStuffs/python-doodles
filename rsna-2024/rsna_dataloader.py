@@ -216,11 +216,10 @@ class SeriesLevelDataset(Dataset):
 
         self.dataframe = (dataframe[['study_id', "series_id", "condition", "severity", "level"]]
                           .drop_duplicates())
-
-        # For handed conditions
         self.dataframe["mirrored"] = False
 
-        if is_train and data_series != "Sagittal T2/STIR":
+        # Axial flipping
+        if is_train and data_series == "Axial T2":
             df_copy = self.dataframe.copy()
             df_copy["mirrored"] = True
             self.dataframe = pd.concat([self.dataframe, df_copy])
