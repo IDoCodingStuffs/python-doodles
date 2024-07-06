@@ -36,6 +36,12 @@ RESIZING_CHANNELS = {
     "Sagittal T1": 35,
 }
 
+DOWNSAMPLING_TARGETS = {
+    "Sagittal T2/STIR": 10,
+    "Axial T2": 10,
+    "Sagittal T1": 10,
+}
+
 class PerImageDataset(Dataset):
     def __init__(self, dataframe, base_path="./data/rsna-2024-lumbar-spine-degenerative-classification/train_images",
                  transform=None):
@@ -189,7 +195,8 @@ class SeriesDataType(Enum):
     # Max 29 for T2/STIR
     SEQUENTIAL_FIXED_LENGTH_PADDED = 3
     SEQUENTIAL_FIXED_LENGTH_RESIZED = 4
-    CUBE_3D = 5
+    SEQUENTIAL_FIXED_LENGTH_DOWNSAMPLED = 5
+    CUBE_3D = 6
 
 
 class SeriesLevelDataset(Dataset):
@@ -262,6 +269,12 @@ class SeriesLevelDataset(Dataset):
             images = ndimage.zoom(images, (len(images) / width, 1, 1))
             # Pad offset
             images = np.pad(images, ((0, width - len(images)), (0, 0), (0, 0)))
+
+        elif self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_DOWNSAMPLED:
+            if len(images) < DOWNSAMPLING_TARGETS[self.data_series]:
+                images = np.pad(images, ((0, DOWNSAMPLING_TARGETS[self.data_series] - len(images)), (0, 0), (0, 0)))
+            np.random.shuffle(images)
+            images = images[:DOWNSAMPLING_TARGETS[self.data_series]]
 
         if self.transform_3d is not None:
             images = self.transform_3d(image=images)["image"]
@@ -770,10 +783,8 @@ def load_dicom_files(path_to_folder):
 def load_dicom(path):
     dicom = pydicom.read_file(path)
     data = dicom.pixel_array
-    data = data - np.min(data)
-    if np.max(data) != 0:
-        data = data / np.max(data)
-    data = (data * 255).astype(np.uint8)
+    data = (data - data.min()) / (data.max() - data.min() +1e-6) * 255
+    data = np.uint8(data)
     return data
 
 

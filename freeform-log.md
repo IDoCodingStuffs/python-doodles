@@ -737,3 +737,9 @@ Working on volumetric transforms now.
 Newsflash, I did not get something better than random. Fuck.
 
 Next thing is revamping my whole approach I guess. I should also set up the competition metric on local so that I am not flying blind and spending 2 weeks to end up not even beating random.
+
+### 8 PM
+Starting training from pretrained and using avg pool, and suddenly validation loss is going wild.
+That makes more sense, I think default pooling was making it fail to generalize or something.
+
+Let's try random sampling 10 images per series.
