@@ -763,3 +763,13 @@ I finally started looking into PyDicom docs... Boy have I been doing this all wr
 There is a bunch of MRI metadata 3D reconstruction and also downsampling vs resizing...
 So if I downsample width and height by 4, then it will be in the same order of magnitude as a 384^3
 Time to test it out
+
+### 5 PM
+Actually, let's try the sequential approach again first now that the sequences are actually right.
+
+### 6 PM
+Not working with transformers + CLS. Avg pool maybe?
+Oh before that, I realized I forgot to add the positional embeddings. Let's see if that changes things.
+
+### 9 PM
+Seems like a no, let's try avg pooling

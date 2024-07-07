@@ -194,11 +194,15 @@ class CoordinateDataset(Dataset):
 class SeriesDataType(Enum):
     SEQUENTIAL_VARIABLE_LENGTH = 1
     SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS = 2
-    # Max 29 for T2/STIR
-    SEQUENTIAL_FIXED_LENGTH_PADDED = 3
-    SEQUENTIAL_FIXED_LENGTH_RESIZED = 4
-    SEQUENTIAL_FIXED_LENGTH_DOWNSAMPLED = 5
-    CUBE_3D = 6
+
+    SEQUENTIAL_FIXED_LENGTH = 3
+    SEQUENTIAL_FIXED_LENGTH_WITH_CLS = 4
+    SEQUENTIAL_FIXED_LENGTH_PADDED = 5
+    SEQUENTIAL_FIXED_LENGTH_RESIZED = 6
+    SEQUENTIAL_FIXED_LENGTH_DOWNSAMPLED = 7
+
+    CUBE_3D = 8
+
 
 
 class SeriesLevelDataset(Dataset):
@@ -273,8 +277,13 @@ class SeriesLevelDataset(Dataset):
                     (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) % 2)
 
             images = np.pad(images, ((front_buffer, rear_buffer), (0, 0), (0, 0)))
-            if self.is_train and self.data_series == "Sagittal T2/STIR":
-                np.random.shuffle(images)
+
+        elif self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_WITH_CLS:
+            front_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2
+            rear_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2 + (
+                    (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) % 2)
+
+            images = np.pad(images, ((front_buffer + 1, rear_buffer), (0, 0), (0, 0)))
 
         elif self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_RESIZED:
             resize_target = RESIZING_CHANNELS[self.data_series]
