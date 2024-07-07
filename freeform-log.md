@@ -785,3 +785,8 @@ Data loading was one little part I was missing. Now there has to be just another
 
 Timm3D models? Too expensive to even fit without preprocessing to get the image sizes down.
 Although I guess I can downsample a bit... Huh, it can actually kinda run 128^3 as opposed to 384^3. Let's try that then.
+
+Also, finally had the sense to check the impact of augments on the 3d data. Did not even look like spines.
+Now trying to see if it can fit without absurdly aggressive 2d transforms that break everything about the 3d relationships.
+If it manages to fit, I can introduce volumetric transforms on top.
+Also also, I wonder if this is why the sequential models would just not fit. Not that it matters with how slow they are.
