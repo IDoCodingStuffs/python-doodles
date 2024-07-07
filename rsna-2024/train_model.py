@@ -384,15 +384,15 @@ def train_model_3d(data_subset_label: str, model_label: str):
             A.GaussNoise(var_limit=(5.0, 30.0)),
         ], p=CONFIG["aug_prob"]),
 
-        A.OneOf([
-            A.OpticalDistortion(distort_limit=1.0),
-            A.GridDistortion(num_steps=5, distort_limit=1.),
-            A.ElasticTransform(alpha=3),
-        ], p=CONFIG["aug_prob"]),
+        # A.OneOf([
+        #     A.OpticalDistortion(distort_limit=1.0),
+        #     A.GridDistortion(num_steps=5, distort_limit=1.),
+        #     A.ElasticTransform(alpha=3),
+        # ], p=CONFIG["aug_prob"]),
 
-        A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=15, border_mode=0, p=CONFIG["aug_prob"]),
+        #A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=15, border_mode=0, p=CONFIG["aug_prob"]),
         A.Resize(*CONFIG["img_size"]),
-        A.CoarseDropout(max_holes=16, max_height=64, max_width=64, min_holes=1, min_height=8, min_width=8,
+        A.CoarseDropout(max_holes=8, max_height=16, max_width=16, min_holes=1, min_height=4, min_width=4,
                         p=CONFIG["aug_prob"]),
         A.Normalize(mean=0.5, std=0.5),
     ])

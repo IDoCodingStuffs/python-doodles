@@ -298,9 +298,15 @@ class SeriesLevelDataset(Dataset):
 
         elif self.type == SeriesDataType.CUBE_3D:
             width = len(images[0])
-            images = ndimage.zoom(images, (len(images) / width, 1, 1))
+            front_buffer = (width - len(images)) // 2
+            rear_buffer = (width - len(images)) // 2 + (
+                    (width - len(images)) % 2)
+
+            images = np.pad(images, ((front_buffer, rear_buffer), (0, 0), (0, 0)))
+
+            # images = ndimage.zoom(images, (len(images) / width, 1, 1))
             # Pad offset
-            images = np.pad(images, ((0, width - len(images)), (0, 0), (0, 0)))
+            # images = np.pad(images, ((0, width - len(images)), (0, 0), (0, 0)))
 
         elif self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_DOWNSAMPLED:
             if len(images) < DOWNSAMPLING_TARGETS[self.data_series]:
