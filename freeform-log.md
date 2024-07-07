@@ -790,3 +790,9 @@ Also, finally had the sense to check the impact of augments on the 3d data. Did 
 Now trying to see if it can fit without absurdly aggressive 2d transforms that break everything about the 3d relationships.
 If it manages to fit, I can introduce volumetric transforms on top.
 Also also, I wonder if this is why the sequential models would just not fit. Not that it matters with how slow they are.
+
+### 3 AM
+Calling it a night now, gonna see how the 128x128 resize turns out.
+Next thing will be setting up some model to chop up the images and feed it in 64^3 channels, without downscaling.
+Could be as simple as chopping evenly, but I do not want to chop in the middle of vertebral discs.
+So, some sort of segmentation model to get vertebral contours, then finding axial and sagittal midlines, and then chopping up along those.
