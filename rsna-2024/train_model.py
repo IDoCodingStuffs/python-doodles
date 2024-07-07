@@ -16,7 +16,7 @@ CONFIG = dict(
     n_levels=5,
     # backbone="tf_efficientnetv2_b3",
     # backbone="tiny_vit_21m_512",
-    backbone="efficientnet_b0",
+    backbone="efficientnet_b4",
     vit_backbone_path="./models/tiny_vit_21m_512_t2stir/tiny_vit_21m_512_t2stir_70.pt",
     efficientnet_backbone_path="./models/tf_efficientnetv2_b3_t2stir/tf_efficientnetv2_b3_t2stir_85.pt",
     # img_size=(512, 512),
@@ -384,15 +384,14 @@ def train_model_3d(data_subset_label: str, model_label: str):
         ], p=CONFIG["aug_prob"]),
 
         A.Resize(*CONFIG["img_size"]),
-        A.CoarseDropout(max_holes=8, max_height=16, max_width=16, min_holes=1, min_height=4, min_width=4,
-                        p=CONFIG["aug_prob"]),
         A.Normalize(mean=0.5, std=0.5),
     ])
 
     transform_3d_train = V.Compose([
         V.RotateAroundAxis3d(rotation_limit=math.pi / 2, axis=(1, 0, 0), p=CONFIG["aug_prob"]),
         V.RotateAroundAxis3d(rotation_limit=math.pi / 2, axis=(0, 1, 0), p=CONFIG["aug_prob"]),
-        V.RotateAroundAxis3d(rotation_limit=math.pi / 2, axis=(0, 0, 1), p=CONFIG["aug_prob"])
+        V.RotateAroundAxis3d(rotation_limit=math.pi / 2, axis=(0, 0, 1), p=CONFIG["aug_prob"]),
+        V.RandomMove3d(x_max=3, y_max=3, p=CONFIG["aug_prob"]),
     ])
 
     transform_val = A.Compose([
@@ -447,7 +446,7 @@ def train_model_3d(data_subset_label: str, model_label: str):
 def train():
     # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_shuffled_t2stir")
     model_t1 = train_model_3d("Sagittal T1",
-                              f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_volumented_t1")
+                              f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_t1")
     # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 
 
