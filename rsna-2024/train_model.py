@@ -20,7 +20,8 @@ CONFIG = dict(
     vit_backbone_path="./models/tiny_vit_21m_512_t2stir/tiny_vit_21m_512_t2stir_70.pt",
     efficientnet_backbone_path="./models/tf_efficientnetv2_b3_t2stir/tf_efficientnetv2_b3_t2stir_85.pt",
     # img_size=(512, 512),
-    img_size=(384, 380),
+    # img_size=(384, 380),
+    img_size=(128, 128),
     in_chans=1,
     drop_rate=0.05,
     drop_rate_last=0.3,
@@ -110,7 +111,7 @@ class CNN_Model_Multichannel(nn.Module):
 
 
 class CNN_Model_3D(nn.Module):
-    def __init__(self, backbone="efficientnet_lite0", pretrained=False):
+    def __init__(self, backbone="efficientnet_lite0", pretrained=True):
         super(CNN_Model_3D, self).__init__()
 
         self.encoder = timm_3d.create_model(
@@ -171,6 +172,48 @@ class CNN_Transformer_Model(nn.Module):
         feat = self.head(feat)
 
         return feat.reshape((-1, CONFIG["n_levels"] * self.handedness_factor, CONFIG["out_dim"]))
+
+
+class CNN_Transformer_Model_Multichannel(nn.Module):
+    def __init__(self, backbone="tf_efficientnetv2_b3", in_chans=29, num_levels=5, pretrained=True):
+        super(CNN_Transformer_Model_Multichannel, self).__init__()
+
+        self.num_levels = num_levels
+        self.encoder = timm.create_model(
+            backbone,
+            num_classes=CONFIG["out_dim"] * self.num_levels,
+            features_only=False,
+            global_pool='avg',
+            drop_rate=CONFIG["drop_rate"],
+            drop_path_rate=CONFIG["drop_path_rate"],
+            pretrained=pretrained,
+            in_chans=CONFIG["in_chans"] * in_chans,
+        )
+        if 'efficient' in backbone:
+            hdim = self.encoder.conv_head.out_channels
+            self.encoder.classifier = nn.Identity()
+        elif 'convnext' in backbone:
+            hdim = self.encoder.head.fc.in_features
+            self.encoder.head.fc = nn.Identity()
+
+        self.pos_emb = PositionalEncoding(d_model=hdim, dropout=CONFIG["drop_rate"])
+        self.attention_layer = nn.Sequential(
+            nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
+            nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=hdim, nhead=8, batch_first=True),
+                                  num_layers=3,
+                                  norm=nn.LayerNorm(hdim, eps=1e-05, elementwise_affine=True)),
+        )
+        self.head = NormMLPClassifierHead(in_dim=hdim,
+                                          out_dim=self.num_levels * CONFIG["out_dim"])
+
+
+    def forward(self, x):
+        feat = self.encoder(x)
+        feat = self.attention_layer(feat)
+        #feat = self.head(feat[:, 0])
+        feat = self.head(feat)
+
+        return feat.reshape((-1, self.num_levels, CONFIG["out_dim"]))
 
 
 def train_model_for_series_per_image(data_subset_label: str, model_label: str):
@@ -292,14 +335,16 @@ def train_model_for_series(data_subset_label: str, model_label: str):
                                                                            base_path=os.path.join(
                                                                                DATA_BASEPATH,
                                                                                "train_images"),
-                                                                           num_workers=12,
+                                                                           num_workers=0,
                                                                            split_factor=0.3,
-                                                                           batch_size=1,
-                                                                           data_type=SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH
+                                                                           batch_size=8,
+                                                                           data_type=SeriesDataType.SEQUENTIAL_FIXED_LENGTH_PADDED
                                                                            )
 
     NUM_EPOCHS = CONFIG["epochs"]
-    model = CNN_Transformer_Model(backbone=CONFIG["backbone"], handedness_factor=2).to(device)
+    model = CNN_Transformer_Model_Multichannel(backbone=CONFIG["backbone"],
+                                               in_chans=MAX_IMAGES_IN_SERIES["Sagittal T1"],
+                                               num_levels=10).to(device)
 
     optimizers = [
         torch.optim.Adam(model.parameters(), lr=1e-3)
@@ -365,14 +410,14 @@ def train_model_3d(data_subset_label: str, model_label: str):
                                                                            base_path=os.path.join(
                                                                                DATA_BASEPATH,
                                                                                "train_images"),
-                                                                           num_workers=2,
+                                                                           num_workers=12,
                                                                            split_factor=0.3,
-                                                                           batch_size=1,
+                                                                           batch_size=8,
                                                                            data_type=SeriesDataType.CUBE_3D)
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = CNN_Model_3D()
+    model = CNN_Model_3D(backbone=CONFIG["backbone"])
 
     optimizers = [
         torch.optim.Adam(model.parameters(), lr=1e-3),
@@ -395,14 +440,14 @@ def train_model_3d(data_subset_label: str, model_label: str):
                                 train_loader_desc=f"Training {data_subset_label}",
                                 epochs=NUM_EPOCHS,
                                 freeze_backbone_initial_epochs=0,
-                                empty_cache_every_n_iterations=2)
+                                )
 
     return model
 
 
 def train():
     # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_shuffled_t2stir")
-    model_t1 = train_model_for_series("Sagittal T1", "efficientnet_b3_transformer_t1")
+    model_t1 = train_model_3d("Sagittal T1", "efficientnet_b3_3d_128_t1")
     # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 
 

@@ -773,3 +773,15 @@ Oh before that, I realized I forgot to add the positional embeddings. Let's see 
 
 ### 9 PM
 Seems like a no, let's try avg pooling
+
+## 7/7
+### 1 AM
+Still no. Wonder if I can use multichannel alongside the transformer. 
+It won't see the features from each image independently, but might end up learning some sequentiality?
+Fuck, there is gotta be some trick to this I am missing. Get an embedding per image and run through a sequential layer?
+Too expensive and fails to train.
+Run each image into its own channel? Now that misses sequentiality.
+Data loading was one little part I was missing. Now there has to be just another tiny part like that.
+
+Timm3D models? Too expensive to even fit without preprocessing to get the image sizes down.
+Although I guess I can downsample a bit... Huh, it can actually kinda run 128^3 as opposed to 384^3. Let's try that then.
