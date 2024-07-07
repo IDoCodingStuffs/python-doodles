@@ -149,7 +149,7 @@ class CNN_Transformer_Model(nn.Module):
             hdim = self.encoder.head.fc.in_features
             self.encoder.head.fc = nn.Identity()
 
-        #self.pos_emb = PositionalEncoding(d_model=hdim, dropout=CONFIG["drop_rate"])
+        self.pos_emb = PositionalEncoding(d_model=hdim, dropout=CONFIG["drop_rate"])
         self.attention_layer = nn.Sequential(
             nn.Dropout(p=CONFIG["drop_rate"], inplace=True),
             nn.TransformerEncoder(nn.TransformerEncoderLayer(d_model=hdim, nhead=8, batch_first=True),
@@ -164,9 +164,9 @@ class CNN_Transformer_Model(nn.Module):
     def forward(self, x):
         feat = self.encoder(x.squeeze(0).unsqueeze(1))
         feat = feat.unsqueeze(0)
-        #feat = self.pos_emb(feat)
-        feat = self.avg_pool(feat)
+        feat = self.pos_emb(feat)
         feat = self.attention_layer(feat)
+        feat = self.avg_pool(feat)
         #feat = self.head(feat[:, 0])
         feat = self.head(feat)
 
