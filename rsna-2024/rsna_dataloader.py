@@ -201,7 +201,8 @@ class SeriesDataType(Enum):
     SEQUENTIAL_FIXED_LENGTH_RESIZED = 6
     SEQUENTIAL_FIXED_LENGTH_DOWNSAMPLED = 7
 
-    CUBE_3D = 8
+    CUBE_3D_RESIZED = 8
+    CUBE_3D_DOWNSAMPLED_PADDED = 9
 
 
 class SeriesLevelDataset(Dataset):
@@ -295,17 +296,6 @@ class SeriesLevelDataset(Dataset):
         elif self.type == SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS:
             images = np.pad(images, ((1, 0), (0, 0), (0, 0)))
 
-        elif self.type == SeriesDataType.CUBE_3D:
-            width = len(images[0])
-            front_buffer = (width - len(images)) // 2
-            rear_buffer = (width - len(images)) // 2 + (
-                    (width - len(images)) % 2)
-
-            images = np.pad(images, ((front_buffer, rear_buffer), (0, 0), (0, 0)))
-
-            # images = ndimage.zoom(images, (len(images) / width, 1, 1))
-            # Pad offset
-            # images = np.pad(images, ((0, width - len(images)), (0, 0), (0, 0)))
 
         elif self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_DOWNSAMPLED:
             if len(images) < DOWNSAMPLING_TARGETS[self.data_series]:
@@ -571,7 +561,7 @@ class PatientLevelDataset(Dataset):
     def __init__(self,
                  base_path: str,
                  dataframe: pd.DataFrame,
-                 data_type=SeriesDataType.CUBE_3D,
+                 data_type=SeriesDataType.CUBE_3D_RESIZED,
                  transform=None,
                  transform_3d=None,
                  is_train=False,
@@ -617,10 +607,18 @@ class PatientLevelDataset(Dataset):
         return torch.stack(images), torch.tensor(label).type(torch.FloatTensor)
 
     def _reshape_by_data_type(self, images):
-        if self.type == SeriesDataType.CUBE_3D:
-            width = len(images[0])
+        width = len(images[0])
+        if self.type == SeriesDataType.CUBE_3D_RESIZED:
             images = ndimage.interpolation.zoom(images, (width / len(images), 1, 1))
+        elif self.type == SeriesDataType.CUBE_3D_DOWNSAMPLED_PADDED:
+            if len(images) > width:
+                images = images[::2, :, :]
+                width = len(images[0])
 
+            front_buffer = (width - len(images)) // 2
+            rear_buffer = (width - len(images)) // 2 + ((width - len(images)) % 2)
+
+            images = np.pad(images, ((front_buffer, rear_buffer), (0, 0), (0, 0)))
 
         return images
 

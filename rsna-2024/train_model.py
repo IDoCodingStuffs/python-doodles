@@ -403,16 +403,16 @@ def train_model_3d(backbone, model_label: str):
 
     (trainloader, valloader, test_loader,
      trainset, valset, testset) = create_subject_level_datasets_and_loaders(TRAINING_DATA,
-                                                                           transform_train,
-                                                                           transform_val,
-                                                                           transform_3d_train=transform_3d_train,
-                                                                           base_path=os.path.join(
+                                                                            transform_train,
+                                                                            transform_val,
+                                                                            transform_3d_train=transform_3d_train,
+                                                                            base_path=os.path.join(
                                                                                DATA_BASEPATH,
                                                                                "train_images"),
-                                                                           num_workers=22,
-                                                                           split_factor=0.3,
-                                                                           batch_size=8,
-                                                                           data_type=SeriesDataType.CUBE_3D)
+                                                                            num_workers=22,
+                                                                            split_factor=0.3,
+                                                                            batch_size=8,
+                                                                            data_type=SeriesDataType.CUBE_3D_RESIZED)
 
     NUM_EPOCHS = CONFIG["epochs"]
 
