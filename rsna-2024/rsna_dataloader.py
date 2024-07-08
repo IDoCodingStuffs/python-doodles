@@ -954,17 +954,17 @@ def load_dicom(path):
 # !TODO: Include metadata to invalidate if data type is changed
 def load_dicom_series(path, transform=None, use_caching=False):
     if use_caching and os.path.exists(os.path.join(path, "cached_slices.npy")):
-        slices = np.load(os.path.join(path, "cached_slices.npy"))
+        slices = np.load(os.path.join(path, "cached_slices.npy"), allow_pickle=True)
     else:
         files = glob.glob(os.path.join(path, '*.dcm'))
         files = sorted(files, key=lambda x: int(x.split('/')[-1].split("\\")[-1].split('.')[0]))
-        slices = np.array([pydicom.dcmread(fname) for fname in files])
+        slices = np.array([pydicom.dcmread(fname).pixel_array.astype(np.uint8) for fname in files])
         # slices = sorted(slices, key=lambda s: s.SliceLocation)
         if use_caching:
             np.save(os.path.join(path, "cached_slices.npy"), slices)
 
     if transform is not None:
-        slices = np.array([transform(image=slice.pixel_array.astype(np.uint8))["image"] for slice in slices])
+        slices = np.array([transform(image=slice)["image"] for slice in slices])
 
     return slices
 
