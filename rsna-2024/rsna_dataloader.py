@@ -951,24 +951,22 @@ def load_dicom(path):
     return data
 
 
+# !TODO: Include metadata to invalidate if data type is changed
 def load_dicom_series(path, transform=None, use_caching=False):
-    if os.path.exists(os.path.join(path, "cached.npy")) and use_caching:
-        return np.load(os.path.join(path, "cached.npy"))
-
-    files = glob.glob(os.path.join(path, '*.dcm'))
-    files = sorted(files, key=lambda x: int(x.split('/')[-1].split("\\")[-1].split('.')[0]))
-    slices = [pydicom.dcmread(fname) for fname in files]
-    # slices = sorted(slices, key=lambda s: s.SliceLocation)
-    if transform is not None:
-        data = np.array([transform(image=slice.pixel_array.astype(np.uint8))["image"] for slice in slices])
+    if use_caching and os.path.exists(os.path.join(path, "cached_slices.npy")):
+        slices = np.load(os.path.join(path, "cached_slices.npy"))
     else:
-        data = np.array([slice.pixel_array for slice in slices])
+        files = glob.glob(os.path.join(path, '*.dcm'))
+        files = sorted(files, key=lambda x: int(x.split('/')[-1].split("\\")[-1].split('.')[0]))
+        slices = np.array([pydicom.dcmread(fname) for fname in files])
+        # slices = sorted(slices, key=lambda s: s.SliceLocation)
+        if use_caching:
+            np.save(os.path.join(path, "cached_slices.npy"), slices)
 
-    data = np.array(data)
-    if use_caching:
-        np.save(os.path.join(path, "cached.npy"), data)
+    if transform is not None:
+        slices = np.array([transform(image=slice.pixel_array.astype(np.uint8))["image"] for slice in slices])
 
-    return data
+    return slices
 
 
 def load_dicom_subject(path, transform=None, use_caching=True):
