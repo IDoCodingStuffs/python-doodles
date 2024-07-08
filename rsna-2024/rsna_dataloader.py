@@ -203,6 +203,7 @@ class SeriesDataType(Enum):
 
     CUBE_3D_RESIZED = 8
     CUBE_3D_DOWNSAMPLED_PADDED = 9
+    CUBE_3D_RESIZED_PADDED = 10
 
 
 class SeriesLevelDataset(Dataset):
@@ -610,10 +611,12 @@ class PatientLevelDataset(Dataset):
         width = len(images[0])
         if self.type == SeriesDataType.CUBE_3D_RESIZED:
             images = ndimage.interpolation.zoom(images, (width / len(images), 1, 1))
-        elif self.type == SeriesDataType.CUBE_3D_DOWNSAMPLED_PADDED:
+        elif self.type in (SeriesDataType.CUBE_3D_DOWNSAMPLED_PADDED, SeriesDataType.CUBE_3D_RESIZED_PADDED):
             if len(images) > width:
-                images = images[::2, :, :]
-                width = len(images[0])
+                if self.type == SeriesDataType.CUBE_3D_DOWNSAMPLED_PADDED:
+                    images = images[::2, :, :]
+                elif self.type == SeriesDataType.CUBE_3D_RESIZED_PADDED:
+                    images = ndimage.interpolation.zoom(images, (width / len(images), 1, 1))
 
             front_buffer = (width - len(images)) // 2
             rear_buffer = (width - len(images)) // 2 + ((width - len(images)) % 2)
