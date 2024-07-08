@@ -823,7 +823,5 @@ Sadly inference is very slow without workers, so I will need to fix that data lo
 Profiler says -- it is the scipy zoom that is so time consuming. So I could try 0 padding + downsampling.
 
 ### 11 AM
-Padding is significantly faster since zooming was taking up half the time. Still bottlenecked by IO though so I will need to figure it out. 
+Padding is significantly faster. Still bottlenecked by IO though so I will need to figure it out. 
 Also val loss decreases more, so that's a bonus.
-
-Yeah the second bottleneck is the dicom decoding which is half the time per the profiler. So I will need to cache the numpy arrays.
