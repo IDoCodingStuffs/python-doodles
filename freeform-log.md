@@ -836,3 +836,5 @@ Fuck my val loss has been all borked up since I switched to BCE.
 
 ### 3 PM
 Gave up trying to figure the implementation for FocalLoss for now. Gonna use weighted BCE loss, see if that works.
+
+Also started getting some `IOError` which went away upon reboot... for now.
