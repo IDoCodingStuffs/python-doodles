@@ -422,7 +422,7 @@ def train_model_3d(model_label: str):
     schedulers = [
     ]
     criteria = [
-        FocalLoss(alpha=0.1).to(device) for i in range(CONFIG["n_levels"] * 5)
+        FocalLoss(alpha=1/(CONFIG["n_levels"] * 5)).to(device) for i in range(CONFIG["n_levels"] * 5)
     ]
 
     train_model_with_validation(model,
