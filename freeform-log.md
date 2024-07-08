@@ -829,3 +829,4 @@ Also val loss decreases more, so that's a bonus.
 ### 1 PM
 Well the downside is, it is worse at picking up the minority classes. So I should probably reintroduce oversampling.
 Also, the mirror trick.
+And also, Focal Loss but implemented correctly so that alpha is a vector.
