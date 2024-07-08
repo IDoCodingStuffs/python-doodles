@@ -274,7 +274,7 @@ def train_model_for_series_per_image(data_subset_label: str, model_label: str):
     ]
 
     criteria = [
-        FocalLoss(alpha=0.2, gamma=3).to(device) for i in range(CONFIG["n_levels"])
+        WeightedBCELoss(alpha=0.2, gamma=3).to(device) for i in range(CONFIG["n_levels"])
     ]
 
     train_model_with_validation(model,
@@ -356,7 +356,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     ]
 
     criteria = [
-        FocalLoss(alpha=(0.2 if "T2/STIR" in data_subset_label else 0.1)).to(device) for i in
+        WeightedBCELoss(alpha=(0.2 if "T2/STIR" in data_subset_label else 0.1)).to(device) for i in
         range(CONFIG["n_levels"] * (1 if "T2/STIR" in data_subset_label else 2))
     ]
 
@@ -423,8 +423,8 @@ def train_model_3d(backbone, model_label: str):
     schedulers = [
     ]
     criteria = [
-        # FocalLoss() for i in range(25)
-        nn.BCEWithLogitsLoss()
+        WeightedBCELoss(device=CONFIG["device"])
+        # nn.BCEWithLogitsLoss()
     ]
 
     train_model_with_validation(model,
@@ -444,7 +444,7 @@ def train_model_3d(backbone, model_label: str):
 
 def train():
     # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_shuffled_t2stir")
-    model = train_model_3d("efficientnet_b0", f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_bce_padded")
+    model = train_model_3d("efficientnet_b0", f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_weighted_bce")
     # model2 = train_model_3d("efficientnet_b3", f"efficientnet_b3_{CONFIG['img_size'][0]}_3d_padded")
     # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 

@@ -833,3 +833,6 @@ And also, Focal Loss but implemented correctly so that alpha is a vector.
 
 ### 2 PM
 Fuck my val loss has been all borked up since I switched to BCE.
+
+### 3 PM
+Gave up trying to figure the implementation for FocalLoss for now. Gonna use weighted BCE loss, see if that works.

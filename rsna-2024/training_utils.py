@@ -25,39 +25,71 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # IMPLEMENTATION CREDIT: https://github.com/clcarwin/focal_loss_pytorch
-class FocalLoss(nn.Module):
-    def __init__(self, gamma=0.5, alpha=None, size_average=True):
-        super(FocalLoss, self).__init__()
-        self.gamma = gamma
+class WeightedBCELoss(nn.Module):
+    def __init__(self, device, alpha=None):
+        super(WeightedBCELoss, self).__init__()
+        if alpha is None:
+            # alpha = torch.Tensor(
+            #     [[1., 29.34146341, 601.5],
+            #      [1., 10.46296296, 141.25],
+            #      [1., 3.6539924, 43.68181818],
+            #      [1., 1.89223058, 8.20652174],
+            #      [1., 2.31736527, 5.60869565],
+            #      [1., 19.46666667, 64.88888889],
+            #      [1., 6.30674847, 18.69090909],
+            #      [1., 2.92041522, 7.46902655],
+            #      [1., 1.5144357, 2.00347222],
+            #      [1., 3.43076923, 9.4893617],
+            #      [1., 27.11363636, 132.55555556],
+            #      [1., 10.5, 283.5],
+            #      [1., 3.65267176, 35.44444444],
+            #      [1., 2.05277045, 8.74157303],
+            #      [1., 2.75333333, 6.88333333],
+            #      [1., 14.59493671, 82.35714286],
+            #      [1., 6.32926829, 23.59090909],
+            #      [1., 2.82828283, 7.70642202],
+            #      [1., 1.43367347, 1.92465753],
+            #      [1., 3.57429719, 8.31775701],
+            #      [1., 29.04878049, 85.07142857],
+            #      [1., 11.31632653, 28.43589744],
+            #      [1., 7.16083916, 12.96202532],
+            #      [1., 6.25675676, 5.38372093],
+            #      [1., 44.66666667, 92.76923077]
+            #      ])
+            alpha = torch.Tensor(
+                [1., 29.34146341, 601.5,
+                 1., 10.46296296, 141.25,
+                 1., 3.6539924, 43.68181818,
+                 1., 1.89223058, 8.20652174,
+                 1., 2.31736527, 5.60869565,
+                 1., 19.46666667, 64.88888889,
+                 1., 6.30674847, 18.69090909,
+                 1., 2.92041522, 7.46902655,
+                 1., 1.5144357, 2.00347222,
+                 1., 3.43076923, 9.4893617,
+                 1., 27.11363636, 132.55555556,
+                 1., 10.5, 283.5,
+                 1., 3.65267176, 35.44444444,
+                 1., 2.05277045, 8.74157303,
+                 1., 2.75333333, 6.88333333,
+                 1., 14.59493671, 82.35714286,
+                 1., 6.32926829, 23.59090909,
+                 1., 2.82828283, 7.70642202,
+                 1., 1.43367347, 1.92465753,
+                 1., 3.57429719, 8.31775701,
+                 1., 29.04878049, 85.07142857,
+                 1., 11.31632653, 28.43589744,
+                 1., 7.16083916, 12.96202532,
+                 1., 6.25675676, 5.38372093,
+                 1., 44.66666667, 92.76923077
+                 ]
+            ).to(device)
         self.alpha = alpha
-        if isinstance(alpha, (float, int)): self.alpha = torch.Tensor([alpha, 1 - alpha])
-        if isinstance(alpha, list): self.alpha = torch.Tensor(alpha)
-        self.size_average = size_average
+        self.bce_loss = nn.BCEWithLogitsLoss(reduction='none')
 
-    def forward(self, input, target):
-        if input.dim() > 2:
-            input = input.view(input.size(0), input.size(1), -1)  # N,C,H,W => N,C,H*W
-            input = input.transpose(1, 2)  # N,C,H*W => N,H*W,C
-            input = input.contiguous().view(-1, input.size(2))  # N,H*W,C => N*H*W,C
-        target = target.view(-1, 1)
-
-        logpt = F.log_softmax(input)
-        logpt = logpt.gather(1, target.to(torch.int64))
-        logpt = logpt.view(-1)
-        pt = torch.autograd.Variable(logpt.data.exp())
-
-        if self.alpha is not None:
-            if self.alpha.type() != input.data.type():
-                self.alpha = self.alpha.type_as(input.data)
-            at = self.alpha.gather(0, target.data.view(-1))
-            logpt = logpt * torch.autograd.Variable(at)
-
-        loss = -1 * (1 - pt) ** self.gamma * logpt
-        if self.size_average:
-            return loss.mean()
-        else:
-            return loss.sum()
-
+    def forward(self, pred, label):
+        losses = self.bce_loss(pred, label)
+        return torch.mean(self.alpha * losses)
 
 # !TODO: Optional
 def freeze_model_backbone(model: nn.Module):
