@@ -374,7 +374,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     return model
 
 
-def train_model_3d(data_subset_label: str, model_label: str):
+def train_model_3d(model_label: str):
     transform_train = A.Compose([
         A.RandomBrightnessContrast(brightness_limit=(-0.2, 0.2), contrast_limit=(-0.2, 0.2), p=CONFIG["aug_prob"]),
         A.OneOf([
@@ -402,7 +402,6 @@ def train_model_3d(data_subset_label: str, model_label: str):
 
     (trainloader, valloader, test_loader,
      trainset, valset, testset) = create_subject_level_datasets_and_loaders(TRAINING_DATA,
-                                                                           data_subset_label,
                                                                            transform_train,
                                                                            transform_val,
                                                                            transform_3d_train=transform_3d_train,
