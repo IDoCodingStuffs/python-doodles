@@ -825,3 +825,7 @@ Profiler says -- it is the scipy zoom that is so time consuming. So I could try 
 ### 11 AM
 Padding is significantly faster. Still bottlenecked by IO though so I will need to figure it out. 
 Also val loss decreases more, so that's a bonus.
+
+### 1 PM
+Well the downside is, it is worse at picking up the minority classes. So I should probably reintroduce oversampling.
+Also, the mirror trick.
