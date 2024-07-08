@@ -803,3 +803,4 @@ Also, discussion on Kaggle showed he file indices were better for sorting, someh
 
 ### 8 PM
 Oh of course there are nans in severity. Beautiful.
+Well I think I have a patient level dataset with 3 channels put together now. So let's try and see if it performs with a 3D model.

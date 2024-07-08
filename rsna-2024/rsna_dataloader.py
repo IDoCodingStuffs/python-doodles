@@ -597,18 +597,6 @@ class PatientLevelDataset(Dataset):
         self.levels = sorted(self.dataframe["level"].unique())
         self.labels = self._get_labels()
 
-        # if data_series == "Sagittal T2/STIR":
-        #     self.labels = self._get_t2stir_labels()
-        #     self.weights = self._get_t2stir_weights()
-        #
-        # elif data_series == "Sagittal T1":
-        #     self.labels = self._get_t1_labels()
-        #     self.weights = self._get_t1_weights()
-        #
-        # if data_series == "Axial T2":
-        #     self.labels = self._get_t2_labels()
-        #     self.weights = self._get_t2_weights()
-
     def __len__(self):
         return len(self.subjects)
 
@@ -634,48 +622,10 @@ class PatientLevelDataset(Dataset):
         return torch.stack(images), torch.tensor(label).type(torch.FloatTensor)
 
     def _reshape_by_data_type(self, images):
-        if self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_PADDED:
-            front_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2
-            rear_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2 + (
-                    (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) % 2)
-
-            images = np.pad(images, ((front_buffer, rear_buffer), (0, 0), (0, 0)))
-
-        elif self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_WITH_CLS:
-            front_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2
-            rear_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2 + (
-                    (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) % 2)
-
-            images = np.pad(images, ((front_buffer + 1, rear_buffer), (0, 0), (0, 0)))
-
-        elif self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_RESIZED:
-            resize_target = RESIZING_CHANNELS[self.data_series]
-            images = ndimage.zoom(images, (len(images) / resize_target, 1, 1))
-            # Clip last
-            images = images[:resize_target]
-            # Pad offset
-            images = np.pad(images, ((0, resize_target - len(images)), (0, 0), (0, 0)))
-
-        elif self.type == SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS:
-            images = np.pad(images, ((1, 0), (0, 0), (0, 0)))
-
-        elif self.type == SeriesDataType.CUBE_3D:
+        if self.type == SeriesDataType.CUBE_3D:
             width = len(images[0])
-            # front_buffer = (width - len(images)) // 2
-            # rear_buffer = (width - len(images)) // 2 + (
-            #         (width - len(images)) % 2)
-            #
-            # images = np.pad(images, ((front_buffer, rear_buffer), (0, 0), (0, 0)))
-
             images = ndimage.interpolation.zoom(images, (width / len(images), 1, 1))
-            # Pad offset
-            # images = np.pad(images, ((0, width - len(images)), (0, 0), (0, 0)))
 
-        elif self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_DOWNSAMPLED:
-            if len(images) < DOWNSAMPLING_TARGETS[self.data_series]:
-                images = np.pad(images, ((0, DOWNSAMPLING_TARGETS[self.data_series] - len(images)), (0, 0), (0, 0)))
-            np.random.shuffle(images)
-            images = images[:DOWNSAMPLING_TARGETS[self.data_series]]
 
         return images
 
@@ -757,7 +707,6 @@ class ValidationTransform(nn.Module):
         return image
 
 
-# !TODO: Avoid duplication
 def create_series_level_datasets_and_loaders(df: pd.DataFrame,
                                              series_description: str,
                                              transform_train,
@@ -786,6 +735,55 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     test_df = test_df.reset_index(drop=True)
 
     random.seed(random_seed)
+    train_dataset = SeriesLevelDataset(base_path, train_df,
+                                        transform=transform_train,
+                                        transform_3d=transform_3d_train,
+                                        data_type=data_type,
+                                        data_series=series_description,
+                                        is_train=True
+                                        )
+    val_dataset = SeriesLevelDataset(base_path, val_df,
+                                      transform=transform_val, data_type=data_type, data_series=series_description)
+    test_dataset = SeriesLevelDataset(base_path, test_df,
+                                       transform=transform_val, data_type=data_type, data_series=series_description)
+
+    train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker, num_workers=num_workers)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+
+    # !TODO: Refactor
+    return train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset
+
+
+def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
+                                             series_description: str,
+                                             transform_train,
+                                             transform_val,
+                                             base_path: str,
+                                             transform_3d_train=None,
+                                             split_factor=0.2,
+                                             random_seed=42,
+                                             batch_size=1,
+                                             num_workers=0,
+                                             data_type=SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS):
+    # By defauly, 8-1.5-.5 split
+    df = df.dropna()
+    df = df[df.groupby(["study_id"]).transform('size') == 25]
+
+    train_studies, val_studies = train_test_split(df["study_id"].unique(), test_size=split_factor,
+                                                  random_state=random_seed)
+    val_studies, test_studies = train_test_split(val_studies, test_size=0.25, random_state=random_seed)
+
+    train_df = df[df["study_id"].isin(train_studies)]
+    val_df = df[df["study_id"].isin(val_studies)]
+    test_df = df[df["study_id"].isin(test_studies)]
+
+    train_df = train_df.reset_index(drop=True)
+    val_df = val_df.reset_index(drop=True)
+    test_df = test_df.reset_index(drop=True)
+
+    random.seed(random_seed)
     train_dataset = PatientLevelDataset(base_path, train_df,
                                         transform=transform_train,
                                         transform_3d=transform_3d_train,
@@ -798,8 +796,9 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     test_dataset = PatientLevelDataset(base_path, test_df,
                                        transform=transform_val, data_type=data_type, data_series=series_description)
 
-    train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker, num_workers=num_workers)
+    #train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
+    #train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker, num_workers=num_workers)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 

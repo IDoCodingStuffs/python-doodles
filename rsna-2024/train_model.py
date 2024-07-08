@@ -111,21 +111,22 @@ class CNN_Model_Multichannel(nn.Module):
 
 
 class CNN_Model_3D(nn.Module):
-    def __init__(self, backbone="efficientnet_lite0", pretrained=True):
+    def __init__(self, backbone="efficientnet_lite0", in_chans=1, out_classes=5, pretrained=True):
         super(CNN_Model_3D, self).__init__()
+        self.out_classes = out_classes
 
         self.encoder = timm_3d.create_model(
             backbone,
-            num_classes=CONFIG["out_dim"] * CONFIG["n_levels"] * 2,
+            num_classes=out_classes * CONFIG["out_dim"],
             features_only=False,
             drop_rate=CONFIG["drop_rate"],
             drop_path_rate=CONFIG["drop_path_rate"],
             pretrained=pretrained,
-            in_chans=CONFIG["in_chans"],
+            in_chans=in_chans,
         ).to(CONFIG["device"])
 
     def forward(self, x):
-        return self.encoder(x.unsqueeze(1)).reshape((-1, 10, 3))
+        return self.encoder(x).reshape((-1, self.out_classes, 3))
 
 
 class CNN_Transformer_Model(nn.Module):
@@ -400,7 +401,7 @@ def train_model_3d(data_subset_label: str, model_label: str):
     ])
 
     (trainloader, valloader, test_loader,
-     trainset, valset, testset) = create_series_level_datasets_and_loaders(TRAINING_DATA,
+     trainset, valset, testset) = create_subject_level_datasets_and_loaders(TRAINING_DATA,
                                                                            data_subset_label,
                                                                            transform_train,
                                                                            transform_val,
@@ -415,17 +416,14 @@ def train_model_3d(data_subset_label: str, model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = CNN_Model_3D(backbone=CONFIG["backbone"])
-
+    model = CNN_Model_3D(in_chans=3, out_classes=25)
     optimizers = [
         torch.optim.Adam(model.parameters(), lr=1e-3),
     ]
-
     schedulers = [
     ]
-
     criteria = [
-        FocalLoss(alpha=0.1).to(device) for i in range(CONFIG["n_levels"] * 2)
+        FocalLoss(alpha=0.1).to(device) for i in range(CONFIG["n_levels"] * 5)
     ]
 
     train_model_with_validation(model,
@@ -445,8 +443,8 @@ def train_model_3d(data_subset_label: str, model_label: str):
 
 def train():
     # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_shuffled_t2stir")
-    model_t1 = train_model_3d("Sagittal T1",
-                              f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_t1")
+    model = train_model_3d("Sagittal T1",
+                              f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d")
     # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 
 
