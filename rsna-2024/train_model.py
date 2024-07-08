@@ -126,7 +126,8 @@ class CNN_Model_3D(nn.Module):
         ).to(CONFIG["device"])
 
     def forward(self, x):
-        return self.encoder(x).reshape((-1, self.out_classes, 3))
+        # return self.encoder(x).reshape((-1, self.out_classes, 3))
+        return self.encoder(x)
 
 
 class CNN_Transformer_Model(nn.Module):
@@ -422,7 +423,8 @@ def train_model_3d(model_label: str):
     schedulers = [
     ]
     criteria = [
-        FocalLoss(alpha=1/(CONFIG["n_levels"] * 5)).to(device) for i in range(CONFIG["n_levels"] * 5)
+        #FocalLoss(alpha=1/(CONFIG["n_levels"] * 5)).to(device) for i in range(CONFIG["n_levels"] * 5)
+        nn.BCEWithLogitsLoss(),
     ]
 
     train_model_with_validation(model,
@@ -442,7 +444,7 @@ def train_model_3d(model_label: str):
 
 def train():
     # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_shuffled_t2stir")
-    model = train_model_3d(f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d")
+    model = train_model_3d(f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_bceloss")
     # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 
 

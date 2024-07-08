@@ -641,7 +641,7 @@ class PatientLevelDataset(Dataset):
             for label in label_indices:
                 curr = [0 if label != i else 1 for i in range(3)]
                 labels[study_id].append(curr)
-
+            labels[study_id] = np.array(labels[study_id]).flatten()
         return labels
 
 

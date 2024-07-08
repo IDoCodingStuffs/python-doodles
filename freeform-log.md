@@ -804,3 +804,11 @@ Also, discussion on Kaggle showed he file indices were better for sorting, someh
 ### 8 PM
 Oh of course there are nans in severity. Beautiful.
 Well I think I have a patient level dataset with 3 channels put together now. So let's try and see if it performs with a 3D model.
+
+### 11 PM
+Val loss still not going down. Gonna iterate through the loss function again. 
+BCE with logits instead of FocalLoss, which is somehow insanely faster. Like, it's bottlenecked by CPU but flies through once on GPU.
+But class imbalance will be something to tweak around.
+
+## 7/8
+Val loss goes down with BCE, but the problem is if it will just learn to predict mild for everything.
