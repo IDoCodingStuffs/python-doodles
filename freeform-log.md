@@ -821,3 +821,7 @@ Val loss went down for the first few before coming back up, so that's promising.
 Sadly inference is very slow without workers, so I will need to fix that data loading bottleneck.
 
 Profiler says -- it is the scipy zoom that is so time consuming. So I could try 0 padding + downsampling.
+
+### 11 AM
+Padding is significantly faster. Still bottlenecked by IO though so I will need to figure it out. 
+Also val loss decreases more, so that's a bonus.
