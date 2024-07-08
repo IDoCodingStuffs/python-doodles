@@ -819,3 +819,5 @@ When I am up, I can check the test set.
 ### 8 AM
 Val loss went down for the first few before coming back up, so that's promising.
 Sadly inference is very slow without workers, so I will need to fix that data loading bottleneck.
+
+Profiler says -- it is the scipy zoom that is so time consuming. So I could try 0 padding + downsampling.
