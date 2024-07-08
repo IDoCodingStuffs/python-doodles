@@ -423,7 +423,7 @@ def train_model_3d(backbone, model_label: str):
     schedulers = [
     ]
     criteria = [
-        # FocalLoss(),
+        # FocalLoss() for i in range(25)
         nn.BCEWithLogitsLoss()
     ]
 
@@ -444,7 +444,7 @@ def train_model_3d(backbone, model_label: str):
 
 def train():
     # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_shuffled_t2stir")
-    model = train_model_3d("efficientnet_b0", f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_focal")
+    model = train_model_3d("efficientnet_b0", f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_bce_padded")
     # model2 = train_model_3d("efficientnet_b3", f"efficientnet_b3_{CONFIG['img_size'][0]}_3d_padded")
     # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 

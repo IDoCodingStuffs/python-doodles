@@ -830,3 +830,6 @@ Also val loss decreases more, so that's a bonus.
 Well the downside is, it is worse at picking up the minority classes. So I should probably reintroduce oversampling.
 Also, the mirror trick.
 And also, Focal Loss but implemented correctly so that alpha is a vector.
+
+### 2 PM
+Fuck my val loss has been all borked up since I switched to BCE.

@@ -82,7 +82,8 @@ def model_validation_loss(model, val_loader, loss_fns, epoch):
 
             output = model(images.to(device))
             for index, loss_fn in enumerate(loss_fns):
-                loss = loss_fn(output[:, index], label[:, index])
+                # loss = loss_fn(output[:, index], label[:, index])
+                loss = loss_fn(output, label)
                 total_loss += loss.cpu().item()
                 del loss
 
