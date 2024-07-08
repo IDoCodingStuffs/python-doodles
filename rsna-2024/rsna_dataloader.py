@@ -952,6 +952,7 @@ def load_dicom(path):
     return data
 
 
+# !TODO: Add disk caching
 def load_dicom_series(path, transform=None, downsampling_rate=1):
     files = glob.glob(os.path.join(path, '*.dcm'))
     files = sorted(files, key=lambda x: int(x.split('/')[-1].split("\\")[-1].split('.')[0]))
