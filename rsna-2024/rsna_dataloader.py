@@ -763,15 +763,24 @@ def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
                                              data_type=SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS):
     # By defauly, 8-1.5-.5 split
     df = df.dropna()
-    df = df[df.groupby(["study_id"]).transform('size') == 25]
+    # This drops any subjects with nans
+    filtered_df = pd.DataFrame(columns=df.columns)
+    for series_desc in CONDITIONS.keys():
+        subset = df[df['series_description'] == series_desc]
+        if series_desc == "Sagittal T2/STIR":
+            subset = subset[subset.groupby(["study_id"]).transform('size') == 5]
+        else:
+            subset = subset[subset.groupby(["study_id"]).transform('size') == 10]
+        filtered_df = pd.concat([filtered_df, subset])
+    filtered_df = filtered_df[filtered_df.groupby(["study_id"]).transform('size') == 25]
 
-    train_studies, val_studies = train_test_split(df["study_id"].unique(), test_size=split_factor,
+    train_studies, val_studies = train_test_split(filtered_df["study_id"].unique(), test_size=split_factor,
                                                   random_state=random_seed)
     val_studies, test_studies = train_test_split(val_studies, test_size=0.25, random_state=random_seed)
 
-    train_df = df[df["study_id"].isin(train_studies)]
-    val_df = df[df["study_id"].isin(val_studies)]
-    test_df = df[df["study_id"].isin(test_studies)]
+    train_df = filtered_df[filtered_df["study_id"].isin(train_studies)]
+    val_df = filtered_df[filtered_df["study_id"].isin(val_studies)]
+    test_df = filtered_df[filtered_df["study_id"].isin(test_studies)]
 
     train_df = train_df.reset_index(drop=True)
     val_df = val_df.reset_index(drop=True)

@@ -16,7 +16,7 @@ CONFIG = dict(
     n_levels=5,
     # backbone="tf_efficientnetv2_b3",
     # backbone="tiny_vit_21m_512",
-    backbone="efficientnet_b4",
+    backbone="efficientnet_b0",
     vit_backbone_path="./models/tiny_vit_21m_512_t2stir/tiny_vit_21m_512_t2stir_70.pt",
     efficientnet_backbone_path="./models/tf_efficientnetv2_b3_t2stir/tf_efficientnetv2_b3_t2stir_85.pt",
     # img_size=(512, 512),
@@ -408,14 +408,14 @@ def train_model_3d(model_label: str):
                                                                            base_path=os.path.join(
                                                                                DATA_BASEPATH,
                                                                                "train_images"),
-                                                                           num_workers=12,
+                                                                           num_workers=16,
                                                                            split_factor=0.3,
                                                                            batch_size=8,
                                                                            data_type=SeriesDataType.CUBE_3D)
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = CNN_Model_3D(in_chans=3, out_classes=25)
+    model = CNN_Model_3D(backbone=CONFIG["backbone"], in_chans=3, out_classes=25)
     optimizers = [
         torch.optim.Adam(model.parameters(), lr=1e-3),
     ]
@@ -432,7 +432,7 @@ def train_model_3d(model_label: str):
                                 trainloader,
                                 valloader,
                                 model_desc=model_label,
-                                train_loader_desc=f"Training {data_subset_label}",
+                                train_loader_desc=f"Training {model_label}",
                                 epochs=NUM_EPOCHS,
                                 freeze_backbone_initial_epochs=0,
                                 )
@@ -442,8 +442,7 @@ def train_model_3d(model_label: str):
 
 def train():
     # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_shuffled_t2stir")
-    model = train_model_3d("Sagittal T1",
-                              f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d")
+    model = train_model_3d(f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d")
     # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 
 
