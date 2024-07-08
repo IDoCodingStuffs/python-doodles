@@ -811,4 +811,11 @@ BCE with logits instead of FocalLoss, which is somehow insanely faster. Like, it
 But class imbalance will be something to tweak around.
 
 ## 7/8
+### 12 AM
 Val loss goes down with BCE, but the problem is if it will just learn to predict mild for everything.
+Guess I will see in the morning. Leaving it to train with efficientnetb0 and efficientnetb3 overnight. 
+When I am up, I can check the test set.
+
+### 8 AM
+Val loss went down for the first few before coming back up, so that's promising.
+Sadly inference is very slow without workers, so I will need to fix that data loading bottleneck.

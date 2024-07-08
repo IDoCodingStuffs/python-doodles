@@ -375,7 +375,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
     return model
 
 
-def train_model_3d(model_label: str):
+def train_model_3d(backbone, model_label: str):
     transform_train = A.Compose([
         A.RandomBrightnessContrast(brightness_limit=(-0.2, 0.2), contrast_limit=(-0.2, 0.2), p=CONFIG["aug_prob"]),
         A.OneOf([
@@ -409,14 +409,14 @@ def train_model_3d(model_label: str):
                                                                            base_path=os.path.join(
                                                                                DATA_BASEPATH,
                                                                                "train_images"),
-                                                                           num_workers=16,
+                                                                           num_workers=22,
                                                                            split_factor=0.3,
                                                                            batch_size=8,
                                                                            data_type=SeriesDataType.CUBE_3D)
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = CNN_Model_3D(backbone=CONFIG["backbone"], in_chans=3, out_classes=25)
+    model = CNN_Model_3D(backbone=backbone, in_chans=3, out_classes=25)
     optimizers = [
         torch.optim.Adam(model.parameters(), lr=1e-3),
     ]
@@ -444,7 +444,8 @@ def train_model_3d(model_label: str):
 
 def train():
     # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_shuffled_t2stir")
-    model = train_model_3d(f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_bceloss")
+    model = train_model_3d("efficientnet_b0", f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_bceloss")
+    model2 = train_model_3d("efficientnet_b3", f"efficientnet_b3_{CONFIG['img_size'][0]}_3d_bceloss")
     # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 
 
