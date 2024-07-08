@@ -793,6 +793,13 @@ Also also, I wonder if this is why the sequential models would just not fit. Not
 
 ### 3 AM
 Calling it a night now, gonna see how the 128x128 resize turns out.
-Next thing will be setting up some model to chop up the images and feed it in 64^3 channels, without downscaling.
+Next thing will be setting up some model to chop up the images and feed it in 64^3 sized channels, without downscaling.
 Could be as simple as chopping evenly, but I do not want to chop in the middle of vertebral discs.
 So, some sort of segmentation model to get vertebral contours, then finding axial and sagittal midlines, and then chopping up along those.
+
+### 7 PM
+So to start on that, first I will try to pass in patient level data as a whole. Each series in its own channel first.
+Also, discussion on Kaggle showed he file indices were better for sorting, somehow. But I will still need to figure the orientations to match.
+
+### 8 PM
+Oh of course there are nans in severity. Beautiful.

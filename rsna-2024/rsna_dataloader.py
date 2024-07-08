@@ -204,7 +204,6 @@ class SeriesDataType(Enum):
     CUBE_3D = 8
 
 
-
 class SeriesLevelDataset(Dataset):
     def __init__(self,
                  base_path: str,
@@ -568,6 +567,139 @@ class SeriesLevelCoordinateDataset(Dataset):
         return int(image_path.split("/")[-1].split("\\")[-1].replace(".dcm", ""))
 
 
+class PatientLevelDataset(Dataset):
+    def __init__(self,
+                 base_path: str,
+                 dataframe: pd.DataFrame,
+                 data_type=SeriesDataType.CUBE_3D,
+                 data_series="Sagittal T2/STIR",
+                 transform=None,
+                 transform_3d=None,
+                 is_train=False,
+                 downsample_ratio=1):
+        self.base_path = base_path
+        self.type = data_type
+        self.data_series = data_series
+        self.is_train = is_train
+
+        training_data = dataframe.dropna()
+        training_data = training_data.groupby("study_id").filter(lambda x: len(x) != 75)
+
+        self.dataframe = (training_data[['study_id', "series_id", "series_description", "condition", "severity", "level"]]
+                          .drop_duplicates())
+
+        self.subjects = self.dataframe[['study_id']].drop_duplicates().reset_index(drop=True)
+
+        self.transform = transform
+        self.transform_3d = transform_3d
+        self.downsample_ratio = downsample_ratio
+
+        self.levels = sorted(self.dataframe["level"].unique())
+        self.labels = self._get_labels()
+
+        # if data_series == "Sagittal T2/STIR":
+        #     self.labels = self._get_t2stir_labels()
+        #     self.weights = self._get_t2stir_weights()
+        #
+        # elif data_series == "Sagittal T1":
+        #     self.labels = self._get_t1_labels()
+        #     self.weights = self._get_t1_weights()
+        #
+        # if data_series == "Axial T2":
+        #     self.labels = self._get_t2_labels()
+        #     self.weights = self._get_t2_weights()
+
+    def __len__(self):
+        return len(self.subjects)
+
+    def __getitem__(self, index):
+        curr = self.subjects.iloc[index]
+        label = np.array(self.labels[(curr["study_id"])])
+        images_basepath = os.path.join(self.base_path, str(curr["study_id"]))
+        images = []
+
+        series_and_images = load_dicom_subject(images_basepath, self.transform, self.downsample_ratio)
+        for series_desc in CONDITIONS.keys():
+            series = self.dataframe.loc[
+                (self.dataframe["study_id"] == curr["study_id"]) &
+                (self.dataframe["series_description"] == series_desc)]['series_id'].iloc[0]
+
+            series_images = [item[1] for item in series_and_images if item[0] == series][0]
+            series_images = self._reshape_by_data_type(series_images)
+            if self.transform_3d is not None:
+                series_images = self.transform_3d(image=series_images)["image"]
+
+            images.append(torch.Tensor(series_images))
+
+        return torch.stack(images), torch.tensor(label).type(torch.FloatTensor)
+
+    def _reshape_by_data_type(self, images):
+        if self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_PADDED:
+            front_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2
+            rear_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2 + (
+                    (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) % 2)
+
+            images = np.pad(images, ((front_buffer, rear_buffer), (0, 0), (0, 0)))
+
+        elif self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_WITH_CLS:
+            front_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2
+            rear_buffer = (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) // 2 + (
+                    (MAX_IMAGES_IN_SERIES[self.data_series] - len(images)) % 2)
+
+            images = np.pad(images, ((front_buffer + 1, rear_buffer), (0, 0), (0, 0)))
+
+        elif self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_RESIZED:
+            resize_target = RESIZING_CHANNELS[self.data_series]
+            images = ndimage.zoom(images, (len(images) / resize_target, 1, 1))
+            # Clip last
+            images = images[:resize_target]
+            # Pad offset
+            images = np.pad(images, ((0, resize_target - len(images)), (0, 0), (0, 0)))
+
+        elif self.type == SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS:
+            images = np.pad(images, ((1, 0), (0, 0), (0, 0)))
+
+        elif self.type == SeriesDataType.CUBE_3D:
+            width = len(images[0])
+            # front_buffer = (width - len(images)) // 2
+            # rear_buffer = (width - len(images)) // 2 + (
+            #         (width - len(images)) % 2)
+            #
+            # images = np.pad(images, ((front_buffer, rear_buffer), (0, 0), (0, 0)))
+
+            images = ndimage.zoom(images, (len(images) / width, 1, 1))
+            # Pad offset
+            images = np.pad(images, ((0, width - len(images)), (0, 0), (0, 0)))
+
+        elif self.type == SeriesDataType.SEQUENTIAL_FIXED_LENGTH_DOWNSAMPLED:
+            if len(images) < DOWNSAMPLING_TARGETS[self.data_series]:
+                images = np.pad(images, ((0, DOWNSAMPLING_TARGETS[self.data_series] - len(images)), (0, 0), (0, 0)))
+            np.random.shuffle(images)
+            images = images[:DOWNSAMPLING_TARGETS[self.data_series]]
+
+        return images
+
+    def _get_labels(self):
+        labels = dict()
+        for name, group in self.dataframe.groupby(["study_id"]):
+            group = group[["condition", "level", "severity"]].drop_duplicates().sort_values(["condition", "level"])
+            label_indices = []
+            for index, row in group.iterrows():
+                if row["severity"] in LABEL_MAP:
+                    label_indices.append(LABEL_MAP[row["severity"]])
+                else:
+                    raise ValueError()
+
+            # !TODO: Clean
+            study_id = name[0]
+            labels[study_id] = []
+            for label in label_indices:
+                curr = [0 if label != i else 1 for i in range(3)]
+                labels[study_id].append(curr)
+
+        return labels
+
+
 class TrainingTransform(nn.Module):
     def __init__(self, image_size=(224, 224), num_channels=3):
         super(TrainingTransform, self).__init__()
@@ -654,17 +786,17 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
     test_df = test_df.reset_index(drop=True)
 
     random.seed(random_seed)
-    train_dataset = SeriesLevelDataset(base_path, train_df,
-                                       transform=transform_train,
-                                       transform_3d=transform_3d_train,
-                                       data_type=data_type,
-                                       data_series=series_description,
-                                       is_train=True
-                                       )
-    val_dataset = SeriesLevelDataset(base_path, val_df,
-                                     transform=transform_val, data_type=data_type, data_series=series_description)
-    test_dataset = SeriesLevelDataset(base_path, test_df,
+    train_dataset = PatientLevelDataset(base_path, train_df,
+                                        transform=transform_train,
+                                        transform_3d=transform_3d_train,
+                                        data_type=data_type,
+                                        data_series=series_description,
+                                        is_train=True
+                                        )
+    val_dataset = PatientLevelDataset(base_path, val_df,
                                       transform=transform_val, data_type=data_type, data_series=series_description)
+    test_dataset = PatientLevelDataset(base_path, test_df,
+                                       transform=transform_val, data_type=data_type, data_series=series_description)
 
     train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
     train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker, num_workers=num_workers)
@@ -708,7 +840,7 @@ def create_series_level_test_datasets_and_loaders(df: pd.DataFrame,
                                                   batch_size=1):
     filtered_df = df[df['series_description'] == series_description].reset_index(drop=True)
 
-    val_dataset = SeriesLevelDataset(base_path, filtered_df, transform_val)
+    val_dataset = PatientLevelDataset(base_path, filtered_df, transform_val)
 
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
@@ -820,8 +952,9 @@ def load_dicom(path):
 
 def load_dicom_series(path, transform=None, downsampling_rate=1):
     files = glob.glob(os.path.join(path, '*.dcm'))
+    files = sorted(files, key=lambda x: int(x.split('/')[-1].split("\\")[-1].split('.')[0]))
     slices = [pydicom.dcmread(fname) for fname in files]
-    slices = sorted(slices, key=lambda s: s.SliceLocation)
+    # slices = sorted(slices, key=lambda s: s.SliceLocation)
     if transform is not None:
         data = np.array([transform(image=slice.pixel_array.astype(np.uint8))["image"] for slice in slices])
     else:
@@ -832,6 +965,11 @@ def load_dicom_series(path, transform=None, downsampling_rate=1):
 
     data = np.array(data)
     return data
+
+
+def load_dicom_subject(path, transform=None, downsampling_rate=1):
+    series_list = glob.glob(os.path.join(path, "*"))
+    return [(int(os.path.basename(series)), load_dicom_series(series, transform)) for series in series_list]
 
 
 def get_bounding_boxes_for_label(label, box_offset_from_center=5):
