@@ -259,7 +259,7 @@ class SeriesLevelDataset(Dataset):
         label = np.array(self.labels[(curr["study_id"], curr["series_id"], curr["mirrored"])])
         images_basepath = os.path.join(self.base_path, str(curr["study_id"]), str(curr["series_id"]))
 
-        images = load_dicom_series(images_basepath, self.transform, self.downsample_ratio)
+        images = load_dicom_series(images_basepath, self.transform)
 
         if curr["mirrored"]:
             images = np.array([cv2.flip(image, 1) for image in images])
@@ -566,7 +566,7 @@ class PatientLevelDataset(Dataset):
                  transform=None,
                  transform_3d=None,
                  is_train=False,
-                 downsample_ratio=1):
+                ):
         self.base_path = base_path
         self.type = data_type
         self.is_train = is_train
@@ -578,7 +578,6 @@ class PatientLevelDataset(Dataset):
 
         self.transform = transform
         self.transform_3d = transform_3d
-        self.downsample_ratio = downsample_ratio
 
         self.levels = sorted(self.dataframe["level"].unique())
         self.labels = self._get_labels()
@@ -592,7 +591,7 @@ class PatientLevelDataset(Dataset):
         images_basepath = os.path.join(self.base_path, str(curr["study_id"]))
         images = []
 
-        series_and_images = load_dicom_subject(images_basepath, self.transform, self.downsample_ratio)
+        series_and_images = load_dicom_subject(images_basepath, self.transform)
         for series_desc in CONDITIONS.keys():
             series = self.dataframe.loc[
                 (self.dataframe["study_id"] == curr["study_id"]) &
@@ -952,8 +951,10 @@ def load_dicom(path):
     return data
 
 
-# !TODO: Add disk caching
-def load_dicom_series(path, transform=None, downsampling_rate=1):
+def load_dicom_series(path, transform=None, use_caching=False):
+    if os.path.exists(os.path.join(path, "cached.npy")) and use_caching:
+        return np.load(os.path.join(path, "cached.npy"))
+
     files = glob.glob(os.path.join(path, '*.dcm'))
     files = sorted(files, key=lambda x: int(x.split('/')[-1].split("\\")[-1].split('.')[0]))
     slices = [pydicom.dcmread(fname) for fname in files]
@@ -963,16 +964,18 @@ def load_dicom_series(path, transform=None, downsampling_rate=1):
     else:
         data = np.array([slice.pixel_array for slice in slices])
 
-    if downsampling_rate > 1:
-        data = np.array([slice[::downsampling_rate, ::downsampling_rate] for slice in data])
-
     data = np.array(data)
+    if use_caching:
+        np.save(os.path.join(path, "cached.npy"), data)
+
     return data
 
 
-def load_dicom_subject(path, transform=None, downsampling_rate=1):
+def load_dicom_subject(path, transform=None, use_caching=True):
     series_list = glob.glob(os.path.join(path, "*"))
-    return [(int(os.path.basename(series)), load_dicom_series(series, transform)) for series in series_list]
+    return [(int(os.path.basename(series)),
+             load_dicom_series(series, transform, use_caching=use_caching))
+            for series in series_list]
 
 
 def get_bounding_boxes_for_label(label, box_offset_from_center=5):
