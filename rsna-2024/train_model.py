@@ -443,7 +443,6 @@ def train_model_3d(backbone, model_label: str):
         tio.RescaleIntensity(out_min_max=(0, 1)),
     ])
 
-
     (trainloader, valloader, test_loader,
      trainset, valset, testset) = create_subject_level_datasets_and_loaders(TRAINING_DATA,
                                                                             transform_2d,
@@ -456,7 +455,7 @@ def train_model_3d(backbone, model_label: str):
                                                                             num_workers=12,
                                                                             split_factor=0.3,
                                                                             batch_size=8,
-                                                                            data_type=SeriesDataType.CUBE_3D_DOWNSAMPLED_PADDED)
+                                                                            data_type=SeriesDataType.CUBE_3D_RESIZED_PADDED)
 
     NUM_EPOCHS = CONFIG["epochs"]
 
