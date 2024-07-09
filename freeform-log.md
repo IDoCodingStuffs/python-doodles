@@ -858,3 +858,5 @@ Ditto for stuff like stretch, random crop, dropout etc.
 
 ### 2 PM
 !TODO: Check this out https://colab.research.google.com/drive/1CT9nIGME_M4kIDc3BfEF4pCb_8JdFLpH#scrollTo=DLqhO16yXQq1
+
+Or better yet, this: https://torchio.readthedocs.io
