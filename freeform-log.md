@@ -849,3 +849,9 @@ Let's see if it does better without it now.
 
 Although, I will need to do that conversion at some point so that I can use augmentations beyond dropout and rotate.
 Added back with `cv2.convertScaleAbs` since val loss was getting absurdly high
+
+### 1 PM
+Adding randombrightnesscontrast or gaussian noise per slice was leading to slicewise artifacts which I did not like.
+It might be beneficial anyway, but I will try and find or implement 3D equivalents.
+
+Ditto for stuff like stretch, random crop, dropout etc.
