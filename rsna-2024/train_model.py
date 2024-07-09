@@ -439,7 +439,7 @@ def train_model_3d(backbone, model_label: str):
     transform_3d_train = tio.Compose([
         tio.OneOf({
             tio.RandomElasticDeformation(): 0.2,
-            tio.RandomAffine(): 0.8,
+            tio.RandomMotion(): 0.8,
         }, p=CONFIG["aug_prob"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
     ])
