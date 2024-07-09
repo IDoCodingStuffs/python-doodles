@@ -424,13 +424,13 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 def train_model_3d(backbone, model_label: str):
     transform_train = A.Compose([
-        A.RandomBrightnessContrast(brightness_limit=(-0.2, 0.2), contrast_limit=(-0.2, 0.2), p=CONFIG["aug_prob"]),
-        A.OneOf([
-            A.MotionBlur(blur_limit=5),
-            A.MedianBlur(blur_limit=5),
-            A.GaussianBlur(blur_limit=5),
-            A.GaussNoise(var_limit=(5.0, 30.0)),
-        ], p=CONFIG["aug_prob"]),
+        # A.RandomBrightnessContrast(brightness_limit=(-0.2, 0.2), contrast_limit=(-0.2, 0.2), p=CONFIG["aug_prob"]),
+        # A.OneOf([
+        #     A.MotionBlur(blur_limit=5),
+        #     A.MedianBlur(blur_limit=5),
+        #     A.GaussianBlur(blur_limit=5),
+        #     A.GaussNoise(var_limit=(5.0, 30.0)),
+        # ], p=CONFIG["aug_prob"]),
 
         A.Resize(*CONFIG["img_size"]),
         A.Normalize(mean=0.5, std=0.5),
@@ -440,7 +440,9 @@ def train_model_3d(backbone, model_label: str):
         V.RotateAroundAxis3d(rotation_limit=math.pi / 2, axis=(1, 0, 0), p=CONFIG["aug_prob"]),
         V.RotateAroundAxis3d(rotation_limit=math.pi / 2, axis=(0, 1, 0), p=CONFIG["aug_prob"]),
         V.RotateAroundAxis3d(rotation_limit=math.pi / 2, axis=(0, 0, 1), p=CONFIG["aug_prob"]),
-        V.RandomMove3d(x_max=3, y_max=3, p=CONFIG["aug_prob"]),
+        V.RandomMove3d(x_min=-12, y_min=-12, z_min=-12,
+                       x_max=12, y_max=12, z_max=12,
+                       p=CONFIG["aug_prob"]),
     ])
 
     transform_val = A.Compose([
@@ -456,7 +458,7 @@ def train_model_3d(backbone, model_label: str):
                                                                             base_path=os.path.join(
                                                                                 DATA_BASEPATH,
                                                                                 "train_images"),
-                                                                            num_workers=22,
+                                                                            num_workers=12,
                                                                             split_factor=0.3,
                                                                             batch_size=8,
                                                                             data_type=SeriesDataType.CUBE_3D_DOWNSAMPLED_PADDED)
@@ -492,7 +494,7 @@ def train_model_3d(backbone, model_label: str):
 def train():
     # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_shuffled_t2stir")
     model = train_model_3d(CONFIG['backbone'],
-                           f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_neg_vs_pos_weighted_bce")
+                           f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_non_alb")
     # model2 = train_model_3d("efficientnet_b3", f"efficientnet_b3_{CONFIG['img_size'][0]}_3d_padded")
     # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 

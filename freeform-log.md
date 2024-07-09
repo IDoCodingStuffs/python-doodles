@@ -838,3 +838,14 @@ Fuck my val loss has been all borked up since I switched to BCE.
 Gave up trying to figure the implementation for FocalLoss for now. Gonna use weighted BCE loss, see if that works.
 
 Also started getting some `IOError` which went away upon reboot... for now.
+
+## 7/9
+### 12 PM
+Val loss was failing to converge while train loss was overfitting after the first handful. 
+Gonna see if not applying 2D augmentations helps.
+
+Realized I was deep frying the input again with a `.to(uint8)` call again. No wonder it is immediately overfitting.
+Let's see if it does better without it now.
+
+Although, I will need to do that conversion at some point so that I can use augmentations beyond dropout and rotate.
+Added back with `cv2.convertScaleAbs` since val loss was getting absurdly high

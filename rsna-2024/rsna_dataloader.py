@@ -958,9 +958,9 @@ def load_dicom_series(path, transform=None, downsampling_rate=1):
     slices = [pydicom.dcmread(fname) for fname in files]
     # slices = sorted(slices, key=lambda s: s.SliceLocation)
     if transform is not None:
-        data = np.array([transform(image=slice.pixel_array.astype(np.uint8))["image"] for slice in slices])
+        data = np.array([transform(image=cv2.convertScaleAbs(slice.pixel_array))["image"] for slice in slices])
     else:
-        data = np.array([slice.pixel_array for slice in slices])
+        data = np.array([cv2.convertScaleAbs(slice.pixel_array) for slice in slices])
 
     if downsampling_rate > 1:
         data = np.array([slice[::downsampling_rate, ::downsampling_rate] for slice in data])
