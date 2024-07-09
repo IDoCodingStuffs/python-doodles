@@ -600,10 +600,11 @@ class PatientLevelDataset(Dataset):
 
             series_images = [item[1] for item in series_and_images if item[0] == series][0]
             series_images = self._reshape_by_data_type(series_images)
+            series_images = torch.Tensor(series_images)
             if self.transform_3d is not None:
-                series_images = self.transform_3d(image=series_images)["image"]
+                series_images = self.transform_3d(series_images.unsqueeze(3)).squeeze(3)
 
-            images.append(torch.Tensor(series_images))
+            images.append(series_images)
 
         return torch.stack(images), torch.tensor(label).type(torch.FloatTensor)
 

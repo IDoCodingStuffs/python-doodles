@@ -4,7 +4,7 @@ import timm
 import timm_3d
 import torchvision
 import albumentations as A
-import volumentations as V
+import torchio as tio
 
 from training_utils import *
 from rsna_dataloader import *
@@ -436,13 +436,12 @@ def train_model_3d(backbone, model_label: str):
         A.Normalize(mean=0.5, std=0.5),
     ])
 
-    transform_3d_train = V.Compose([
-        V.RotateAroundAxis3d(rotation_limit=math.pi / 2, axis=(1, 0, 0), p=CONFIG["aug_prob"]),
-        V.RotateAroundAxis3d(rotation_limit=math.pi / 2, axis=(0, 1, 0), p=CONFIG["aug_prob"]),
-        V.RotateAroundAxis3d(rotation_limit=math.pi / 2, axis=(0, 0, 1), p=CONFIG["aug_prob"]),
-        V.RandomMove3d(x_min=-12, y_min=-12, z_min=-12,
-                       x_max=12, y_max=12, z_max=12,
-                       p=CONFIG["aug_prob"]),
+    transform_3d_train = tio.Compose([
+        tio.OneOf({
+            tio.RandomElasticDeformation(): 0.2,
+            tio.RandomAffine(): 0.8,
+        }, p=CONFIG["aug_prob"]),
+        tio.RescaleIntensity(out_min_max=(0, 1)),
     ])
 
     transform_val = A.Compose([
