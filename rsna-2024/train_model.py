@@ -432,10 +432,10 @@ def train_model_3d(backbone, model_label: str):
         tio.OneOf({
             tio.RandomElasticDeformation(): 0.2,
             tio.RandomMotion(): 0.8,
-        }, p=1),
-        tio.RandomNoise(p=1),
-        tio.RandomBlur(p=1),
-        tio.RandomAnisotropy(p=1),
+        }, p=CONFIG["aug_prob"]),
+        tio.RandomNoise(p=CONFIG["aug_prob"]),
+        tio.RandomBlur(p=CONFIG["aug_prob"]),
+        tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
     ])
 
