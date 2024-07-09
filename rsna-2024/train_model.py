@@ -14,15 +14,8 @@ torchvision.disable_beta_transforms_warning()
 
 CONFIG = dict(
     n_levels=5,
-    # backbone="tf_efficientnetv2_b3",
-    # backbone="tiny_vit_21m_512",
-    backbone="efficientnet_b0",
-    vit_backbone_path="./models/tiny_vit_21m_512_t2stir/tiny_vit_21m_512_t2stir_70.pt",
-    efficientnet_backbone_path="./models/tf_efficientnetv2_b3_t2stir/tf_efficientnetv2_b3_t2stir_85.pt",
-    # img_size=(512, 512),
-    # img_size=(384, 380),
+    backbone="efficientnet_b4",
     img_size=(128, 128),
-    in_chans=1,
     drop_rate=0.05,
     drop_rate_last=0.3,
     drop_path_rate=0.,
@@ -498,7 +491,7 @@ def train_model_3d(backbone, model_label: str):
 
 def train():
     # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_shuffled_t2stir")
-    model = train_model_3d("efficientnet_b0",
+    model = train_model_3d(CONFIG['backbone'],
                            f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_neg_vs_pos_weighted_bce")
     # model2 = train_model_3d("efficientnet_b3", f"efficientnet_b3_{CONFIG['img_size'][0]}_3d_padded")
     # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
