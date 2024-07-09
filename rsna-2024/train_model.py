@@ -28,7 +28,7 @@ CONFIG = dict(
     drop_path_rate=0.,
     aug_prob=0.7,
     out_dim=3,
-    epochs=25,
+    epochs=100,
     batch_size=8,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
@@ -36,6 +36,32 @@ CONFIG = dict(
 DATA_BASEPATH = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
 TRAINING_DATA = retrieve_coordinate_training_data(DATA_BASEPATH)
 
+CLASS_WEIGHTS = torch.Tensor([1., 29.34146341, 601.5,
+                 1., 10.46296296, 141.25,
+                 1., 3.6539924, 43.68181818,
+                 1., 1.89223058, 8.20652174,
+                 1., 2.31736527, 5.60869565,
+                 1., 19.46666667, 64.88888889,
+                 1., 6.30674847, 18.69090909,
+                 1., 2.92041522, 7.46902655,
+                 1., 1.5144357, 2.00347222,
+                 1., 3.43076923, 9.4893617,
+                 1., 27.11363636, 132.55555556,
+                 1., 10.5, 283.5,
+                 1., 3.65267176, 35.44444444,
+                 1., 2.05277045, 8.74157303,
+                 1., 2.75333333, 6.88333333,
+                 1., 14.59493671, 82.35714286,
+                 1., 6.32926829, 23.59090909,
+                 1., 2.82828283, 7.70642202,
+                 1., 1.43367347, 1.92465753,
+                 1., 3.57429719, 8.31775701,
+                 1., 29.04878049, 85.07142857,
+                 1., 11.31632653, 28.43589744,
+                 1., 7.16083916, 12.96202532,
+                 1., 6.25675676, 5.38372093,
+                 1., 44.66666667, 92.76923077
+                 ]).to(CONFIG["device"])
 
 class NormMLPClassifierHead(nn.Module):
     def __init__(self, in_dim, out_dim):
@@ -423,8 +449,8 @@ def train_model_3d(backbone, model_label: str):
     schedulers = [
     ]
     criteria = [
-        WeightedBCELoss(device=CONFIG["device"])
-        # nn.BCEWithLogitsLoss()
+        # WeightedBCELoss(device=CONFIG["device"])
+        nn.BCEWithLogitsLoss(pos_weight=CLASS_WEIGHTS)
     ]
 
     train_model_with_validation(model,
