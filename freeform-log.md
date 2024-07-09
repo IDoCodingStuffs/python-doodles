@@ -855,3 +855,6 @@ Adding randombrightnesscontrast or gaussian noise per slice was leading to slice
 It might be beneficial anyway, but I will try and find or implement 3D equivalents.
 
 Ditto for stuff like stretch, random crop, dropout etc.
+
+### 2 PM
+!TODO: Check this out https://colab.research.google.com/drive/1CT9nIGME_M4kIDc3BfEF4pCb_8JdFLpH#scrollTo=DLqhO16yXQq1
