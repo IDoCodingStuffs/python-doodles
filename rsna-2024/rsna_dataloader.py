@@ -563,7 +563,7 @@ class PatientLevelDataset(Dataset):
                  base_path: str,
                  dataframe: pd.DataFrame,
                  data_type=SeriesDataType.CUBE_3D_RESIZED,
-                 transform=None,
+                 transform_2d=None,
                  transform_3d=None,
                  is_train=False,
                  downsample_ratio=1):
@@ -576,7 +576,7 @@ class PatientLevelDataset(Dataset):
 
         self.subjects = self.dataframe[['study_id']].drop_duplicates().reset_index(drop=True)
 
-        self.transform = transform
+        self.transform = transform_2d
         self.transform_3d = transform_3d
         self.downsample_ratio = downsample_ratio
 
@@ -758,6 +758,7 @@ def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
                                              transform_val,
                                              base_path: str,
                                              transform_3d_train=None,
+                                             transform_3d_val=None,
                                              split_factor=0.2,
                                              random_seed=42,
                                              batch_size=1,
@@ -790,15 +791,15 @@ def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
 
     random.seed(random_seed)
     train_dataset = PatientLevelDataset(base_path, train_df,
-                                        transform=transform_train,
+                                        transform_2d=transform_train,
                                         transform_3d=transform_3d_train,
                                         data_type=data_type,
                                         is_train=True
                                         )
     val_dataset = PatientLevelDataset(base_path, val_df,
-                                      transform=transform_val, data_type=data_type)
+                                      transform_2d=transform_val, transform_3d=transform_3d_val, data_type=data_type)
     test_dataset = PatientLevelDataset(base_path, test_df,
-                                       transform=transform_val, data_type=data_type)
+                                       transform_2d=transform_val, transform_3d=transform_3d_val, data_type=data_type)
 
     #train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
     #train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker, num_workers=num_workers)

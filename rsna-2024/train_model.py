@@ -16,6 +16,7 @@ CONFIG = dict(
     n_levels=5,
     backbone="efficientnet_b4",
     img_size=(128, 128),
+    vol_size=(128, 128, 128),
     drop_rate=0.05,
     drop_rate_last=0.3,
     drop_path_rate=0.,
@@ -423,37 +424,32 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train_model_3d(backbone, model_label: str):
-    transform_train = A.Compose([
-        # A.RandomBrightnessContrast(brightness_limit=(-0.2, 0.2), contrast_limit=(-0.2, 0.2), p=CONFIG["aug_prob"]),
-        # A.OneOf([
-        #     A.MotionBlur(blur_limit=5),
-        #     A.MedianBlur(blur_limit=5),
-        #     A.GaussianBlur(blur_limit=5),
-        #     A.GaussNoise(var_limit=(5.0, 30.0)),
-        # ], p=CONFIG["aug_prob"]),
-
+    transform_2d = A.Compose([
         A.Resize(*CONFIG["img_size"]),
-        A.Normalize(mean=0.5, std=0.5),
     ])
 
     transform_3d_train = tio.Compose([
         tio.OneOf({
             tio.RandomElasticDeformation(): 0.2,
             tio.RandomMotion(): 0.8,
-        }, p=CONFIG["aug_prob"]),
+        }, p=1),
+        tio.RandomNoise(p=1),
+        tio.RandomBlur(p=1),
+        tio.RandomAnisotropy(p=1),
         tio.RescaleIntensity(out_min_max=(0, 1)),
     ])
 
-    transform_val = A.Compose([
-        A.Resize(*CONFIG["img_size"]),
-        A.Normalize(mean=0.5, std=0.5),
+    transform_3d_val = tio.Compose([
+        tio.RescaleIntensity(out_min_max=(0, 1)),
     ])
+
 
     (trainloader, valloader, test_loader,
      trainset, valset, testset) = create_subject_level_datasets_and_loaders(TRAINING_DATA,
-                                                                            transform_train,
-                                                                            transform_val,
+                                                                            transform_2d,
+                                                                            transform_2d,
                                                                             transform_3d_train=transform_3d_train,
+                                                                            transform_3d_val=transform_3d_val,
                                                                             base_path=os.path.join(
                                                                                 DATA_BASEPATH,
                                                                                 "train_images"),
