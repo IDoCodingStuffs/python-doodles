@@ -435,7 +435,7 @@ def train_model_3d(backbone, model_label: str):
         }, p=CONFIG["aug_prob"]),
         tio.RandomNoise(p=CONFIG["aug_prob"]),
         tio.RandomBlur(p=CONFIG["aug_prob"]),
-        tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
+        #tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
         tio.RandomGhosting(p=CONFIG["aug_prob"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
     ])
