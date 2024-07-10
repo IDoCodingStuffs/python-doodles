@@ -20,7 +20,7 @@ CONFIG = dict(
     drop_rate=0.05,
     drop_rate_last=0.3,
     drop_path_rate=0.,
-    aug_prob=0.5,
+    aug_prob=0.7,
     out_dim=3,
     epochs=25,
     batch_size=8,
@@ -430,8 +430,8 @@ def train_model_3d(backbone, model_label: str):
 
     transform_3d_train = tio.Compose([
         tio.OneOf({
-            tio.RandomElasticDeformation(): 0.2,
-            tio.RandomAffine(): 0.8,
+            tio.RandomElasticDeformation(): 0.3,
+            tio.RandomAffine(): 0.7,
         }, p=CONFIG["aug_prob"]),
         tio.RandomNoise(p=CONFIG["aug_prob"]),
         tio.RandomBlur(p=CONFIG["aug_prob"]),
