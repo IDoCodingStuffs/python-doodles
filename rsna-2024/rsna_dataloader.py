@@ -588,7 +588,7 @@ class PatientLevelDataset(Dataset):
         images_basepath = os.path.join(self.base_path, str(curr["study_id"]))
         images = []
 
-        #series_and_images = load_dicom_subject(images_basepath, self.transform, self.downsample_ratio)
+        series_and_images = load_dicom_subject(images_basepath)
         for series_desc in CONDITIONS.keys():
             series = self.dataframe.loc[
                 (self.dataframe["study_id"] == curr["study_id"]) &
@@ -946,6 +946,28 @@ def load_dicom(path):
     data = np.uint8(data)
     return data
 
+
+
+def unit_vector(vector):
+    """ Returns the unit vector of the vector.  """
+    return vector / np.linalg.norm(vector)
+
+def angle_between(v1, v2):
+    """ Returns the angle in radians between vectors 'v1' and 'v2'::
+
+            >>> angle_between((1, 0, 0), (0, 1, 0))
+            1.5707963267948966
+            >>> angle_between((1, 0, 0), (1, 0, 0))
+            0.0
+            >>> angle_between((1, 0, 0), (-1, 0, 0))
+            3.141592653589793
+    """
+    v1_u = unit_vector(v1)
+    v2_u = unit_vector(v2)
+    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
+
+# !TODO: Data cleaning
+# [angle_between(np.array(slice.ImageOrientationPatient), np.array(slices[0].ImageOrientationPatient)) for slice in slices]
 
 def load_dicom_series(path, transform=None):
     files = glob.glob(os.path.join(path, '*.dcm'))
