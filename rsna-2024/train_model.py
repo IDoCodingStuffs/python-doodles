@@ -22,7 +22,7 @@ CONFIG = dict(
     drop_path_rate=0.,
     aug_prob=0.7,
     out_dim=3,
-    epochs=25,
+    epochs=100,
     batch_size=8,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
@@ -456,7 +456,7 @@ def train_model_3d(backbone, model_label: str):
                                                                             base_path=os.path.join(
                                                                                 DATA_BASEPATH,
                                                                                 "train_images"),
-                                                                            num_workers=12,
+                                                                            num_workers=16,
                                                                             split_factor=0.3,
                                                                             batch_size=8,
                                                                             data_type=SeriesDataType.CUBE_3D_RESIZED_PADDED)
