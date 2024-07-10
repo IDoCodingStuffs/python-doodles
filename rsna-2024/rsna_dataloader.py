@@ -602,7 +602,7 @@ class PatientLevelDataset(Dataset):
             series_images = self._reshape_by_data_type(series_images)
             series_images = torch.Tensor(series_images)
             if self.transform_3d is not None:
-                series_images = self.transform_3d(series_images.unsqueeze(-1)).squeeze(-1)
+                series_images = self.transform_3d(series_images.unsqueeze(0)).squeeze(0)
 
             images.append(series_images)
 
