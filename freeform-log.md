@@ -882,3 +882,6 @@ based on the imageposition and imageorientation metadata.
 
 ### 1 AM
 Realized I was using the wrong dimension for channel unsqueeze. Fixed that, which should enable me to use resampling instead of resizing tomorrow.
+
+### 10 AM
+Got a cool finding: `RSNACervicalSpineFracture` from 2022 has segmentation data. Can be repurposed for lumbar probably.
