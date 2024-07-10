@@ -874,3 +874,8 @@ Instead:
 3. Slice along the center of each vertebra axially
 4. Grab a cube just large enough to contain the relevant features for each of the 5 levels
 5. Some diagnostic model to finally get the condition level (1-3) for each of the 5 conditions
+
+## 7/10
+### 12 AM
+One last thing -- some images have patients moving and such, so simple stacking is not sufficient. I will need to add some affine mapping per slice
+based on the imageposition and imageorientation metadata.

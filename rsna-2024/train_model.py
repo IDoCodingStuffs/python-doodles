@@ -456,7 +456,7 @@ def train_model_3d(backbone, model_label: str):
                                                                             base_path=os.path.join(
                                                                                 DATA_BASEPATH,
                                                                                 "train_images"),
-                                                                            num_workers=12,
+                                                                            num_workers=16,
                                                                             split_factor=0.3,
                                                                             batch_size=8,
                                                                             data_type=SeriesDataType.CUBE_3D_RESIZED_PADDED)
