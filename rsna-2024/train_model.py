@@ -22,7 +22,7 @@ CONFIG = dict(
     drop_path_rate=0.,
     aug_prob=0.5,
     out_dim=3,
-    epochs=100,
+    epochs=25,
     batch_size=8,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
@@ -431,14 +431,14 @@ def train_model_3d(backbone, model_label: str):
     transform_3d_train = tio.Compose([
         tio.OneOf({
             tio.RandomElasticDeformation(): 0.2,
-            tio.RandomMotion(): 0.8,
+            tio.RandomAffine(): 0.8,
         }, p=CONFIG["aug_prob"]),
         tio.RandomNoise(p=CONFIG["aug_prob"]),
         tio.RandomBlur(p=CONFIG["aug_prob"]),
         tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
         tio.RandomBiasField(p=CONFIG["aug_prob"]),
         tio.RandomSpike(p=CONFIG["aug_prob"]),
-        tio.RandomSwap(p=CONFIG["aug_prob"]),
+        # tio.RandomSwap(p=CONFIG["aug_prob"]),
         tio.RandomGhosting(p=CONFIG["aug_prob"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
     ])
@@ -492,7 +492,7 @@ def train_model_3d(backbone, model_label: str):
 def train():
     # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_shuffled_t2stir")
     model = train_model_3d(CONFIG['backbone'],
-                           f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_non_alb")
+                           f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d")
     # model2 = train_model_3d("efficientnet_b3", f"efficientnet_b3_{CONFIG['img_size'][0]}_3d_padded")
     # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 
