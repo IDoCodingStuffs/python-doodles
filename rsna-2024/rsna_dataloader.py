@@ -600,7 +600,7 @@ class PatientLevelDataset(Dataset):
             first_slice = pydicom.dcmread(files[0])
             affine = self._get_affine(first_slice)
 
-            series_images = tio.ScalarImage(series_path, affine=affine)
+            series_images = tio.ScalarImage(series_path) #, affine=affine)
 
             # series_images = [item[1] for item in series_and_images if item[0] == series][0]
             # series_images = self._reshape_by_data_type(series_images)
