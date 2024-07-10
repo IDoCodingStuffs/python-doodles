@@ -860,3 +860,17 @@ Ditto for stuff like stretch, random crop, dropout etc.
 !TODO: Check this out https://colab.research.google.com/drive/1CT9nIGME_M4kIDc3BfEF4pCb_8JdFLpH#scrollTo=DLqhO16yXQq1
 
 Or better yet, this: https://torchio.readthedocs.io
+
+### 9 PM
+After some work, I figured how to use the torchio transforms, and boy do they work much better
+Val loss goes down significantly for some 20 epochs, so I will run to 100 overnight with more aggressive augmentations.
+
+I think this will be good enough for a submission and wrap up before I move onto some segmentation approach.
+The idea is -- one model to grab each disc + foramina + radial nerve bits and another to just diagnose the condition.
+That will help me get around the issue with the absurdly underrepresented condition classes for the L1/L2 and L5/S1 levels especially.
+Instead:
+1. Some 3D segmentation model to determine the vertebrae
+2. Some sort of model to get the centers and pose
+3. Slice along the center of each vertebra axially
+4. Grab a cube just large enough to contain the relevant features for each of the 5 levels
+5. Some diagnostic model to finally get the condition level (1-3) for each of the 5 conditions
