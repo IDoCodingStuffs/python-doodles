@@ -1,21 +1,7 @@
 import os.path
-import time
 
-import matplotlib.pyplot as plt
-import torch
-import torch.nn as nn
-import torchvision.models as models
-from torchvision import transforms
-from torchvision.transforms import v2
-from torch.utils.data import DataLoader
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix
-import pandas as pd
 from tqdm import tqdm
 import logging
-import seaborn as sn
-from itertools import chain
-from transformers import AutoImageProcessor, AutoModelForImageClassification
 from torch.profiler import profile, record_function, ProfilerActivity
 
 from rsna_dataloader import *

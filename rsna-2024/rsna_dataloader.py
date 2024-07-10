@@ -1,21 +1,19 @@
 import random
 import matplotlib.pyplot as plt
 import os
-from os.path import abspath
 import numpy as np
 import pandas as pd
 import glob
 import pydicom
 import torch
-import torch.nn.functional as F
 from torch import nn
 from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from sklearn.model_selection import train_test_split
 import torchvision.transforms as transforms
-from torchvision.transforms import v2
 from scipy import ndimage
 from enum import Enum
 import cv2
+import torchio as tio
 
 LABEL_MAP = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
 CONDITIONS = {
@@ -563,7 +561,6 @@ class PatientLevelDataset(Dataset):
                  base_path: str,
                  dataframe: pd.DataFrame,
                  data_type=SeriesDataType.CUBE_3D_RESIZED,
-                 transform_2d=None,
                  transform_3d=None,
                  is_train=False,
                  downsample_ratio=1):
@@ -576,7 +573,6 @@ class PatientLevelDataset(Dataset):
 
         self.subjects = self.dataframe[['study_id']].drop_duplicates().reset_index(drop=True)
 
-        self.transform = transform_2d
         self.transform_3d = transform_3d
         self.downsample_ratio = downsample_ratio
 
@@ -592,17 +588,19 @@ class PatientLevelDataset(Dataset):
         images_basepath = os.path.join(self.base_path, str(curr["study_id"]))
         images = []
 
-        series_and_images = load_dicom_subject(images_basepath, self.transform, self.downsample_ratio)
+        #series_and_images = load_dicom_subject(images_basepath, self.transform, self.downsample_ratio)
         for series_desc in CONDITIONS.keys():
             series = self.dataframe.loc[
                 (self.dataframe["study_id"] == curr["study_id"]) &
                 (self.dataframe["series_description"] == series_desc)]['series_id'].iloc[0]
 
-            series_images = [item[1] for item in series_and_images if item[0] == series][0]
-            series_images = self._reshape_by_data_type(series_images)
-            series_images = torch.Tensor(series_images)
+            series_images = tio.Image(os.path.join(images_basepath, str(series)))
+            # series_images = [item[1] for item in series_and_images if item[0] == series][0]
+            # series_images = self._reshape_by_data_type(series_images)
+            # series_images = torch.Tensor(series_images)
             if self.transform_3d is not None:
-                series_images = self.transform_3d(series_images.unsqueeze(0)).squeeze(0)
+                # series_images = self.transform_3d(series_images.unsqueeze(0)).squeeze(0)
+                series_images = self.transform_3d(series_images)
 
             images.append(series_images)
 
@@ -660,14 +658,12 @@ class TrainingTransform(nn.Module):
         self.gaussian_blur = transforms.RandomChoice([
             transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 3)),
             transforms.GaussianBlur(kernel_size=5, sigma=(0.1, 3)),
-            v2.Identity(),
-        ], p=[0.2, 0.2, 0.6])
+        ], p=[0.5, 0.5])
 
         self.gaussian_noise = transforms.RandomChoice([
             transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 3)),
             transforms.GaussianBlur(kernel_size=5, sigma=(0.1, 3)),
-            v2.Identity(),
-        ], p=[0.2, 0.2, 0.6])
+        ], p=[0.5, 0.5])
 
         self.grayscale = transforms.Grayscale(num_output_channels=num_channels)
         self.to_tensor = transforms.ToTensor()
@@ -754,8 +750,6 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
 
 
 def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
-                                             transform_train,
-                                             transform_val,
                                              base_path: str,
                                              transform_3d_train=None,
                                              transform_3d_val=None,
@@ -791,15 +785,14 @@ def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
 
     random.seed(random_seed)
     train_dataset = PatientLevelDataset(base_path, train_df,
-                                        transform_2d=transform_train,
                                         transform_3d=transform_3d_train,
                                         data_type=data_type,
                                         is_train=True
                                         )
     val_dataset = PatientLevelDataset(base_path, val_df,
-                                      transform_2d=transform_val, transform_3d=transform_3d_val, data_type=data_type)
+                                      transform_3d=transform_3d_val, data_type=data_type)
     test_dataset = PatientLevelDataset(base_path, test_df,
-                                       transform_2d=transform_val, transform_3d=transform_3d_val, data_type=data_type)
+                                       transform_3d=transform_3d_val, data_type=data_type)
 
     #train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
     #train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker, num_workers=num_workers)

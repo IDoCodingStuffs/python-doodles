@@ -2,15 +2,12 @@ import math
 
 import timm
 import timm_3d
-import torchvision
-import albumentations as A
 import torchio as tio
 
 from training_utils import *
 from rsna_dataloader import *
 
 _logger = logging.getLogger(__name__)
-torchvision.disable_beta_transforms_warning()
 
 CONFIG = dict(
     n_levels=5,
@@ -424,11 +421,8 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 
 def train_model_3d(backbone, model_label: str):
-    transform_2d = A.Compose([
-        A.Resize(*CONFIG["img_size"]),
-    ])
-
     transform_3d_train = tio.Compose([
+        tio.Resize(CONFIG["vol_size"]),
         tio.OneOf({
             tio.RandomElasticDeformation(): 0.3,
             tio.RandomAffine(): 0.7,
@@ -444,13 +438,12 @@ def train_model_3d(backbone, model_label: str):
     ])
 
     transform_3d_val = tio.Compose([
+        tio.Resize(CONFIG["vol_size"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
     ])
 
     (trainloader, valloader, test_loader,
      trainset, valset, testset) = create_subject_level_datasets_and_loaders(TRAINING_DATA,
-                                                                            transform_2d,
-                                                                            transform_2d,
                                                                             transform_3d_train=transform_3d_train,
                                                                             transform_3d_val=transform_3d_val,
                                                                             base_path=os.path.join(
