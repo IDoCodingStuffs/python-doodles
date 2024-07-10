@@ -259,7 +259,7 @@ class SeriesLevelDataset(Dataset):
         label = np.array(self.labels[(curr["study_id"], curr["series_id"], curr["mirrored"])])
         images_basepath = os.path.join(self.base_path, str(curr["study_id"]), str(curr["series_id"]))
 
-        images = load_dicom_series(images_basepath, self.transform, self.downsample_ratio)
+        images = load_dicom_series(images_basepath, self.transform)
 
         if curr["mirrored"]:
             images = np.array([cv2.flip(image, 1) for image in images])
@@ -954,7 +954,7 @@ def load_dicom(path):
     return data
 
 
-def load_dicom_series(path, transform=None, downsampling_rate=1):
+def load_dicom_series(path, transform=None):
     files = glob.glob(os.path.join(path, '*.dcm'))
     files = sorted(files, key=lambda x: int(x.split('/')[-1].split("\\")[-1].split('.')[0]))
     slices = [pydicom.dcmread(fname) for fname in files]
@@ -964,8 +964,7 @@ def load_dicom_series(path, transform=None, downsampling_rate=1):
     else:
         data = np.array([cv2.convertScaleAbs(slice.pixel_array) for slice in slices])
 
-    if downsampling_rate > 1:
-        data = np.array([slice[::downsampling_rate, ::downsampling_rate] for slice in data])
+    data = np.repeat(data, repeats=[slice.SliceThickness for slice in slices], axis=0)
 
     data = np.array(data)
     return data
