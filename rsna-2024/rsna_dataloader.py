@@ -602,7 +602,7 @@ class PatientLevelDataset(Dataset):
                 # series_images = self.transform_3d(series_images.unsqueeze(0)).squeeze(0)
                 series_images = self.transform_3d(series_images)
 
-            images.append(series_images)
+            images.append(series_images.data.squeeze(0))
 
         return torch.stack(images), torch.tensor(label).type(torch.FloatTensor)
 
