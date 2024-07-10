@@ -879,3 +879,6 @@ Instead:
 ### 12 AM
 One last thing -- some images have patients moving and such, so simple stacking is not sufficient. I will need to add some affine mapping per slice
 based on the imageposition and imageorientation metadata.
+
+### 1 AM
+Realized I was using the wrong dimension for channel unsqueeze. Fixed that, which should enable me to use resampling instead of resizing tomorrow.
