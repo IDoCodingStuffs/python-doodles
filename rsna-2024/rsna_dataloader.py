@@ -588,13 +588,20 @@ class PatientLevelDataset(Dataset):
         images_basepath = os.path.join(self.base_path, str(curr["study_id"]))
         images = []
 
-        series_and_images = load_dicom_subject(images_basepath)
+        # series_and_images = load_dicom_subject(images_basepath)
+        # files = sorted(files, key=lambda x: int(x.split('/')[-1].split("\\")[-1].split('.')[0]))
+
         for series_desc in CONDITIONS.keys():
             series = self.dataframe.loc[
                 (self.dataframe["study_id"] == curr["study_id"]) &
                 (self.dataframe["series_description"] == series_desc)]['series_id'].iloc[0]
+            series_path = os.path.join(images_basepath, str(series))
+            files = glob.glob(os.path.join(series_path, '*.dcm'))
+            first_slice = pydicom.dcmread(files[0])
+            affine = self._get_affine(first_slice)
 
-            series_images = tio.Image(os.path.join(images_basepath, str(series)))
+            series_images = tio.ScalarImage(series_path, affine=affine)
+
             # series_images = [item[1] for item in series_and_images if item[0] == series][0]
             # series_images = self._reshape_by_data_type(series_images)
             # series_images = torch.Tensor(series_images)
@@ -605,6 +612,17 @@ class PatientLevelDataset(Dataset):
             images.append(series_images.data.squeeze(0))
 
         return torch.stack(images), torch.tensor(label).type(torch.FloatTensor)
+
+    def _get_affine(self, slice: pydicom.FileDataset):
+        return np.array(
+            [
+                [slice.ImageOrientationPatient[0], slice.ImageOrientationPatient[3], 0, slice.ImagePositionPatient[0]],
+                [slice.ImageOrientationPatient[1], slice.ImageOrientationPatient[4], 0, slice.ImagePositionPatient[1]],
+                [slice.ImageOrientationPatient[2], slice.ImageOrientationPatient[5], 0, slice.ImagePositionPatient[2]],
+                [0,0,0,1],
+            ]
+        )
+
 
     def _reshape_by_data_type(self, images):
         width = len(images[0])
