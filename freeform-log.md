@@ -885,3 +885,7 @@ Realized I was using the wrong dimension for channel unsqueeze. Fixed that, whic
 
 ### 10 AM
 Got a cool finding: `RSNACervicalSpineFracture` from 2022 has segmentation data. Can be repurposed for lumbar probably.
+
+### 11 AM
+Another cool/worrying finding -- those images are not natively uint16 for nothing. Converting to uint8 loses gray levels.
+So I might want to fix that eventually. By moving the data loading completely into torchio.
