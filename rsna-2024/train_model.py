@@ -469,20 +469,17 @@ def train_model_3d(backbone, model_label: str):
         nn.BCEWithLogitsLoss(pos_weight=CLASS_NEG_VS_POS)
     ]
 
-    for img, lbl in trainloader:
-        print(img.shape, lbl.shape)
-
-    # train_model_with_validation(model,
-    #                             optimizers,
-    #                             schedulers,
-    #                             criteria,
-    #                             trainloader,
-    #                             valloader,
-    #                             model_desc=model_label,
-    #                             train_loader_desc=f"Training {model_label}",
-    #                             epochs=NUM_EPOCHS,
-    #                             freeze_backbone_initial_epochs=0,
-    #                             )
+    train_model_with_validation(model,
+                                optimizers,
+                                schedulers,
+                                criteria,
+                                trainloader,
+                                valloader,
+                                model_desc=model_label,
+                                train_loader_desc=f"Training {model_label}",
+                                epochs=NUM_EPOCHS,
+                                freeze_backbone_initial_epochs=0,
+                                )
 
     return model
 
