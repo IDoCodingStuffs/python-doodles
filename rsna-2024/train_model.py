@@ -2,6 +2,7 @@ import math
 
 import timm
 import timm_3d
+import torch.optim
 import torchio as tio
 
 from training_utils import *
@@ -460,12 +461,13 @@ def train_model_3d(backbone, model_label: str):
 
     model = CNN_Model_3D(backbone=backbone, in_chans=3, out_classes=25)
     optimizers = [
-        torch.optim.Adam(model.parameters(), lr=1e-3),
+        # torch.optim.Adam(model.parameters(), lr=1e-3),
+        torch.optim.SGD(model.parameters(), lr=.01, momentum=.99)
     ]
     schedulers = [
+        torch.optim.lr_scheduler.CosineAnnealingLR(optimizers[0], NUM_EPOCHS, eta_min=0, last_epoch=-1)
     ]
     criteria = [
-        # WeightedBCELoss(device=CONFIG["device"])
         nn.BCEWithLogitsLoss(pos_weight=CLASS_NEG_VS_POS)
     ]
 
@@ -485,11 +487,7 @@ def train_model_3d(backbone, model_label: str):
 
 
 def train():
-    # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_shuffled_t2stir")
-    model = train_model_3d(CONFIG['backbone'],
-                           f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d")
-    # model2 = train_model_3d("efficientnet_b3", f"efficientnet_b3_{CONFIG['img_size'][0]}_3d_padded")
-    # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
+    model = train_model_3d(CONFIG['backbone'],f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_sgd")
 
 
 if __name__ == '__main__':

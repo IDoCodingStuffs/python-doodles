@@ -895,3 +895,7 @@ This could also help with the resizing narrow slices https://github.com/fepegar/
 ### 7 PM
 Turns out volume stiching is actually tricky as hell.
 Oh well, hopefully it will be fine.
+
+## 7/11
+### 7 AM
+After a whole bunch of fixes we're back, and it does better. I'll submit the results from last night while also checking if SGD does better vs Adam.
