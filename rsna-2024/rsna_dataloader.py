@@ -595,15 +595,15 @@ class PatientLevelDataset(Dataset):
                 (self.dataframe["series_description"] == series_desc)]['series_id'].iloc[0]
 
             series_path = os.path.join(images_basepath, str(series))
+            # series_images, affine = load_dicom_series(series_path)
             series_images = tio.ScalarImage(series_path, reader=load_dicom_series).data
 
             if self.transform_3d is not None:
-                series_images = self.transform_3d(series_images)
+                series_images = self.transform_3d(series_images).data
 
-            images.append(series_images.data.squeeze(0))
+            images.append(series_images.squeeze(0))
 
         return torch.stack(images), torch.tensor(label).type(torch.FloatTensor)
-
 
     def _reshape_by_data_type(self, images):
         width = len(images[0])
@@ -728,16 +728,16 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
 
     random.seed(random_seed)
     train_dataset = SeriesLevelDataset(base_path, train_df,
-                                        transform=transform_train,
-                                        transform_3d=transform_3d_train,
-                                        data_type=data_type,
-                                        data_series=series_description,
-                                        is_train=True
-                                        )
+                                       transform=transform_train,
+                                       transform_3d=transform_3d_train,
+                                       data_type=data_type,
+                                       data_series=series_description,
+                                       is_train=True
+                                       )
     val_dataset = SeriesLevelDataset(base_path, val_df,
-                                      transform=transform_val, data_type=data_type, data_series=series_description)
+                                     transform=transform_val, data_type=data_type, data_series=series_description)
     test_dataset = SeriesLevelDataset(base_path, test_df,
-                                       transform=transform_val, data_type=data_type, data_series=series_description)
+                                      transform=transform_val, data_type=data_type, data_series=series_description)
 
     train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
     train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker, num_workers=num_workers)
@@ -749,14 +749,14 @@ def create_series_level_datasets_and_loaders(df: pd.DataFrame,
 
 
 def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
-                                             base_path: str,
-                                             transform_3d_train=None,
-                                             transform_3d_val=None,
-                                             split_factor=0.2,
-                                             random_seed=42,
-                                             batch_size=1,
-                                             num_workers=0,
-                                             data_type=SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS):
+                                              base_path: str,
+                                              transform_3d_train=None,
+                                              transform_3d_val=None,
+                                              split_factor=0.2,
+                                              random_seed=42,
+                                              batch_size=1,
+                                              num_workers=0,
+                                              data_type=SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS):
     # By defauly, 8-1.5-.5 split
     df = df.dropna()
     # This drops any subjects with nans
@@ -793,8 +793,8 @@ def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
     test_dataset = PatientLevelDataset(base_path, test_df,
                                        transform_3d=transform_3d_val, data_type=data_type)
 
-    #train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
-    #train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker, num_workers=num_workers)
+    # train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
+    # train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker, num_workers=num_workers)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
@@ -946,10 +946,10 @@ def load_dicom(path):
     return data
 
 
-
 def unit_vector(vector):
     """ Returns the unit vector of the vector.  """
     return vector / np.linalg.norm(vector)
+
 
 def angle_between(v1, v2):
     """ Returns the angle in radians between vectors 'v1' and 'v2'::
@@ -965,17 +965,18 @@ def angle_between(v1, v2):
     v2_u = unit_vector(v2)
     return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
+
 # !TODO: Data cleaning
 # [angle_between(np.array(slice.ImageOrientationPatient), np.array(slices[0].ImageOrientationPatient)) for slice in slices]
 
-def load_dicom_series(path, transform:albumentations.TransformType=None):
+def load_dicom_series(path, transform: albumentations.TransformType = None):
     def _get_affine(slice: pydicom.FileDataset):
         return np.array(
             [
                 [slice.ImageOrientationPatient[0], slice.ImageOrientationPatient[3], 0, slice.ImagePositionPatient[0]],
                 [slice.ImageOrientationPatient[1], slice.ImageOrientationPatient[4], 0, slice.ImagePositionPatient[1]],
                 [slice.ImageOrientationPatient[2], slice.ImageOrientationPatient[5], 0, slice.ImagePositionPatient[2]],
-                [0,0,0,1],
+                [0, 0, 0, 1],
             ]
         )
 
@@ -990,10 +991,11 @@ def load_dicom_series(path, transform:albumentations.TransformType=None):
     if transform is not None:
         data = np.array([transform(image=cv2.convertScaleAbs(slice.pixel_array))["image"] for slice in slices])
     else:
-        data = np.array([cv2.resize(dicom_slice.pixel_array, slice_shape,interpolation=cv2.INTER_LINEAR_EXACT) for dicom_slice in slices])
-
-    # !TODO: Necessary?
-    data = np.repeat(data, repeats=[slice.SliceThickness for slice in slices], axis=0)
+        data = np.array(
+            [
+                cv2.resize(dicom_slice.pixel_array, slice_shape,
+                           interpolation=cv2.INTER_LANCZOS4) for dicom_slice in slices
+            ])
 
     return data, affine
 

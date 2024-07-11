@@ -422,7 +422,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 def train_model_3d(backbone, model_label: str):
     transform_3d_train = tio.Compose([
-        tio.Resize(CONFIG["vol_size"]),
+        tio.Resize(CONFIG["vol_size"], image_interpolation="bspline"),
         tio.RandomAffine(p=CONFIG["aug_prob"]),
         # tio.OneOf({
         #     tio.RandomElasticDeformation(): 0.3,
