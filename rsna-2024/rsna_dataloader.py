@@ -1,4 +1,6 @@
 import random
+
+import albumentations
 import matplotlib.pyplot as plt
 import os
 import numpy as np
@@ -562,8 +564,7 @@ class PatientLevelDataset(Dataset):
                  dataframe: pd.DataFrame,
                  data_type=SeriesDataType.CUBE_3D_RESIZED,
                  transform_3d=None,
-                 is_train=False,
-                 downsample_ratio=1):
+                 is_train=False):
         self.base_path = base_path
         self.type = data_type
         self.is_train = is_train
@@ -574,7 +575,6 @@ class PatientLevelDataset(Dataset):
         self.subjects = self.dataframe[['study_id']].drop_duplicates().reset_index(drop=True)
 
         self.transform_3d = transform_3d
-        self.downsample_ratio = downsample_ratio
 
         self.levels = sorted(self.dataframe["level"].unique())
         self.labels = self._get_labels()
@@ -588,40 +588,21 @@ class PatientLevelDataset(Dataset):
         images_basepath = os.path.join(self.base_path, str(curr["study_id"]))
         images = []
 
-        # series_and_images = load_dicom_subject(images_basepath)
-        # files = sorted(files, key=lambda x: int(x.split('/')[-1].split("\\")[-1].split('.')[0]))
-
         for series_desc in CONDITIONS.keys():
+            # !TODO: Multiple matching series
             series = self.dataframe.loc[
                 (self.dataframe["study_id"] == curr["study_id"]) &
                 (self.dataframe["series_description"] == series_desc)]['series_id'].iloc[0]
+
             series_path = os.path.join(images_basepath, str(series))
-            files = glob.glob(os.path.join(series_path, '*.dcm'))
-            first_slice = pydicom.dcmread(files[0])
-            affine = self._get_affine(first_slice)
+            series_images = tio.ScalarImage(series_path, reader=load_dicom_series).data
 
-            series_images = tio.ScalarImage(series_path) #, affine=affine)
-
-            # series_images = [item[1] for item in series_and_images if item[0] == series][0]
-            # series_images = self._reshape_by_data_type(series_images)
-            # series_images = torch.Tensor(series_images)
             if self.transform_3d is not None:
-                # series_images = self.transform_3d(series_images.unsqueeze(0)).squeeze(0)
                 series_images = self.transform_3d(series_images)
 
             images.append(series_images.data.squeeze(0))
 
         return torch.stack(images), torch.tensor(label).type(torch.FloatTensor)
-
-    def _get_affine(self, slice: pydicom.FileDataset):
-        return np.array(
-            [
-                [slice.ImageOrientationPatient[0], slice.ImageOrientationPatient[3], 0, slice.ImagePositionPatient[0]],
-                [slice.ImageOrientationPatient[1], slice.ImageOrientationPatient[4], 0, slice.ImagePositionPatient[1]],
-                [slice.ImageOrientationPatient[2], slice.ImageOrientationPatient[5], 0, slice.ImagePositionPatient[2]],
-                [0,0,0,1],
-            ]
-        )
 
 
     def _reshape_by_data_type(self, images):
@@ -987,20 +968,34 @@ def angle_between(v1, v2):
 # !TODO: Data cleaning
 # [angle_between(np.array(slice.ImageOrientationPatient), np.array(slices[0].ImageOrientationPatient)) for slice in slices]
 
-def load_dicom_series(path, transform=None):
+def load_dicom_series(path, transform:albumentations.TransformType=None):
+    def _get_affine(slice: pydicom.FileDataset):
+        return np.array(
+            [
+                [slice.ImageOrientationPatient[0], slice.ImageOrientationPatient[3], 0, slice.ImagePositionPatient[0]],
+                [slice.ImageOrientationPatient[1], slice.ImageOrientationPatient[4], 0, slice.ImagePositionPatient[1]],
+                [slice.ImageOrientationPatient[2], slice.ImageOrientationPatient[5], 0, slice.ImagePositionPatient[2]],
+                [0,0,0,1],
+            ]
+        )
+
     files = glob.glob(os.path.join(path, '*.dcm'))
     files = sorted(files, key=lambda x: int(x.split('/')[-1].split("\\")[-1].split('.')[0]))
     slices = [pydicom.dcmread(fname) for fname in files]
-    # slices = sorted(slices, key=lambda s: s.SliceLocation)
+    slice_shape = slices[0].pixel_array.shape
+
+    # !TODO: Volume stiching with orientation shifts
+    affine = _get_affine(slices[0])
+
     if transform is not None:
         data = np.array([transform(image=cv2.convertScaleAbs(slice.pixel_array))["image"] for slice in slices])
     else:
-        data = np.array([cv2.convertScaleAbs(slice.pixel_array) for slice in slices])
+        data = np.array([cv2.resize(dicom_slice.pixel_array, slice_shape,interpolation=cv2.INTER_LINEAR_EXACT) for dicom_slice in slices])
 
+    # !TODO: Necessary?
     data = np.repeat(data, repeats=[slice.SliceThickness for slice in slices], axis=0)
 
-    data = np.array(data)
-    return data
+    return data, affine
 
 
 def load_dicom_subject(path, transform=None, downsampling_rate=1):

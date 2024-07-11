@@ -433,6 +433,7 @@ def train_model_3d(backbone, model_label: str):
         tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
         tio.RandomBiasField(p=CONFIG["aug_prob"]),
         tio.RandomSpike(p=CONFIG["aug_prob"]),
+        tio.RandomGamma(p=CONFIG["aug_prob"]),
         # tio.RandomSwap(p=CONFIG["aug_prob"]),
         tio.RandomGhosting(p=CONFIG["aug_prob"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
@@ -450,7 +451,7 @@ def train_model_3d(backbone, model_label: str):
                                                                             base_path=os.path.join(
                                                                                 DATA_BASEPATH,
                                                                                 "train_images"),
-                                                                            num_workers=16,
+                                                                            num_workers=0,
                                                                             split_factor=0.3,
                                                                             batch_size=8,
                                                                             data_type=SeriesDataType.CUBE_3D_RESIZED_PADDED)
@@ -468,17 +469,20 @@ def train_model_3d(backbone, model_label: str):
         nn.BCEWithLogitsLoss(pos_weight=CLASS_NEG_VS_POS)
     ]
 
-    train_model_with_validation(model,
-                                optimizers,
-                                schedulers,
-                                criteria,
-                                trainloader,
-                                valloader,
-                                model_desc=model_label,
-                                train_loader_desc=f"Training {model_label}",
-                                epochs=NUM_EPOCHS,
-                                freeze_backbone_initial_epochs=0,
-                                )
+    for img, lbl in trainloader:
+        print(img.shape, lbl.shape)
+
+    # train_model_with_validation(model,
+    #                             optimizers,
+    #                             schedulers,
+    #                             criteria,
+    #                             trainloader,
+    #                             valloader,
+    #                             model_desc=model_label,
+    #                             train_loader_desc=f"Training {model_label}",
+    #                             epochs=NUM_EPOCHS,
+    #                             freeze_backbone_initial_epochs=0,
+    #                             )
 
     return model
 
