@@ -590,7 +590,7 @@ class PatientLevelDataset(Dataset):
             # !TODO: Multiple matching series
             series = self.dataframe.loc[
                 (self.dataframe["study_id"] == curr["study_id"]) &
-                (self.dataframe["series_description"] == series_desc)]['series_id'].iloc[0]
+                (self.dataframe["series_description"] == series_desc)].sort_values("series_id")['series_id'].iloc[0]
 
             series_path = os.path.join(images_basepath, str(series))
             # series_images, affine = load_dicom_series(series_path)
@@ -747,6 +747,7 @@ def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
         else:
             subset = subset[subset.groupby(["study_id"]).transform('size') == 10]
         filtered_df = pd.concat([filtered_df, subset])
+
     filtered_df = filtered_df[filtered_df.groupby(["study_id"]).transform('size') == 25]
 
     train_studies, val_studies = train_test_split(filtered_df["study_id"].unique(), test_size=split_factor,
@@ -948,7 +949,7 @@ def angle_between(v1, v2):
 # [angle_between(np.array(slice.ImageOrientationPatient), np.array(slices[0].ImageOrientationPatient)) for slice in slices]
 
 def load_dicom_series(path, transform: albumentations.TransformType = None):
-    def _get_affine(ds:pydicom.FileDataset):
+    def _get_affine(ds: pydicom.FileDataset):
         F11, F21, F31 = ds.ImageOrientationPatient[3:]
         F12, F22, F32 = ds.ImageOrientationPatient[:3]
 
@@ -967,8 +968,11 @@ def load_dicom_series(path, transform: albumentations.TransformType = None):
     files = glob.glob(os.path.join(path, '*.dcm'))
     files = sorted(files, key=lambda x: int(x.split('/')[-1].split("\\")[-1].split('.')[0]))
     slices = [pydicom.dcmread(fname) for fname in files]
-    slice_shape = slices[0].pixel_array.shape
 
+    if len(slices) > 0:
+        slice_shape = slices[0].pixel_array.shape
+    else:
+        raise ValueError(f"Empty path? {path}")
     # !TODO: Volume stiching with orientation shifts
     affine = _get_affine(slices[0])
 
@@ -982,11 +986,6 @@ def load_dicom_series(path, transform: albumentations.TransformType = None):
             ])
 
     return data, affine
-
-
-def load_dicom_subject(path, transform=None, downsampling_rate=1):
-    series_list = glob.glob(os.path.join(path, "*"))
-    return [(int(os.path.basename(series)), load_dicom_series(series, transform)) for series in series_list]
 
 
 def get_bounding_boxes_for_label(label, box_offset_from_center=5):
