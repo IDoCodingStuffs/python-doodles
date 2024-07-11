@@ -595,12 +595,13 @@ class PatientLevelDataset(Dataset):
 
             series_path = os.path.join(images_basepath, str(series))
             # series_images, affine = load_dicom_series(series_path)
-            series_images = tio.ScalarImage(series_path, reader=read_series_as_volume).data
+            # series_images = tio.ScalarImage(series_path, reader=read_series_as_volume).data
+            series_images = read_series_as_volume(series_path)
 
             if self.transform_3d is not None:
-                series_images = self.transform_3d(series_images).data
+                series_images = self.transform_3d(torch.Tensor(series_images).unsqueeze(0))
 
-            images.append(series_images.squeeze(0))
+            images.append(torch.Tensor(series_images).squeeze(0))
 
         return torch.stack(images), torch.tensor(label).type(torch.FloatTensor)
 
@@ -989,7 +990,7 @@ def load_dicom_series(path, transform: albumentations.TransformType = None):
     return data, affine
 
 
-def read_series_as_volume(dirName):
+def read_series_as_volume(dirName, verbose=False):
     PixelType = itk.ctype("signed short")
     Dimension = 3
 
@@ -1003,17 +1004,19 @@ def read_series_as_volume(dirName):
 
     seriesUID = namesGenerator.GetSeriesUIDs()
 
-    if len(seriesUID) < 1:
-        print("No DICOMs in: " + dirName)
+    if verbose:
+        if len(seriesUID) < 1:
+            print("No DICOMs in: " + dirName)
 
-    print("The directory: " + dirName)
-    print("Contains the following DICOM Series: ")
-    for uid in seriesUID:
-        print(uid)
+        print("The directory: " + dirName)
+        print("Contains the following DICOM Series: ")
+        for uid in seriesUID:
+            print(uid)
 
     for uid in seriesUID:
         seriesIdentifier = uid
-        print("Reading: " + seriesIdentifier)
+        if verbose:
+            print("Reading: " + seriesIdentifier)
         fileNames = namesGenerator.GetFileNames(seriesIdentifier)
 
         reader = itk.ImageSeriesReader[ImageType].New()
