@@ -16,6 +16,7 @@ from scipy import ndimage
 from enum import Enum
 import cv2
 import torchio as tio
+import itk
 
 LABEL_MAP = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
 CONDITIONS = {
@@ -594,7 +595,7 @@ class PatientLevelDataset(Dataset):
 
             series_path = os.path.join(images_basepath, str(series))
             # series_images, affine = load_dicom_series(series_path)
-            series_images = tio.ScalarImage(series_path, reader=load_dicom_series).data
+            series_images = tio.ScalarImage(series_path, reader=read_series_as_volume).data
 
             if self.transform_3d is not None:
                 series_images = self.transform_3d(series_images).data
@@ -986,6 +987,44 @@ def load_dicom_series(path, transform: albumentations.TransformType = None):
             ])
 
     return data, affine
+
+
+def read_series_as_volume(dirName):
+    PixelType = itk.ctype("signed short")
+    Dimension = 3
+
+    ImageType = itk.Image[PixelType, Dimension]
+
+    namesGenerator = itk.GDCMSeriesFileNames.New()
+    namesGenerator.SetUseSeriesDetails(True)
+    namesGenerator.AddSeriesRestriction("0008|0021")
+    namesGenerator.SetGlobalWarningDisplay(False)
+    namesGenerator.SetDirectory(dirName)
+
+    seriesUID = namesGenerator.GetSeriesUIDs()
+
+    if len(seriesUID) < 1:
+        print("No DICOMs in: " + dirName)
+
+    print("The directory: " + dirName)
+    print("Contains the following DICOM Series: ")
+    for uid in seriesUID:
+        print(uid)
+
+    for uid in seriesUID:
+        seriesIdentifier = uid
+        print("Reading: " + seriesIdentifier)
+        fileNames = namesGenerator.GetFileNames(seriesIdentifier)
+
+        reader = itk.ImageSeriesReader[ImageType].New()
+        dicomIO = itk.GDCMImageIO.New()
+        reader.SetImageIO(dicomIO)
+        reader.SetFileNames(fileNames)
+        reader.ForceOrthogonalDirectionOff()
+
+    reader.Update()
+    data = itk.GetArrayFromImage(reader.GetOutput())
+    return data
 
 
 def get_bounding_boxes_for_label(label, box_offset_from_center=5):
