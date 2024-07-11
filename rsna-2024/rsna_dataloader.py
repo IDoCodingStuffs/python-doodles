@@ -562,11 +562,9 @@ class PatientLevelDataset(Dataset):
     def __init__(self,
                  base_path: str,
                  dataframe: pd.DataFrame,
-                 data_type=SeriesDataType.CUBE_3D_RESIZED,
                  transform_3d=None,
                  is_train=False):
         self.base_path = base_path
-        self.type = data_type
         self.is_train = is_train
 
         self.dataframe = (dataframe[['study_id', "series_id", "series_description", "condition", "severity", "level"]]
@@ -604,24 +602,6 @@ class PatientLevelDataset(Dataset):
             images.append(series_images.squeeze(0))
 
         return torch.stack(images), torch.tensor(label).type(torch.FloatTensor)
-
-    def _reshape_by_data_type(self, images):
-        width = len(images[0])
-        if self.type == SeriesDataType.CUBE_3D_RESIZED:
-            images = ndimage.interpolation.zoom(images, (width / len(images), 1, 1))
-        elif self.type in (SeriesDataType.CUBE_3D_DOWNSAMPLED_PADDED, SeriesDataType.CUBE_3D_RESIZED_PADDED):
-            if len(images) > width:
-                if self.type == SeriesDataType.CUBE_3D_DOWNSAMPLED_PADDED:
-                    images = images[::2, :, :]
-                elif self.type == SeriesDataType.CUBE_3D_RESIZED_PADDED:
-                    images = ndimage.interpolation.zoom(images, (width / len(images), 1, 1))
-
-            front_buffer = (width - len(images)) // 2
-            rear_buffer = (width - len(images)) // 2 + ((width - len(images)) % 2)
-
-            images = np.pad(images, ((front_buffer, rear_buffer), (0, 0), (0, 0)))
-
-        return images
 
     def _get_labels(self):
         labels = dict()
@@ -755,8 +735,7 @@ def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
                                               split_factor=0.2,
                                               random_seed=42,
                                               batch_size=1,
-                                              num_workers=0,
-                                              data_type=SeriesDataType.SEQUENTIAL_VARIABLE_LENGTH_WITH_CLS):
+                                              num_workers=0):
     # By defauly, 8-1.5-.5 split
     df = df.dropna()
     # This drops any subjects with nans
@@ -785,13 +764,12 @@ def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
     random.seed(random_seed)
     train_dataset = PatientLevelDataset(base_path, train_df,
                                         transform_3d=transform_3d_train,
-                                        data_type=data_type,
                                         is_train=True
                                         )
     val_dataset = PatientLevelDataset(base_path, val_df,
-                                      transform_3d=transform_3d_val, data_type=data_type)
+                                      transform_3d=transform_3d_val)
     test_dataset = PatientLevelDataset(base_path, test_df,
-                                       transform_3d=transform_3d_val, data_type=data_type)
+                                       transform_3d=transform_3d_val)
 
     # train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
     # train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker, num_workers=num_workers)

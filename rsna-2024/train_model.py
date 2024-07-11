@@ -440,7 +440,7 @@ def train_model_3d(backbone, model_label: str):
     ])
 
     transform_3d_val = tio.Compose([
-        tio.Resize(CONFIG["vol_size"]),
+        tio.Resize(CONFIG["vol_size"], image_interpolation="bspline"),
         tio.RescaleIntensity(out_min_max=(0, 1)),
     ])
 
@@ -451,10 +451,10 @@ def train_model_3d(backbone, model_label: str):
                                                                             base_path=os.path.join(
                                                                                 DATA_BASEPATH,
                                                                                 "train_images"),
-                                                                            num_workers=0,
+                                                                            num_workers=20,
                                                                             split_factor=0.3,
                                                                             batch_size=8,
-                                                                            data_type=SeriesDataType.CUBE_3D_RESIZED_PADDED)
+                                                                            )
 
     NUM_EPOCHS = CONFIG["epochs"]
 
