@@ -891,3 +891,7 @@ Another cool/worrying finding -- those images are not natively uint16 for nothin
 So I might want to fix that eventually. By moving the data loading completely into torchio.
 
 This could also help with the resizing narrow slices https://github.com/fepegar/torchio/discussions/828
+
+### 7 PM
+Turns out volume stiching is actually tricky as hell.
+Oh well, hopefully it will be fine.

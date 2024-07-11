@@ -948,13 +948,19 @@ def angle_between(v1, v2):
 # [angle_between(np.array(slice.ImageOrientationPatient), np.array(slices[0].ImageOrientationPatient)) for slice in slices]
 
 def load_dicom_series(path, transform: albumentations.TransformType = None):
-    def _get_affine(slice: pydicom.FileDataset):
+    def _get_affine(ds:pydicom.FileDataset):
+        F11, F21, F31 = ds.ImageOrientationPatient[3:]
+        F12, F22, F32 = ds.ImageOrientationPatient[:3]
+
+        dr, dc = ds.PixelSpacing
+        Sx, Sy, Sz = ds.ImagePositionPatient
+
         return np.array(
             [
-                [slice.ImageOrientationPatient[0], slice.ImageOrientationPatient[3], 0, slice.ImagePositionPatient[0]],
-                [slice.ImageOrientationPatient[1], slice.ImageOrientationPatient[4], 0, slice.ImagePositionPatient[1]],
-                [slice.ImageOrientationPatient[2], slice.ImageOrientationPatient[5], 0, slice.ImagePositionPatient[2]],
-                [0, 0, 0, 1],
+                [F11 * dr, F12 * dc, 0, Sx],
+                [F21 * dr, F22 * dc, 0, Sy],
+                [F31 * dr, F32 * dc, 0, Sz],
+                [0, 0, 0, 1]
             ]
         )
 
