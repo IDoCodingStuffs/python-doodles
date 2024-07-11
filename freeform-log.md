@@ -895,3 +895,9 @@ This could also help with the resizing narrow slices https://github.com/fepegar/
 ### 7 PM
 Turns out volume stiching is actually tricky as hell.
 Oh well, hopefully it will be fine.
+
+## 7/11
+### 11 AM
+Two things to do next
+1. Volume stitching using some similarity measure vs last slice. Later, can use affine per slice?
+2. Get joint coordinates, which might be easier than segmentation + pose estimation + slicing through axial and coronal centers.
