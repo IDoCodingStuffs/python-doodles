@@ -19,7 +19,7 @@ CONFIG = dict(
     drop_path_rate=0.,
     aug_prob=0.7,
     out_dim=3,
-    epochs=25,
+    epochs=50,
     batch_size=8,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
@@ -451,7 +451,7 @@ def train_model_3d(backbone, model_label: str):
                                                                             base_path=os.path.join(
                                                                                 DATA_BASEPATH,
                                                                                 "train_images"),
-                                                                            num_workers=20,
+                                                                            num_workers=16,
                                                                             split_factor=0.3,
                                                                             batch_size=8,
                                                                             )
@@ -487,7 +487,7 @@ def train_model_3d(backbone, model_label: str):
 def train():
     # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_shuffled_t2stir")
     model = train_model_3d(CONFIG['backbone'],
-                           f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_torchio_only")
+                           f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d")
     # model2 = train_model_3d("efficientnet_b3", f"efficientnet_b3_{CONFIG['img_size'][0]}_3d_padded")
     # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 
