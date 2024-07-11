@@ -969,7 +969,6 @@ def load_dicom_series(path, transform: albumentations.TransformType = None):
     slices = [pydicom.dcmread(fname) for fname in files]
     slice_shape = slices[0].pixel_array.shape
 
-    # !TODO: Volume stiching with orientation shifts
     affine = _get_affine(slices[0])
 
     if transform is not None:
@@ -980,6 +979,13 @@ def load_dicom_series(path, transform: albumentations.TransformType = None):
                 cv2.resize(dicom_slice.pixel_array, slice_shape,
                            interpolation=cv2.INTER_LANCZOS4) for dicom_slice in slices
             ])
+
+    # !TODO: Volume stiching with orientation shifts
+    # positional_offsets = [np.array(dicom_slice.ImagePositionPatient) - np.array(slices[0].ImagePositionPatient)
+    #                       for dicom_slice in slices]
+    # for index, offset in enumerate(positional_offsets):
+    #     data[index] = np.roll(data[index], -int(offset[0]), axis=0)
+    #     data[index] = np.roll(data[index], -int(offset[1]), axis=1)
 
     return data, affine
 

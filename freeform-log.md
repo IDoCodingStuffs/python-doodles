@@ -894,4 +894,4 @@ This could also help with the resizing narrow slices https://github.com/fepegar/
 
 ### 7 PM
 Turns out volume stiching is actually tricky as hell.
-Oh well, hopefully it will be fine.
+Oh well, hopefully it will be fine. Even with those shifted slices
