@@ -595,11 +595,11 @@ class PatientLevelDataset(Dataset):
 
             series_path = os.path.join(images_basepath, str(series))
             # series_images, affine = load_dicom_series(series_path)
-            # series_images = tio.ScalarImage(series_path, reader=read_series_as_volume).data
+            # series_images = tio.ScalarImage(series_path, reader=load_dicom_series).data
             series_images = read_series_as_volume(series_path)
 
             if self.transform_3d is not None:
-                series_images = self.transform_3d(torch.Tensor(series_images).unsqueeze(0))
+                series_images = self.transform_3d(np.expand_dims(series_images, 0)) #.data
 
             images.append(torch.Tensor(series_images).squeeze(0))
 
@@ -974,7 +974,7 @@ def load_dicom_series(path, transform: albumentations.TransformType = None):
     if len(slices) > 0:
         slice_shape = slices[0].pixel_array.shape
     else:
-        raise ValueError(f"Empty path? {path}")
+        raise ValueError(f"Empty path? {os.path.abspath(path)}")
     # !TODO: Volume stiching with orientation shifts
     affine = _get_affine(slices[0])
 
@@ -1013,20 +1013,32 @@ def read_series_as_volume(dirName, verbose=False):
         for uid in seriesUID:
             print(uid)
 
-    for uid in seriesUID:
-        seriesIdentifier = uid
-        if verbose:
-            print("Reading: " + seriesIdentifier)
-        fileNames = namesGenerator.GetFileNames(seriesIdentifier)
+    reader = None
+    dicomIO = None
+    for i in range(10):
+        for uid in seriesUID:
+            seriesIdentifier = uid
+            if verbose:
+                print("Reading: " + seriesIdentifier)
+            fileNames = namesGenerator.GetFileNames(seriesIdentifier)
 
-        reader = itk.ImageSeriesReader[ImageType].New()
-        dicomIO = itk.GDCMImageIO.New()
-        reader.SetImageIO(dicomIO)
-        reader.SetFileNames(fileNames)
-        reader.ForceOrthogonalDirectionOff()
+            reader = itk.ImageSeriesReader[ImageType].New()
+            dicomIO = itk.GDCMImageIO.New()
+            reader.SetImageIO(dicomIO)
+            reader.SetFileNames(fileNames)
+            reader.ForceOrthogonalDirectionOff()
+        if reader is not None:
+            break
 
+    if reader is None or dicomIO is None:
+        raise FileNotFoundError(f"Empty path? {os.path.abspath(dirName)}")
     reader.Update()
     data = itk.GetArrayFromImage(reader.GetOutput())
+
+    del namesGenerator
+    del dicomIO
+    del reader
+
     return data
 
 

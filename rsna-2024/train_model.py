@@ -466,7 +466,7 @@ def train_model_3d(backbone, model_label: str):
     ]
     criteria = [
         # WeightedBCELoss(device=CONFIG["device"])
-        nn.BCEWithLogitsLoss(pos_weight=CLASS_NEG_VS_POS)
+        nn.BCEWithLogitsLoss(pos_weight=1 + 2 * torch.log(CLASS_RELATIVE_WEIGHTS))
     ]
 
     train_model_with_validation(model,
@@ -487,7 +487,7 @@ def train_model_3d(backbone, model_label: str):
 def train():
     # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_shuffled_t2stir")
     model = train_model_3d(CONFIG['backbone'],
-                           f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d")
+                           f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_log_oversample_itk")
     # model2 = train_model_3d("efficientnet_b3", f"efficientnet_b3_{CONFIG['img_size'][0]}_3d_padded")
     # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 
