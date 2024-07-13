@@ -991,6 +991,10 @@ def load_dicom_series(path, transform: albumentations.TransformType = None):
 
 
 def read_series_as_volume(dirName, verbose=False):
+    cache_path = os.path.join(dirName, "cached.npy")
+    if os.path.exists(cache_path):
+        return np.load(cache_path)
+
     PixelType = itk.ctype("signed short")
     Dimension = 3
 
@@ -1038,6 +1042,8 @@ def read_series_as_volume(dirName, verbose=False):
     del namesGenerator
     del dicomIO
     del reader
+
+    np.save(cache_path, data)
 
     return data
 
