@@ -17,9 +17,9 @@ CONFIG = dict(
     drop_rate=0.05,
     drop_rate_last=0.3,
     drop_path_rate=0.,
-    aug_prob=0.7,
+    aug_prob=0.9,
     out_dim=3,
-    epochs=50,
+    epochs=25,
     batch_size=8,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
@@ -435,7 +435,7 @@ def train_model_3d(backbone, model_label: str):
         tio.RandomSpike(p=CONFIG["aug_prob"]),
         tio.RandomGamma(p=CONFIG["aug_prob"]),
         # tio.RandomSwap(p=CONFIG["aug_prob"]),
-        tio.RandomGhosting(p=CONFIG["aug_prob"]),
+        # tio.RandomGhosting(p=CONFIG["aug_prob"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
     ])
 
@@ -485,11 +485,8 @@ def train_model_3d(backbone, model_label: str):
 
 
 def train():
-    # model_t2stir = train_model_for_series("Sagittal T2/STIR", "efficientnet_b4_multichannel_shuffled_t2stir")
     model = train_model_3d(CONFIG['backbone'],
                            f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_log_oversample_itk")
-    # model2 = train_model_3d("efficientnet_b3", f"efficientnet_b3_{CONFIG['img_size'][0]}_3d_padded")
-    # model_t2 = train_model_3d("Axial T2", "efficientnet_b0_3d_t2")
 
 
 if __name__ == '__main__':
