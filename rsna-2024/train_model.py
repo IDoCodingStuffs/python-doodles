@@ -14,12 +14,12 @@ CONFIG = dict(
     backbone="efficientnet_b4",
     img_size=(128, 128),
     vol_size=(128, 128, 128),
-    drop_rate=0.05,
-    drop_rate_last=0.3,
+    drop_rate=0.5,
+    drop_rate_last=0.2,
     drop_path_rate=0.,
     aug_prob=0.9,
     out_dim=3,
-    epochs=25,
+    epochs=50,
     batch_size=8,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
@@ -126,7 +126,7 @@ class CNN_Model(nn.Module):
             num_classes=CONFIG["out_dim"] * CONFIG["n_levels"],
             features_only=False,
             drop_rate=CONFIG["drop_rate"],
-            drop_path_rate=CONFIG["drop_path_rate"],
+            #drop_path_rate=CONFIG["drop_path_rate"],
             pretrained=pretrained,
             global_pool='avg',
             in_chans=CONFIG["in_chans"],
@@ -166,7 +166,7 @@ class CNN_Model_3D(nn.Module):
             num_classes=out_classes * CONFIG["out_dim"],
             features_only=False,
             drop_rate=CONFIG["drop_rate"],
-            drop_path_rate=CONFIG["drop_path_rate"],
+            #drop_path_rate=CONFIG["drop_path_rate"],
             pretrained=pretrained,
             in_chans=in_chans,
         ).to(CONFIG["device"])
@@ -486,7 +486,7 @@ def train_model_3d(backbone, model_label: str):
 
 def train():
     model = train_model_3d(CONFIG['backbone'],
-                           f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d_log_oversample_itk")
+                           f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d")
 
 
 if __name__ == '__main__':
