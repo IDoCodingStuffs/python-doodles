@@ -14,12 +14,12 @@ CONFIG = dict(
     backbone="efficientnet_b4",
     img_size=(128, 128),
     vol_size=(128, 128, 128),
-    drop_rate=0.5,
+    drop_rate=0.25,
     drop_rate_last=0.1,
-    drop_path_rate=0.5,
-    aug_prob=0.9,
+    drop_path_rate=0.25,
+    aug_prob=0.7,
     out_dim=3,
-    epochs=50,
+    epochs=15,
     batch_size=8,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
@@ -429,12 +429,12 @@ def train_model_3d(backbone, model_label: str):
         #     tio.RandomElasticDeformation(): 0.3,
         #     tio.RandomAffine(): 0.7,
         # }, p=CONFIG["aug_prob"]),
-        tio.RandomNoise(p=CONFIG["aug_prob"]),
-        tio.RandomBlur(p=CONFIG["aug_prob"]),
+        # tio.RandomNoise(p=CONFIG["aug_prob"]),
+        # tio.RandomBlur(p=CONFIG["aug_prob"]),
         # tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
-        tio.RandomBiasField(p=CONFIG["aug_prob"]),
-        tio.RandomSpike(p=CONFIG["aug_prob"]),
-        tio.RandomGamma(p=CONFIG["aug_prob"]),
+        # tio.RandomBiasField(p=CONFIG["aug_prob"]),
+        # tio.RandomSpike(p=CONFIG["aug_prob"]),
+        # tio.RandomGamma(p=CONFIG["aug_prob"]),
         # tio.RandomSwap(p=CONFIG["aug_prob"]),
         # tio.RandomGhosting(p=CONFIG["aug_prob"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
@@ -486,8 +486,15 @@ def train_model_3d(backbone, model_label: str):
 
 
 def train():
-    model = train_model_3d(CONFIG['backbone'],
-                           f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d")
+    for drop_rate in np.arange(0, 0.51, 0.05):
+        for drop_path_rate in np.arange(0, 0.51, 0.05):
+            CONFIG["drop_path_rate"] = drop_path_rate
+            CONFIG["drop_rate"] = drop_rate
+
+            model = train_model_3d(CONFIG['backbone'],
+                           f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d"
+                           f"_{str(drop_rate).replace('.','')}"
+                           f"_{str(drop_path_rate).replace('.', '')}")
 
 
 if __name__ == '__main__':
