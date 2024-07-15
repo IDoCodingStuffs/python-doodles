@@ -14,12 +14,12 @@ CONFIG = dict(
     backbone="efficientnet_b4",
     img_size=(128, 128),
     vol_size=(128, 128, 128),
-    drop_rate=0.25,
+    drop_rate=0.15,
     drop_rate_last=0.1,
-    drop_path_rate=0.25,
+    drop_path_rate=0.15,
     aug_prob=0.7,
     out_dim=3,
-    epochs=15,
+    epochs=25,
     batch_size=8,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
@@ -81,6 +81,35 @@ CLASS_NEG_VS_POS = torch.Tensor(
      0.34557235, 7.41891892, 6.24418605,
      3.31674959e-02, 4.51481481e+01, 9.48461538e+01]
 ).to(CONFIG["device"])
+
+
+COMP_WEIGHTS = torch.Tensor([1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       1, 2, 4,
+                                       ]).to(CONFIG["device"])
+
 
 
 class NormMLPClassifierHead(nn.Module):
@@ -429,12 +458,12 @@ def train_model_3d(backbone, model_label: str):
         #     tio.RandomElasticDeformation(): 0.3,
         #     tio.RandomAffine(): 0.7,
         # }, p=CONFIG["aug_prob"]),
-        # tio.RandomNoise(p=CONFIG["aug_prob"]),
-        # tio.RandomBlur(p=CONFIG["aug_prob"]),
-        # tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
+        tio.RandomNoise(p=CONFIG["aug_prob"]),
+        tio.RandomBlur(p=CONFIG["aug_prob"]),
+        tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
         # tio.RandomBiasField(p=CONFIG["aug_prob"]),
-        # tio.RandomSpike(p=CONFIG["aug_prob"]),
-        # tio.RandomGamma(p=CONFIG["aug_prob"]),
+        tio.RandomSpike(p=CONFIG["aug_prob"]),
+        tio.RandomGamma(p=CONFIG["aug_prob"]),
         # tio.RandomSwap(p=CONFIG["aug_prob"]),
         # tio.RandomGhosting(p=CONFIG["aug_prob"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
@@ -467,7 +496,7 @@ def train_model_3d(backbone, model_label: str):
     ]
     criteria = [
         # WeightedBCELoss(device=CONFIG["device"])
-        nn.BCEWithLogitsLoss(pos_weight=1 + 2 * torch.log(CLASS_RELATIVE_WEIGHTS))
+        nn.BCEWithLogitsLoss(pos_weight=COMP_WEIGHTS)
     ]
 
     train_model_with_validation(model,
@@ -486,15 +515,8 @@ def train_model_3d(backbone, model_label: str):
 
 
 def train():
-    for drop_rate in np.arange(0, 0.51, 0.05):
-        for drop_path_rate in np.arange(0, 0.51, 0.05):
-            CONFIG["drop_path_rate"] = drop_path_rate
-            CONFIG["drop_rate"] = drop_rate
-
-            model = train_model_3d(CONFIG['backbone'],
-                           f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d"
-                           f"_{str(drop_rate).replace('.','')}"
-                           f"_{str(drop_path_rate).replace('.', '')}")
+    model = train_model_3d(CONFIG['backbone'],
+                   f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d")
 
 
 if __name__ == '__main__':
