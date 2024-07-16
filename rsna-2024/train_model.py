@@ -12,9 +12,10 @@ _logger = logging.getLogger(__name__)
 CONFIG = dict(
     n_levels=5,
     # backbone="efficientnet_b4",
-    backbone="tf_efficientnetv2_s",
+    backbone="tf_efficientnetv2_m",
     img_size=(128, 128),
-    vol_size=(160, 160, 160),
+    vol_size=(144, 144, 144),
+    num_workers=16,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
@@ -482,9 +483,9 @@ def train_model_3d(backbone, model_label: str):
                                                                             base_path=os.path.join(
                                                                                 DATA_BASEPATH,
                                                                                 "train_images"),
-                                                                            num_workers=16,
+                                                                            num_workers=CONFIG["num_workers"],
                                                                             split_factor=0.3,
-                                                                            batch_size=8,
+                                                                            batch_size=CONFIG["batch_size"],
                                                                             )
 
     NUM_EPOCHS = CONFIG["epochs"]
