@@ -913,3 +913,6 @@ Getting `0.75` CV if I divide the logits by the loss weights. So maybe I can do 
 Also realized I was using float32 tensors for no reason. Gonna try float16 which should allow me to use higher definition volumes.
 
 Next thing is figuring out segmentation with something like GMM. Before even getting to slicing, it might allow me to use way higher definition, with way smaller loss.
+
+### 3 PM
+Likely worth doing a hyperparam study on interpolation methods. Maybe guassian vs bspline to see if smoothing helps with learning latent segmentation?
