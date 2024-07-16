@@ -500,8 +500,8 @@ def train_model_3d(backbone, model_label: str):
     schedulers = [
     ]
     criteria = [
-        # WeightedBCELoss(device=CONFIG["device"])
-        nn.BCEWithLogitsLoss(pos_weight=CLASS_RELATIVE_WEIGHTS)
+        # nn.BCEWithLogitsLoss(pos_weight=CLASS_RELATIVE_WEIGHTS)
+        nn.BCEWithLogitsLoss(pos_weight=COMP_WEIGHTS)
     ]
 
     train_model_with_validation(model,
