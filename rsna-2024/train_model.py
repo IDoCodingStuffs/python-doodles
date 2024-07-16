@@ -488,6 +488,7 @@ def train_model_3d(backbone, model_label: str):
                                                                             num_workers=CONFIG["num_workers"],
                                                                             split_factor=0.3,
                                                                             batch_size=CONFIG["batch_size"],
+                                                                            pin_memory=False
                                                                             )
 
     NUM_EPOCHS = CONFIG["epochs"]

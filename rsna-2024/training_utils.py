@@ -3,6 +3,7 @@ import os.path
 from tqdm import tqdm
 import logging
 from torch.profiler import profile, record_function, ProfilerActivity
+from  torch.cuda.amp import autocast
 
 from rsna_dataloader import *
 
@@ -34,7 +35,8 @@ def model_validation_loss(model, val_loader, loss_fns, epoch):
             # !TODO: Do this in the data loader
             label = label.to(device)
 
-            output = model(images.to(device))
+            with autocast():
+                output = model(images.to(device))
             for index, loss_fn in enumerate(loss_fns):
                 # loss = loss_fn(output[:, index], label[:, index])
                 loss = loss_fn(output, label)
@@ -108,7 +110,8 @@ def train_model_with_validation(model,
             images, label = val
             label = label.to(device)
 
-            output = model(images.to(device))
+            with autocast():
+                output = model(images.to(device))
 
             for loss_index, loss_fn in enumerate(loss_fns):
                 # loss = loss_fn(output[:, loss_index], label[:, loss_index]) / gradient_accumulation_per
