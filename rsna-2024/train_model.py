@@ -11,9 +11,10 @@ _logger = logging.getLogger(__name__)
 
 CONFIG = dict(
     n_levels=5,
-    backbone="efficientnet_b4",
+    # backbone="efficientnet_b4",
+    backbone="tf_efficientnetv2_s",
     img_size=(128, 128),
-    vol_size=(128, 128, 128),
+    vol_size=(160, 160, 160),
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
@@ -186,7 +187,7 @@ class CNN_Model_Multichannel(nn.Module):
 
 
 class CNN_Model_3D(nn.Module):
-    def __init__(self, backbone="efficientnet_lite0", in_chans=1, out_classes=5, pretrained=True):
+    def __init__(self, backbone="efficientnet_lite0", in_chans=1, out_classes=5, pretrained=False):
         super(CNN_Model_3D, self).__init__()
         self.out_classes = out_classes
 
@@ -516,7 +517,7 @@ def train_model_3d(backbone, model_label: str):
 
 def train():
     model = train_model_3d(CONFIG['backbone'],
-                   f"{CONFIG['backbone']}_{CONFIG['img_size'][0]}_3d")
+                   f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d")
 
 
 if __name__ == '__main__':
