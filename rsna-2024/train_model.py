@@ -454,7 +454,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 def train_model_3d(backbone, model_label: str):
     transform_3d_train = tio.Compose([
-        tio.Resize(CONFIG["vol_size"], image_interpolation="bspline"),
+        tio.Resize(CONFIG["vol_size"], image_interpolation="gaussian"),
         tio.RandomAffine(p=CONFIG["aug_prob"]),
         # tio.OneOf({
         #     tio.RandomElasticDeformation(): 0.3,
@@ -472,7 +472,7 @@ def train_model_3d(backbone, model_label: str):
     ])
 
     transform_3d_val = tio.Compose([
-        tio.Resize(CONFIG["vol_size"], image_interpolation="bspline"),
+        tio.Resize(CONFIG["vol_size"], image_interpolation="gaussian"),
         tio.RescaleIntensity(out_min_max=(0, 1)),
     ])
 
@@ -498,7 +498,7 @@ def train_model_3d(backbone, model_label: str):
     ]
     criteria = [
         # WeightedBCELoss(device=CONFIG["device"])
-        nn.BCEWithLogitsLoss(pos_weight=COMP_WEIGHTS)
+        nn.BCEWithLogitsLoss(pos_weight=CLASS_RELATIVE_WEIGHTS)
     ]
 
     train_model_with_validation(model,
