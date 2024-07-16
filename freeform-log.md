@@ -901,3 +901,8 @@ Oh well, hopefully it will be fine.
 Two things to do next
 1. Volume stitching using some similarity measure vs last slice. Later, can use affine per slice?
 2. Get joint coordinates, which might be easier than segmentation + pose estimation + slicing through axial and coronal centers.
+
+## 7/15
+### 4 PM
+So the class relative weighted loss gets `0.79` CV with all the augments at `0.544416` loss, same CV the competition weighted loss at `0.442001`
+Anything significantly below for either approach will likely do much better.
