@@ -906,3 +906,7 @@ Two things to do next
 ### 4 PM
 So the class relative weighted loss gets `0.79` CV with all the augments at `0.544416` loss, same CV the competition weighted loss at `0.442001`
 Anything significantly below for either approach will likely do much better.
+
+## 7/16
+### 12 PM
+Getting `0.75` CV if I divide the logits by the loss weights. So maybe I can do even better using actual training data distribution and then correct during inference.
