@@ -13,6 +13,8 @@ CONFIG = dict(
     n_levels=5,
     # backbone="efficientnet_b4",
     backbone="tf_efficientnetv2_m",
+    interpolation="bspline",
+    # interpolation="gaussian",
     img_size=(128, 128),
     vol_size=(192, 192, 192),
     num_workers=16,
@@ -454,7 +456,7 @@ def train_model_for_series(data_subset_label: str, model_label: str):
 
 def train_model_3d(backbone, model_label: str):
     transform_3d_train = tio.Compose([
-        tio.Resize(CONFIG["vol_size"], image_interpolation="gaussian"),
+        tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
         tio.RandomAffine(p=CONFIG["aug_prob"]),
         # tio.OneOf({
         #     tio.RandomElasticDeformation(): 0.3,
@@ -472,7 +474,7 @@ def train_model_3d(backbone, model_label: str):
     ])
 
     transform_3d_val = tio.Compose([
-        tio.Resize(CONFIG["vol_size"], image_interpolation="gaussian"),
+        tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
     ])
 
