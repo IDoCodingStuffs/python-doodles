@@ -601,7 +601,7 @@ class PatientLevelDataset(Dataset):
             if self.transform_3d is not None:
                 series_images = self.transform_3d(np.expand_dims(series_images, 0)) #.data
 
-            images.append(torch.Tensor(series_images).squeeze(0))
+            images.append(torch.HalfTensor(series_images).squeeze(0))
 
         return torch.stack(images), torch.tensor(label).type(torch.FloatTensor)
 
