@@ -737,7 +737,8 @@ def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
                                               split_factor=0.2,
                                               random_seed=42,
                                               batch_size=1,
-                                              num_workers=0):
+                                              num_workers=0,
+                                              pin_memory=True):
     # By defauly, 8-1.5-.5 split
     df = df.dropna()
     # This drops any subjects with nans
@@ -776,8 +777,8 @@ def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
 
     # train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
     # train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker, num_workers=num_workers)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     # !TODO: Refactor
