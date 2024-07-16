@@ -187,7 +187,7 @@ class CNN_Model_Multichannel(nn.Module):
 
 
 class CNN_Model_3D(nn.Module):
-    def __init__(self, backbone="efficientnet_lite0", in_chans=1, out_classes=5, pretrained=False):
+    def __init__(self, backbone="efficientnet_lite0", in_chans=1, out_classes=5, pretrained=True):
         super(CNN_Model_3D, self).__init__()
         self.out_classes = out_classes
 
