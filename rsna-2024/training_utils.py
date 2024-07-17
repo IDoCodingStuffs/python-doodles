@@ -33,8 +33,8 @@ def model_validation_loss(model, val_loader, loss_fns, epoch, loss_weights=None)
             # !TODO: Do this in the data loader
             label = label.to(device)
 
-            with autocast():
-                output = model(images.to(device))
+            # with autocast():
+            output = model(images.to(device))
             for index, loss_fn in enumerate(loss_fns["val"]):
                 loss = loss_fn(output, label)
                 total_loss += loss.cpu().item()
@@ -116,8 +116,8 @@ def train_model_with_validation(model,
             images, label = val
             label = label.to(device)
 
-            with autocast():
-                output = model(images.to(device))
+            # with autocast():
+            output = model(images.to(device))
 
             for loss_index, loss_fn in enumerate(loss_fns["train"]):
                 # loss = loss_fn(output[:, loss_index], label[:, loss_index]) / gradient_accumulation_per
