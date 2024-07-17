@@ -17,7 +17,7 @@ CONFIG = dict(
     # interpolation="gaussian",
     img_size=(128, 128),
     vol_size=(192, 192, 192),
-    num_workers=16,
+    num_workers=12,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
@@ -86,34 +86,32 @@ CLASS_NEG_VS_POS = torch.Tensor(
      3.31674959e-02, 4.51481481e+01, 9.48461538e+01]
 ).to(CONFIG["device"])
 
-
 COMP_WEIGHTS = torch.Tensor([1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       1, 2, 4,
-                                       ]).to(CONFIG["device"])
-
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             1, 2, 4,
+                             ]).to(CONFIG["device"])
 
 
 class NormMLPClassifierHead(nn.Module):
@@ -159,7 +157,7 @@ class CNN_Model(nn.Module):
             num_classes=CONFIG["out_dim"] * CONFIG["n_levels"],
             features_only=False,
             drop_rate=CONFIG["drop_rate"],
-            #drop_path_rate=CONFIG["drop_path_rate"],
+            # drop_path_rate=CONFIG["drop_path_rate"],
             pretrained=pretrained,
             global_pool='avg',
             in_chans=CONFIG["in_chans"],
@@ -499,10 +497,14 @@ def train_model_3d(backbone, model_label: str):
     ]
     schedulers = [
     ]
-    criteria = [
-        # nn.BCEWithLogitsLoss(pos_weight=CLASS_RELATIVE_WEIGHTS)
-        nn.BCEWithLogitsLoss(pos_weight=COMP_WEIGHTS)
-    ]
+    criteria = {
+        "train": [
+            nn.BCEWithLogitsLoss(pos_weight=CLASS_RELATIVE_WEIGHTS)
+        ],
+        "val": [
+            nn.BCEWithLogitsLoss()
+        ]
+    }
 
     train_model_with_validation(model,
                                 optimizers,
@@ -521,7 +523,7 @@ def train_model_3d(backbone, model_label: str):
 
 def train():
     model = train_model_3d(CONFIG['backbone'],
-                   f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d")
+                           f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d")
 
 
 if __name__ == '__main__':
