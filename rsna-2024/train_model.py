@@ -17,7 +17,7 @@ CONFIG = dict(
     # interpolation="gaussian",
     img_size=(128, 128),
     vol_size=(192, 192, 192),
-    num_workers=6,
+    num_workers=12,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
@@ -487,7 +487,7 @@ def train_model_3d(backbone, model_label: str):
                                                                             num_workers=CONFIG["num_workers"],
                                                                             split_factor=0.3,
                                                                             batch_size=CONFIG["batch_size"],
-                                                                            # pin_memory=False
+                                                                            pin_memory=False
                                                                             )
 
     NUM_EPOCHS = CONFIG["epochs"]
