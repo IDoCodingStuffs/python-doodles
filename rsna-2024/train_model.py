@@ -58,6 +58,8 @@ CLASS_RELATIVE_WEIGHTS = torch.Tensor([1., 29.34146341, 601.5,
                                        1., 44.66666667, 92.76923077
                                        ]).to(CONFIG["device"])
 
+CLASS_LOGN_RELATIVE_WEIGHTS = 1 + 2 * torch.log(CLASS_RELATIVE_WEIGHTS)
+
 CLASS_NEG_VS_POS = torch.Tensor(
     [3.57439734e-02, 2.93902439e+01, 6.22000000e+02,
      1.02654867e-01, 1.05370370e+01, 1.54750000e+02,
@@ -113,7 +115,7 @@ COMP_WEIGHTS = torch.Tensor([1, 2, 4,
                              1, 2, 4,
                              ]).to(CONFIG["device"])
 
-CONFIG["loss_weights"] = CLASS_RELATIVE_WEIGHTS
+CONFIG["loss_weights"] = CLASS_LOGN_RELATIVE_WEIGHTS
 
 class NormMLPClassifierHead(nn.Module):
     def __init__(self, in_dim, out_dim):
