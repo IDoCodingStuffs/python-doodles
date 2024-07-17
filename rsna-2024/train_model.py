@@ -24,7 +24,7 @@ CONFIG = dict(
     aug_prob=0.7,
     out_dim=3,
     epochs=50,
-    batch_size=8,
+    batch_size=6,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
 )
@@ -487,7 +487,7 @@ def train_model_3d(backbone, model_label: str):
                                                                             num_workers=CONFIG["num_workers"],
                                                                             split_factor=0.3,
                                                                             batch_size=CONFIG["batch_size"],
-                                                                            pin_memory=True
+                                                                            pin_memory=False
                                                                             )
 
     NUM_EPOCHS = CONFIG["epochs"]
