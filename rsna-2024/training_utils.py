@@ -11,9 +11,6 @@ _logger = logging.getLogger(__name__)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-# !TODO:
-# IMPLEMENTATION: https://github.com/clcarwin/focal_loss_pytorch
-
 # !TODO: Optional
 def freeze_model_backbone(model: nn.Module):
     for param in model.backbone.parameters():
@@ -151,7 +148,9 @@ def train_model_with_validation(model,
         for scheduler in schedulers:
             scheduler.step()
 
-        if epoch % 5 == 0 or epoch_validation_loss < min(epoch_validation_losses):
+        if (epoch % 5 == 0
+                or epoch_validation_loss < min(epoch_validation_losses))\
+                or alt_epoch_validation_loss < min(alt_epoch_validation_losses):
             os.makedirs(f'./models/{model_desc}', exist_ok=True)
             torch.save(model,
                        # torch.jit.script(model),
