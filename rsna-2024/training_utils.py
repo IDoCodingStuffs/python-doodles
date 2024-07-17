@@ -36,14 +36,12 @@ def model_validation_loss(model, val_loader, loss_fns, epoch, loss_weights=None)
             with autocast():
                 output = model(images.to(device))
             for index, loss_fn in enumerate(loss_fns["val"]):
-                loss = loss_fn(output, label)
+                loss = loss_fn(output[:, index], label[:, index])
                 total_loss += loss.cpu().item()
-                del loss
 
             for index, loss_fn in enumerate(loss_fns["train"]):
-                loss = loss_fn(output, label)
+                loss = loss_fn(output[:, index], label[:, index])
                 weighted_loss += loss.cpu().item()
-                del loss
 
             del output
             torch.cuda.empty_cache()
@@ -120,11 +118,10 @@ def train_model_with_validation(model,
                 output = model(images.to(device))
 
             for loss_index, loss_fn in enumerate(loss_fns["train"]):
-                # loss = loss_fn(output[:, loss_index], label[:, loss_index]) / gradient_accumulation_per
-                loss = loss_fn(output, label) / gradient_accumulation_per
+                loss = loss_fn(output[:, loss_index], label[:, loss_index]) / gradient_accumulation_per
+                # loss = loss_fn(output, label) / gradient_accumulation_per
                 epoch_loss += loss.detach().cpu().item() * gradient_accumulation_per
                 loss.backward(retain_graph=True)
-                del loss
 
             del output
 
@@ -138,9 +135,8 @@ def train_model_with_validation(model,
             if empty_cache_every_n_iterations > 0 and index % empty_cache_every_n_iterations == 0:
                 torch.cuda.empty_cache()
 
-                # !TODO: Refactor
-                while os.path.exists(".pause"):
-                    pass
+            while os.path.exists(".pause"):
+                pass
 
         epoch_loss = epoch_loss / len(train_loader)
         epoch_validation_loss, alt_epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns, epoch, loss_weights)

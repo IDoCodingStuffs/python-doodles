@@ -602,9 +602,9 @@ class PatientLevelDataset(Dataset):
                 series_images = self.transform_3d(np.expand_dims(series_images, 0)) #.data
 
             images.append(torch.tensor(series_images, dtype=torch.half).squeeze(0))
-            del series_images
+            # del series_images
 
-        return torch.stack(images), torch.tensor(label, dtype=torch.half)
+        return torch.stack(images), torch.tensor(label, dtype=torch.long)
 
     def _get_labels(self):
         labels = dict()
@@ -617,13 +617,16 @@ class PatientLevelDataset(Dataset):
                 else:
                     raise ValueError()
 
-            # !TODO: Clean
             study_id = name[0]
-            labels[study_id] = []
-            for label in label_indices:
-                curr = [0 if label != i else 1 for i in range(3)]
-                labels[study_id].append(curr)
-            labels[study_id] = np.array(labels[study_id]).flatten()
+
+            # One-hot
+            # labels[study_id] = []
+            # for label in label_indices:
+            #     curr = [0 if label != i else 1 for i in range(3)]
+            #     labels[study_id].append(curr)
+            # labels[study_id] = np.array(labels[study_id]).flatten()
+            labels[study_id] = label_indices
+
         return labels
 
 
