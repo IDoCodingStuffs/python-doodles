@@ -40,10 +40,10 @@ def model_validation_loss(model, val_loader, loss_fns, epoch, loss_weights=None)
                 total_loss += loss.cpu().item()
                 del loss
 
-                if loss_weights is not None:
-                    loss = loss_fn(output / loss_weights, label)
-                    weighted_loss += loss.cpu().item()
-                    del loss
+            for index, loss_fn in enumerate(loss_fns["train"]):
+                loss = loss_fn(output, label)
+                weighted_loss += loss.cpu().item()
+                del loss
 
             del output
             torch.cuda.empty_cache()

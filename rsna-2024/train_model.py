@@ -113,6 +113,7 @@ COMP_WEIGHTS = torch.Tensor([1, 2, 4,
                              1, 2, 4,
                              ]).to(CONFIG["device"])
 
+CONFIG["loss_weights"] = CLASS_RELATIVE_WEIGHTS
 
 class NormMLPClassifierHead(nn.Module):
     def __init__(self, in_dim, out_dim):
@@ -486,7 +487,7 @@ def train_model_3d(backbone, model_label: str):
                                                                             num_workers=CONFIG["num_workers"],
                                                                             split_factor=0.3,
                                                                             batch_size=CONFIG["batch_size"],
-                                                                            pin_memory=False
+                                                                            pin_memory=True
                                                                             )
 
     NUM_EPOCHS = CONFIG["epochs"]
@@ -499,7 +500,7 @@ def train_model_3d(backbone, model_label: str):
     ]
     criteria = {
         "train": [
-            nn.BCEWithLogitsLoss(pos_weight=CLASS_RELATIVE_WEIGHTS)
+            nn.BCEWithLogitsLoss(pos_weight=CONFIG["loss_weights"])
         ],
         "val": [
             nn.BCEWithLogitsLoss()
@@ -516,7 +517,7 @@ def train_model_3d(backbone, model_label: str):
                                 train_loader_desc=f"Training {model_label}",
                                 epochs=NUM_EPOCHS,
                                 freeze_backbone_initial_epochs=0,
-                                loss_weights=CLASS_RELATIVE_WEIGHTS
+                                loss_weights=CONFIG["loss_weights"]
                                 )
 
     return model
