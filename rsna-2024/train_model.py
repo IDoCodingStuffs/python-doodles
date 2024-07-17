@@ -516,6 +516,7 @@ def train_model_3d(backbone, model_label: str):
                                 train_loader_desc=f"Training {model_label}",
                                 epochs=NUM_EPOCHS,
                                 freeze_backbone_initial_epochs=0,
+                                loss_weights=CLASS_RELATIVE_WEIGHTS
                                 )
 
     return model

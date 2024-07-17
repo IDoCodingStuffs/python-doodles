@@ -25,8 +25,9 @@ def unfreeze_model_backbone(model: nn.Module):
         param.requires_grad = True
 
 
-def model_validation_loss(model, val_loader, loss_fns, epoch):
+def model_validation_loss(model, val_loader, loss_fns, epoch, loss_weights=None):
     total_loss = 0
+    weighted_loss = 0
 
     with torch.no_grad():
         model.eval()
@@ -42,17 +43,24 @@ def model_validation_loss(model, val_loader, loss_fns, epoch):
                 total_loss += loss.cpu().item()
                 del loss
 
+                if loss_weights is not None:
+                    loss = loss_fn(output / loss_weights, label)
+                    weighted_loss += loss.cpu().item()
+                    del loss
+
             del output
             torch.cuda.empty_cache()
 
         total_loss = total_loss / len(val_loader)
+        weighted_loss = weighted_loss / len(val_loader)
 
-        return total_loss
+        return total_loss, weighted_loss
 
 
-def dump_plots_for_loss_and_acc(losses, val_losses, data_subset_label, model_label):
+def dump_plots_for_loss_and_acc(losses, val_losses, alt_val_losses, data_subset_label, model_label):
     plt.plot(np.log(losses), label="train")
     plt.plot(np.log(val_losses), label="val")
+    plt.plot(np.log(alt_val_losses), label="alt_val")
     plt.legend(loc="center right")
     plt.title(data_subset_label)
     plt.savefig(f'./figures/{model_label}_loss.png')
@@ -91,9 +99,11 @@ def train_model_with_validation(model,
                                 gradient_accumulation_per=1,
                                 epochs=10,
                                 freeze_backbone_initial_epochs=0,
-                                empty_cache_every_n_iterations=0):
+                                empty_cache_every_n_iterations=0,
+                                loss_weights=None):
     epoch_losses = []
     epoch_validation_losses = []
+    alt_epoch_validation_losses = []
 
     if freeze_backbone_initial_epochs > 0:
         freeze_model_backbone(model)
@@ -136,7 +146,7 @@ def train_model_with_validation(model,
                     pass
 
         epoch_loss = epoch_loss / len(train_loader)
-        epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns, epoch)
+        epoch_validation_loss, alt_epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns, epoch, loss_weights)
 
         for scheduler in schedulers:
             scheduler.step()
@@ -148,11 +158,13 @@ def train_model_with_validation(model,
                        f'./models/{model_desc}/{model_desc}' + "_" + str(epoch) + ".pt")
 
         epoch_validation_losses.append(epoch_validation_loss)
+        alt_epoch_validation_losses.append(alt_epoch_validation_loss)
         epoch_losses.append(epoch_loss)
 
-        dump_plots_for_loss_and_acc(epoch_losses, epoch_validation_losses,
+        dump_plots_for_loss_and_acc(epoch_losses, epoch_validation_losses, alt_epoch_validation_losses,
                                     train_loader_desc, model_desc)
         print(f"Training Loss for epoch {epoch}: {epoch_loss:.6f}")
         print(f"Validation Loss for epoch {epoch}: {epoch_validation_loss:.6f}")
+        print(f"Alt Validation Loss for epoch {epoch}: {alt_epoch_validation_loss:.6f}")
 
     return epoch_losses, epoch_validation_losses
