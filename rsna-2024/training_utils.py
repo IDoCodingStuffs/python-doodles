@@ -32,7 +32,7 @@ def model_validation_loss(model, val_loader, loss_fns, epoch, loss_weights=None)
         for images, label in tqdm(val_loader, desc=f"Validating epoch {epoch}"):
             label = label.to(device).unqueeze(-1)
 
-            with autocast(dtype=torch.bfloat16):
+            with autocast(enabled=device != "cpu", dtype=torch.bfloat16):
                 output = model(images.to(device))
                 for index, loss_fn in enumerate(loss_fns["val"]):
                     loss = loss_fn(output[:, index], label[:, index]) / len(loss_fns["val"])
@@ -116,7 +116,7 @@ def train_model_with_validation(model,
             images, label = val
             label = label.to(device).unsqueeze(-1)
 
-            with autocast(dtype=torch.bfloat16):
+            with autocast(enabled=device != "cpu", dtype=torch.bfloat16):
                 output = model(images.to(device))
 
                 loss = sum([(loss_fn(output[:, loss_index], label[:, loss_index]) / gradient_accumulation_per) for
