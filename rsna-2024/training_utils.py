@@ -3,7 +3,7 @@ import os.path
 from tqdm import tqdm
 import logging
 from torch.profiler import profile, record_function, ProfilerActivity
-from  torch.cuda.amp import autocast
+from torch.cuda.amp import autocast, GradScaler
 
 from rsna_dataloader import *
 
@@ -33,7 +33,7 @@ def model_validation_loss(model, val_loader, loss_fns, epoch, loss_weights=None)
             # !TODO: Do this in the data loader
             label = label.to(device)
 
-            with autocast():
+            with autocast(dtype=torch.bfloat16):
                 output = model(images.to(device))
                 for index, loss_fn in enumerate(loss_fns["val"]):
                     loss = loss_fn(output[:, index], label[:, index])
@@ -100,6 +100,8 @@ def train_model_with_validation(model,
     epoch_validation_losses = []
     alt_epoch_validation_losses = []
 
+    scaler = GradScaler(init_scale=4096)
+
     if freeze_backbone_initial_epochs > 0:
         freeze_model_backbone(model)
 
@@ -114,22 +116,25 @@ def train_model_with_validation(model,
             images, label = val
             label = label.to(device)
 
-            with autocast():
+            with autocast(dtype=torch.bfloat16):
                 output = model(images.to(device))
 
-                for loss_index, loss_fn in enumerate(loss_fns["train"]):
-                    loss = loss_fn(output[:, loss_index], label[:, loss_index]) / gradient_accumulation_per
-                    # loss = loss_fn(output, label) / gradient_accumulation_per
-                    epoch_loss += loss.detach().cpu().item() * gradient_accumulation_per
-                    loss.backward(retain_graph=True)
+                loss = sum([(loss_fn(output[:, loss_index], label[:, loss_index]) / gradient_accumulation_per) for
+                            loss_index, loss_fn in enumerate(loss_fns["train"])])
+                # loss = loss_fn(output, label) / gradient_accumulation_per
+                epoch_loss += loss.detach().cpu().item() * gradient_accumulation_per
+
+            scaler.scale(loss).backward()
 
             del output
 
             # Per gradient accumulation batch or if the last iter
             if index % gradient_accumulation_per == 0 or index == len(train_loader) - 1:
                 for optimizer in optimizers:
-                    optimizer.step()
+                    scaler.step(optimizer)
                     optimizer.zero_grad(set_to_none=True)
+
+            scaler.update()
 
             # prof.step()
             if empty_cache_every_n_iterations > 0 and index % empty_cache_every_n_iterations == 0:
@@ -139,13 +144,14 @@ def train_model_with_validation(model,
                 pass
 
         epoch_loss = epoch_loss / len(train_loader)
-        epoch_validation_loss, alt_epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns, epoch, loss_weights)
+        epoch_validation_loss, alt_epoch_validation_loss = model_validation_loss(model, val_loader, loss_fns, epoch,
+                                                                                 loss_weights)
 
         for scheduler in schedulers:
             scheduler.step()
 
         if (epoch % 5 == 0
-                or epoch_validation_loss < min(epoch_validation_losses))\
+            or epoch_validation_loss < min(epoch_validation_losses)) \
                 or alt_epoch_validation_loss < min(alt_epoch_validation_losses):
             os.makedirs(f'./models/{model_desc}', exist_ok=True)
             torch.save(model,
