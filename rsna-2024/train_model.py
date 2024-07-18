@@ -25,7 +25,7 @@ CONFIG = dict(
     aug_prob=0.7,
     out_dim=3,
     epochs=50,
-    batch_size=4,
+    batch_size=8,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
 )
