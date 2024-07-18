@@ -916,3 +916,9 @@ Next thing is figuring out segmentation with something like GMM. Before even get
 
 ### 3 PM
 Likely worth doing a hyperparam study on interpolation methods. Maybe guassian vs bspline to see if smoothing helps with learning latent segmentation?
+
+## 7/18
+### 12 AM
+Reverted the multihead change. I first need to ensure my experiment with the half float type and the ensuing hilarity get fully reverted.
+Once I can verify higher definition models with the proven approach do even better, I can try out the multihead approach. 
+One hyperparam at a time.
