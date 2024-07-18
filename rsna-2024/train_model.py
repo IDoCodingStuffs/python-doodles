@@ -17,14 +17,14 @@ CONFIG = dict(
     # interpolation="gaussian",
     img_size=(128, 128),
     vol_size=(192, 192, 192),
-    num_workers=12,
+    num_workers=8,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
     aug_prob=0.7,
     out_dim=3,
     epochs=50,
-    batch_size=6,
+    batch_size=8,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
 )
