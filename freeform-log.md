@@ -916,3 +916,7 @@ Next thing is figuring out segmentation with something like GMM. Before even get
 
 ### 3 PM
 Likely worth doing a hyperparam study on interpolation methods. Maybe guassian vs bspline to see if smoothing helps with learning latent segmentation?
+
+## 7/17
+### 5 PM
+Model not training too well after switching to half precision it seems. Probably a bug on tensor init, something to do with autocast, or something even trickier.
