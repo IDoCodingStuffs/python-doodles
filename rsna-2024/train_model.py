@@ -3,6 +3,7 @@ import math
 import timm
 import timm_3d
 import torchio as tio
+from spacecutter.losses import CumulativeLinkLoss
 from spacecutter.models import LogisticCumulativeLink
 
 from training_utils import *
@@ -195,10 +196,10 @@ def train_model_3d(backbone, model_label: str):
     ]
     criteria = {
         "train": [
-            nn.CrossEntropyLoss(weight=CONFIG["loss_weights"][i]) for i in range(CONFIG["num_classes"])
+            CumulativeLinkLoss(class_weights=CONFIG["loss_weights"][i]) for i in range(CONFIG["num_classes"])
         ],
         "val": [
-            nn.CrossEntropyLoss() for i in range(CONFIG["num_classes"])
+            CumulativeLinkLoss() for i in range(CONFIG["num_classes"])
         ]
     }
 
