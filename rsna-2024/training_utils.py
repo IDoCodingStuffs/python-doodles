@@ -126,6 +126,7 @@ def train_model_with_validation(model,
                 epoch_loss += loss.detach().cpu().item() * gradient_accumulation_per
 
             scaler.scale(loss).backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1e9)
 
             del output
 
