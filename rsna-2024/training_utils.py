@@ -36,11 +36,11 @@ def model_validation_loss(model, val_loader, loss_fns, epoch, loss_weights=None)
             with autocast(dtype=torch.bfloat16):
                 output = model(images.to(device))
                 for index, loss_fn in enumerate(loss_fns["val"]):
-                    loss = loss_fn(output[:, index], label[:, index])
+                    loss = loss_fn(output[:, index], label[:, index]) / len(loss_fns["val"])
                     total_loss += loss.cpu().item()
 
                 for index, loss_fn in enumerate(loss_fns["train"]):
-                    loss = loss_fn(output[:, index], label[:, index])
+                    loss = loss_fn(output[:, index], label[:, index]) / len(loss_fns["train"])
                     weighted_loss += loss.cpu().item()
 
             del output
@@ -121,6 +121,7 @@ def train_model_with_validation(model,
 
                 loss = sum([(loss_fn(output[:, loss_index], label[:, loss_index]) / gradient_accumulation_per) for
                             loss_index, loss_fn in enumerate(loss_fns["train"])])
+                loss = loss / len(loss_fns["train"])
                 # loss = loss_fn(output, label) / gradient_accumulation_per
                 epoch_loss += loss.detach().cpu().item() * gradient_accumulation_per
 
