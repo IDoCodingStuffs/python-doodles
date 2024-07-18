@@ -5,6 +5,7 @@ import timm_3d
 import torchio as tio
 from spacecutter.losses import CumulativeLinkLoss
 from spacecutter.models import LogisticCumulativeLink
+from spacecutter.callbacks import AscensionCallback
 
 from training_utils import *
 from rsna_dataloader import *
@@ -144,10 +145,15 @@ class CNN_Model_3D_Multihead(nn.Module):
             ) for i in range(out_classes)]
         )
 
+        self.ascension_callback = AscensionCallback()
+
     def forward(self, x):
         feat = self.encoder(x)
         return torch.swapaxes(torch.stack([head(feat) for head in self.heads]), 0, 1)
 
+    def _ascension_callback(self):
+        for head in self.heads:
+            self.ascension_callback.clip(head[1])
 
 def train_model_3d(backbone, model_label: str):
     transform_3d_train = tio.Compose([
@@ -213,7 +219,8 @@ def train_model_3d(backbone, model_label: str):
                                 train_loader_desc=f"Training {model_label}",
                                 epochs=NUM_EPOCHS,
                                 freeze_backbone_initial_epochs=0,
-                                loss_weights=CONFIG["loss_weights"]
+                                loss_weights=CONFIG["loss_weights"],
+                                callbacks=[model._ascension_callback]
                                 )
 
     return model

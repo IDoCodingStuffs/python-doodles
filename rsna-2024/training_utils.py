@@ -95,7 +95,8 @@ def train_model_with_validation(model,
                                 epochs=10,
                                 freeze_backbone_initial_epochs=0,
                                 empty_cache_every_n_iterations=0,
-                                loss_weights=None):
+                                loss_weights=None,
+                                callbacks=None):
     epoch_losses = []
     epoch_validation_losses = []
     alt_epoch_validation_losses = []
@@ -137,6 +138,10 @@ def train_model_with_validation(model,
                     optimizer.zero_grad(set_to_none=True)
 
             scaler.update()
+
+            if callbacks:
+                for callback in callbacks:
+                    callback()
 
             # prof.step()
             if empty_cache_every_n_iterations > 0 and index % empty_cache_every_n_iterations == 0:
