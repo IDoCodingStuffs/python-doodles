@@ -3,7 +3,7 @@ import os.path
 from tqdm import tqdm
 import logging
 from torch.profiler import profile, record_function, ProfilerActivity
-from  torch.cuda.amp import autocast
+from torch.cuda.amp import autocast
 
 from rsna_dataloader import *
 
