@@ -920,3 +920,9 @@ Likely worth doing a hyperparam study on interpolation methods. Maybe guassian v
 ## 7/17
 ### 5 PM
 Model not training too well after switching to half precision it seems. Probably a bug on tensor init, something to do with autocast, or something even trickier.
+
+### 9 PM
+Still not training at half precision. I need to figure how to load it right
+
+### 10 PM
+I give up on using half precision. Instead I will start trying patch based, which can be a good segue into vertebral segmentation and slicing.
