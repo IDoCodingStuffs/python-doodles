@@ -121,9 +121,8 @@ def train_model_with_validation(model,
 
                 loss = sum([(loss_fn(output[:, loss_index], label[:, loss_index]) / gradient_accumulation_per) for
                             loss_index, loss_fn in enumerate(loss_fns["train"])])
-                loss = loss / len(loss_fns["train"])
                 # loss = loss_fn(output, label) / gradient_accumulation_per
-                epoch_loss += loss.detach().cpu().item() * gradient_accumulation_per
+                epoch_loss += loss.detach().cpu().item() * gradient_accumulation_per / len(loss_fns["train"])
 
             scaler.scale(loss).backward()
             # torch.nn.utils.clip_grad_norm_(model.parameters(), 1e9)
