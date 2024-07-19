@@ -92,32 +92,7 @@ CLASS_NEG_VS_POS = torch.Tensor(
      3.31674959e-02, 4.51481481e+01, 9.48461538e+01]
 ).to(CONFIG["device"])
 
-COMP_WEIGHTS = torch.Tensor([1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             1, 2, 4,
-                             ]).to(CONFIG["device"])
+COMP_WEIGHTS = torch.Tensor([[1, 2, 4] for i in range(25)]).to(CONFIG["device"])
 
 CONFIG["loss_weights"] = CLASS_LOGN_RELATIVE_WEIGHTS
 
