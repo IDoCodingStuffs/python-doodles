@@ -196,7 +196,8 @@ def train_model_3d(backbone, model_label: str):
 
     model = CNN_Model_3D_Multihead(backbone=backbone, in_chans=3, out_classes=CONFIG["num_classes"]).to(device)
     optimizers = [
-        torch.optim.Adam(model.parameters(), lr=1e-3),
+        torch.optim.Adam(model.encoder.parameters(), lr=5e-5),
+        torch.optim.Adam(model.heads.parameters(), lr=1e-3),
     ]
     schedulers = [
     ]
