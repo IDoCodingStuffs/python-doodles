@@ -21,7 +21,7 @@ CONFIG = dict(
     # interpolation="gaussian",
     img_size=(128, 128),
     vol_size=(144, 144, 144),
-    num_workers=6,
+    num_workers=12,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
@@ -229,7 +229,7 @@ def train_model_3d(backbone, model_label: str):
 
 def train():
     model = train_model_3d(CONFIG['backbone'],
-                           f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d")
+                           f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d_spacecutter")
 
 
 if __name__ == '__main__':
