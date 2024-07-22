@@ -86,7 +86,7 @@ class PatientLevelDataset(Dataset):
             series_images = read_series_as_volume(series_path)
 
             if is_mirror:
-                series_images = np.flip(series_images, axis=1 if series_desc == "Axial T2" else 0)
+                series_images = np.flip(series_images, axis=2 if series_desc == "Axial T2" else 0)
                 temp = label[:10].copy()
                 label[:10] = label[10:20].copy()
                 label[10:20] = temp
