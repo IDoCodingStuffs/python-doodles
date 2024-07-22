@@ -49,9 +49,11 @@ class PatientLevelDataset(Dataset):
                  base_path: str,
                  dataframe: pd.DataFrame,
                  transform_3d=None,
-                 is_train=False):
+                 is_train=False,
+                 use_mirror_trick=False):
         self.base_path = base_path
         self.is_train = is_train
+        self.use_mirror_trick = use_mirror_trick
 
         self.dataframe = (dataframe[['study_id', "series_id", "series_description", "condition", "severity", "level"]]
                           .drop_duplicates())
@@ -64,10 +66,12 @@ class PatientLevelDataset(Dataset):
         self.labels = self._get_labels()
 
     def __len__(self):
-        return len(self.subjects)
+        return len(self.subjects) * 2 if self.use_mirror_trick else 1
 
     def __getitem__(self, index):
-        curr = self.subjects.iloc[index]
+        is_mirror = index >= len(self.subjects)
+        curr = self.subjects.iloc[index % len(self.subjects)]
+
         label = np.array(self.labels[(curr["study_id"])])
         images_basepath = os.path.join(self.base_path, str(curr["study_id"]))
         images = []
@@ -79,15 +83,18 @@ class PatientLevelDataset(Dataset):
                 (self.dataframe["series_description"] == series_desc)].sort_values("series_id")['series_id'].iloc[0]
 
             series_path = os.path.join(images_basepath, str(series))
-            # series_images, affine = load_dicom_series(series_path)
-            # series_images = tio.ScalarImage(series_path, reader=load_dicom_series).data
             series_images = read_series_as_volume(series_path)
+
+            if is_mirror:
+                series_images = np.flip(series_images, axis=1 if series_desc == "Axial T2" else 0)
+                temp = label[:10].copy()
+                label[:10] = label[10:20].copy()
+                label[10:20] = temp
 
             if self.transform_3d is not None:
                 series_images = self.transform_3d(np.expand_dims(series_images, 0)) #.data
 
             images.append(torch.tensor(series_images, dtype=torch.half).squeeze(0))
-            # del series_images
 
         return torch.stack(images), torch.tensor(label, dtype=torch.long)
 
