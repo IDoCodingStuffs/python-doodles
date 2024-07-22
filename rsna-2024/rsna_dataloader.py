@@ -66,7 +66,7 @@ class PatientLevelDataset(Dataset):
         self.labels = self._get_labels()
 
     def __len__(self):
-        return len(self.subjects) * 2 if self.use_mirror_trick else 1
+        return len(self.subjects) * (2 if self.use_mirror_trick else 1)
 
     def __getitem__(self, index):
         is_mirror = index >= len(self.subjects)
