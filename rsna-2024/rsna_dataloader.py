@@ -129,7 +129,8 @@ def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
                                               random_seed=42,
                                               batch_size=1,
                                               num_workers=0,
-                                              pin_memory=True):
+                                              pin_memory=True,
+                                              use_mirroring_trick=True):
     # By defauly, 8-1.5-.5 split
     df = df.dropna()
     # This drops any subjects with nans
@@ -159,7 +160,8 @@ def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
     random.seed(random_seed)
     train_dataset = PatientLevelDataset(base_path, train_df,
                                         transform_3d=transform_3d_train,
-                                        is_train=True
+                                        is_train=True,
+                                        use_mirror_trick=use_mirroring_trick
                                         )
     val_dataset = PatientLevelDataset(base_path, val_df,
                                       transform_3d=transform_3d_val)
