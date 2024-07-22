@@ -20,8 +20,8 @@ CONFIG = dict(
     interpolation="bspline",
     # interpolation="gaussian",
     img_size=(128, 128),
-    vol_size=(192, 192, 192),
-    num_workers=9,
+    vol_size=(144, 144, 144),
+    num_workers=12,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
@@ -64,6 +64,14 @@ CLASS_RELATIVE_WEIGHTS = torch.Tensor([[1., 29.34146341, 601.5, ],
 
 CLASS_LOGN_RELATIVE_WEIGHTS = 1 + 2 * torch.log(CLASS_RELATIVE_WEIGHTS)
 
+# !TODO: Refactor
+CLASS_RELATIVE_WEIGHTS_MIRROR = CLASS_LOGN_RELATIVE_WEIGHTS
+CLASS_RELATIVE_WEIGHTS_MIRROR[0:10] += CLASS_RELATIVE_WEIGHTS_MIRROR[10:20]
+CLASS_RELATIVE_WEIGHTS_MIRROR[0:10] /= 2
+CLASS_RELATIVE_WEIGHTS_MIRROR[10:20] = CLASS_RELATIVE_WEIGHTS_MIRROR[0:10]
+
+CLASS_LOGN_RELATIVE_WEIGHTS_MIRROR = 1 + 2 * torch.log(CLASS_RELATIVE_WEIGHTS_MIRROR)
+
 CLASS_NEG_VS_POS = torch.Tensor(
     [3.57439734e-02, 2.93902439e+01, 6.22000000e+02,
      1.02654867e-01, 1.05370370e+01, 1.54750000e+02,
@@ -94,7 +102,7 @@ CLASS_NEG_VS_POS = torch.Tensor(
 
 COMP_WEIGHTS = torch.Tensor([[1, 2, 4] for i in range(25)]).to(CONFIG["device"])
 
-CONFIG["loss_weights"] = CLASS_LOGN_RELATIVE_WEIGHTS
+CONFIG["loss_weights"] = CLASS_LOGN_RELATIVE_WEIGHTS_MIRROR
 
 class CNN_Model_3D_Multihead(nn.Module):
     def __init__(self, backbone="efficientnet_lite0", in_chans=1, out_classes=5, out_dim=3, pretrained=True):
