@@ -65,12 +65,12 @@ CLASS_RELATIVE_WEIGHTS = torch.Tensor([[1., 29.34146341, 601.5, ],
 CLASS_LOGN_RELATIVE_WEIGHTS = 1 + 2 * torch.log(CLASS_RELATIVE_WEIGHTS)
 
 # !TODO: Refactor
-CLASS_RELATIVE_WEIGHTS_MIRROR = CLASS_LOGN_RELATIVE_WEIGHTS
+CLASS_RELATIVE_WEIGHTS_MIRROR = CLASS_RELATIVE_WEIGHTS.clone()
 CLASS_RELATIVE_WEIGHTS_MIRROR[0:10] += CLASS_RELATIVE_WEIGHTS_MIRROR[10:20]
 CLASS_RELATIVE_WEIGHTS_MIRROR[0:10] /= 2
 CLASS_RELATIVE_WEIGHTS_MIRROR[10:20] = CLASS_RELATIVE_WEIGHTS_MIRROR[0:10]
 
-CLASS_LOGN_RELATIVE_WEIGHTS_MIRROR = 1 + 2 * torch.log(CLASS_RELATIVE_WEIGHTS_MIRROR)
+CLASS_LOGN_RELATIVE_WEIGHTS_MIRROR = 1 + torch.log(CLASS_RELATIVE_WEIGHTS_MIRROR)
 
 CLASS_NEG_VS_POS = torch.Tensor(
     [3.57439734e-02, 2.93902439e+01, 6.22000000e+02,
@@ -212,7 +212,7 @@ def train_model_3d(backbone, model_label: str):
 
 def train():
     model = train_model_3d(CONFIG['backbone'],
-                           f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d_spacecutter")
+                           f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d")
 
 
 if __name__ == '__main__':
