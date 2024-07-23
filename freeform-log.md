@@ -935,5 +935,6 @@ So next idea is a 2-stage approach to get vertebrae centers:
 2. Some TBD method to get spatial clusters
 
 ## 4 PM
-Seems the approach will look like filtering on intensity + spatial K-Means + slicing instead. Promising results on axial *and* sagittal stacks
+Seems the approach will look like filtering on intensity + 2-stage (spatial K-Means + slicing) instead. 
+Promising results on axial *and* sagittal stacks
 Will need to see if it scales well to the rest of the dataset, but good start on n=1
