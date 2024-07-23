@@ -933,3 +933,6 @@ I eventually figured out how to train at half precision and starting to hit a ce
 So next idea is a 2-stage approach to get vertebrae centers:
 1. Point intensity based k-Means clustering
 2. Some TBD method to get spatial clusters
+
+## 4 PM
+Seems the approach will look like filtering on intensity + spatial K-Means + slicing instead. Promising results on axial stacks
