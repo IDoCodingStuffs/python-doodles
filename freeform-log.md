@@ -926,3 +926,10 @@ Still not training at half precision. I need to figure how to load it right
 
 ### 10 PM
 I give up on using half precision. Instead I will start trying patch based, which can be a good segue into vertebral segmentation and slicing.
+
+## 7/23
+### 11 AM
+I eventually figured out how to train at half precision and starting to hit a ceiling with the non-sliced perf at `0.65` CV score.
+So next idea is a 2-stage approach to get vertebrae centers:
+1. Point intensity based k-Means clustering
+2. Some TBD method to get spatial clusters
