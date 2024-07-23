@@ -1,4 +1,4 @@
-## 6/15 
+_## 6/15 
 ### 2 PM
 On Windows + CUDA, using the CNN+LSTM architecture
 Training Sagittal T2/STIR:  67%|██████▋   | 8/12 [3:45:55<1:53:31, 1702.84s/it]
@@ -935,4 +935,5 @@ So next idea is a 2-stage approach to get vertebrae centers:
 2. Some TBD method to get spatial clusters
 
 ## 4 PM
-Seems the approach will look like filtering on intensity + spatial K-Means + slicing instead. Promising results on axial stacks
+Seems the approach will look like filtering on intensity + spatial K-Means + slicing instead. Promising results on axial *and* sagittal stacks
+Will need to see if it scales well to the rest of the dataset, but good start on n=1
