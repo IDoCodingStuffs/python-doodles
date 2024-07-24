@@ -938,3 +938,7 @@ So next idea is a 2-stage approach to get vertebrae centers:
 Seems the approach will look like filtering on intensity + 3-stage (spatial K-Means + slicing) instead. 
 Promising results on axial *and* sagittal stacks
 Will need to see if it scales well to the rest of the dataset, not to mention actual training+inference performance, but good start on n=1
+
+## 7/24
+### 3 PM
+Random idea: When there is an extra axial set, use it in a 4th channel vs just discarding. If not, duplicate the existing axial there or leave blank
