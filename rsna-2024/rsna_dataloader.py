@@ -29,21 +29,6 @@ MAX_IMAGES_IN_SERIES = {
     "Sagittal T1": 38,
 }
 
-RESIZING_CHANNELS = {
-    "Sagittal T2/STIR": 25,
-    # !TODO: Might need a 3D model for this one
-    "Axial T2": 100,
-    "Sagittal T1": 35,
-}
-
-DOWNSAMPLING_TARGETS = {
-    "Sagittal T2/STIR": 25,
-    "Axial T2": 10,
-    "Sagittal T1": 10,
-}
-
-
-
 class PatientLevelDataset(Dataset):
     def __init__(self,
                  base_path: str,
@@ -316,38 +301,3 @@ def retrieve_coordinate_training_data(train_path):
     )
 
     return final_merged_df
-
-
-def clean_training_data(train_data, train_path):
-    def check_exists(path):
-        return os.path.exists(path)
-
-    # Define a function to check if a study ID directory exists
-    def check_study_id(row):
-        study_id = row['study_id']
-        path = f'{train_path}/train_images/{study_id}'
-        return check_exists(path)
-
-    # Define a function to check if a series ID directory exists
-    def check_series_id(row):
-        study_id = row['study_id']
-        series_id = row['series_id']
-        path = f'{train_path}/train_images/{study_id}/{series_id}'
-        return check_exists(path)
-
-    # Define a function to check if an image file exists
-    def check_image_exists(row):
-        image_path = row['image_path']
-        return check_exists(image_path)
-
-    # Apply the functions to the train_data dataframe
-    train_data['study_id_exists'] = train_data.apply(check_study_id, axis=1)
-    train_data['series_id_exists'] = train_data.apply(check_series_id, axis=1)
-    train_data['image_exists'] = train_data.apply(check_image_exists, axis=1)
-
-    # Filter train_data
-    train_data = train_data[
-        (train_data['study_id_exists']) & (train_data['series_id_exists']) & (train_data['image_exists'])]
-    train_data = train_data.dropna()
-
-    return train_data
