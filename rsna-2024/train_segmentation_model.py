@@ -200,7 +200,7 @@ class SegmentationLoss(nn.Module):
 def train_segmentation_model_3d(data_type: str, model_label: str):
     transform_3d_train = tio.Compose([
         tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
-        tio.RandomAffine(p=CONFIG["aug_prob"]),
+        #tio.RandomAffine(p=CONFIG["aug_prob"]),
         tio.RandomNoise(p=CONFIG["aug_prob"]),
         tio.RandomBlur(p=CONFIG["aug_prob"]),
         tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
