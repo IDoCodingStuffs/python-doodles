@@ -248,7 +248,7 @@ def train_segmentation_model_3d(data_type: str, model_label: str):
             SegmentationLoss()
         ],
         "val": [
-            nn.CrossEntropyLoss()
+            nn.BCEWithLogitsLoss()
         ]
     }
 
