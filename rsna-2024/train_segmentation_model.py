@@ -168,15 +168,13 @@ class SegmentationLoss(nn.Module):
 
     def forward(self, input, target):
         ce_loss = F.binary_cross_entropy_with_logits(input, target)
-        dice_loss = self.dice_loss(F.softmax(input, dim=1), target, multiclass=False)
+        dice_loss = self.dice_loss(F.sigmoid(input), target, multiclass=False)
 
         return ce_loss + dice_loss
 
     def dice_coeff(self, input: Tensor, target: Tensor, reduce_batch_first: bool = False, epsilon: float = 1e-6):
         # Average of Dice coefficient for all batches, or for a single mask
         assert input.size() == target.size()
-        assert input.dim() == 3 or not reduce_batch_first
-
         sum_dim = (-1, -2) if input.dim() == 2 or not reduce_batch_first else (-1, -2, -3)
 
         inter = 2 * (input * target).sum(dim=sum_dim)
@@ -194,7 +192,7 @@ class SegmentationLoss(nn.Module):
     def dice_loss(self, input: Tensor, target: Tensor, multiclass: bool = False):
         # Dice loss (objective to minimize) between 0 and 1
         fn = self.multiclass_dice_coeff if multiclass else self.dice_coeff
-        return 1 - fn(input, target)
+        return 1 - fn(input, target, reduce_batch_first=True)
 
 
 # endregion
