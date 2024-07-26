@@ -175,12 +175,12 @@ class PatientLevelSegmentationDataset(Dataset):
         coords_groups = coords.groupby("level").agg(("min", "max"))
 
         # !TODO: Buffer sizes for slices. 1/3 or 1/4 overall maybe
-        coords_groups["x_s"] = coords_groups[("x", "min")].values - 3
-        coords_groups["x_e"] = coords_groups[("x", "max")].values + 3
-        coords_groups["y_s"] = coords_groups[("y", "min")].values - 20
-        coords_groups["y_e"] = coords_groups[("y", "max")].values + 20
-        coords_groups["z_s"] = coords_groups[("z", "min")].values - 20
-        coords_groups["z_e"] = coords_groups[("z", "max")].values + 20
+        coords_groups["x_s"] = coords_groups[("x", "min")].values - 5
+        coords_groups["x_e"] = coords_groups[("x", "max")].values + 5
+        coords_groups["y_s"] = coords_groups[("y", "min")].values - 25
+        coords_groups["y_e"] = coords_groups[("y", "max")].values + 25
+        coords_groups["z_s"] = coords_groups[("z", "min")].values - 25
+        coords_groups["z_e"] = coords_groups[("z", "max")].values + 25
 
         return coords_groups[["x_s", "x_e", "y_s", "y_e", "z_s", "z_e"]]
 
@@ -198,7 +198,10 @@ class PatientLevelSegmentationDataset(Dataset):
             x_s, x_e, y_s, y_e, z_s, z_e = box.astype(int)
 
             segmentation = np.zeros(volume.shape)
-            segmentation[x_s:x_e, y_s:y_e, z_s:z_e] = 1
+            if self.data_type == "Sagittal":
+                segmentation[:, y_s:y_e, z_s:z_e] = 1
+            else:
+                segmentation[x_s:x_e, y_s:y_e, z_s:z_e] = 1
             ret.append(segmentation)
 
         return np.array(ret)
