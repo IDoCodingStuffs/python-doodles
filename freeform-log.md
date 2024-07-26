@@ -942,3 +942,8 @@ Will need to see if it scales well to the rest of the dataset, not to mention ac
 ## 7/24
 ### 3 PM
 Random idea: When there is an extra axial set, use it in a 4th channel vs just discarding. If not, duplicate the existing axial there or leave blank
+
+## 7/26
+### 1 PM
+After some fumbling around, finally managed to set up a basic UNet segmenter. It's not doing great though.
+Probably going to need a SAM model to be able to train vertebral segmentation. Then get the bounding boxes that way.
