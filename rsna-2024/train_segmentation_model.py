@@ -170,6 +170,8 @@ class SegmentationLoss(nn.Module):
         ce_loss = F.cross_entropy(input, target)
         dice_loss = self.dice_loss(input, target, multiclass=True)
 
+        return ce_loss + dice_loss
+
     def dice_coeff(self, input: Tensor, target: Tensor, reduce_batch_first: bool = False, epsilon: float = 1e-6):
         # Average of Dice coefficient for all batches, or for a single mask
         assert input.size() == target.size()

@@ -114,7 +114,7 @@ def train_model_with_validation(model,
 
         for index, val in enumerate(tqdm(train_loader, desc=f"Epoch {epoch}")):
             images, label = val
-            label = label.to(device).unsqueeze(-1)
+            label = label.to(device) #.unsqueeze(-1)
 
             with autocast(enabled=device != "cpu", dtype=torch.bfloat16):
                 output = model(images.to(device))

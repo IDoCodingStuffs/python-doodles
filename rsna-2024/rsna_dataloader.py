@@ -144,7 +144,7 @@ class PatientLevelSegmentationDataset(Dataset):
 
         label = self._get_vol_segments(images[0], series_data)
 
-        return torch.stack(images), torch.tensor(label, dtype=torch.long)
+        return torch.stack(images), torch.tensor(label, dtype=torch.half)
 
     def _get_bounding_boxes(self, series_data):
         coords = []
