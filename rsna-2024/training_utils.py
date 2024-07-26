@@ -30,7 +30,7 @@ def model_validation_loss(model, val_loader, loss_fns, epoch, loss_weights=None)
         model.eval()
 
         for images, label in tqdm(val_loader, desc=f"Validating epoch {epoch}"):
-            label = label.to(device).unsqueeze(-1)
+            label = label.to(device) #.unsqueeze(-1)
 
             with autocast(enabled=device != "cpu", dtype=torch.bfloat16):
                 output = model(images.to(device))

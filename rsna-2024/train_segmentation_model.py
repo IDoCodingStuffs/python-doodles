@@ -10,7 +10,7 @@ CONFIG = dict(
     n_levels=5,
     interpolation="bspline",
     vol_size=(64, 64, 64),
-    num_workers=0,
+    num_workers=20,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
@@ -167,8 +167,8 @@ class SegmentationLoss(nn.Module):
         super().__init__(*args, **kwargs)
 
     def forward(self, input, target):
-        ce_loss = F.cross_entropy(input, target)
-        dice_loss = self.dice_loss(input, target, multiclass=True)
+        ce_loss = F.binary_cross_entropy_with_logits(input, target)
+        dice_loss = self.dice_loss(F.softmax(input, dim=1), target, multiclass=True)
 
         return ce_loss + dice_loss
 
