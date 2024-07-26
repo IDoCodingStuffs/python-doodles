@@ -103,12 +103,14 @@ class PatientLevelDataset(Dataset):
 
 
 class PatientLevelSegmentationDataset(Dataset):
-    def __init__(self, base_path: str, dataframe: pd.DataFrame, data_type: str, transform_3d=None):
+    def __init__(self, base_path: str, dataframe: pd.DataFrame, data_type: str, transform_3d=None, vol_size=(64, 64, 64)):
         self.dataframe = dataframe
         self.base_path = base_path
 
         self.subjects = self.dataframe[['study_id']].drop_duplicates().reset_index(drop=True)
         self.transform_3d = transform_3d
+        self.vol_size = vol_size
+        self.transform_resize = tio.Resize((64, 64, 64), image_interpolation='bspline')
 
         # Axial or Sagittal
         self.data_type = data_type
@@ -117,11 +119,13 @@ class PatientLevelSegmentationDataset(Dataset):
         return len(self.subjects)
 
     def __getitem__(self, index):
-        is_mirror = index >= len(self.subjects)
         curr = self.subjects.iloc[index % len(self.subjects)]
 
         images_basepath = os.path.join(self.base_path, str(curr["study_id"]))
         images = []
+
+        series_data = None
+        factor = None
 
         for series_desc in CONDITIONS.keys():
             if not self.data_type in series_desc:
@@ -134,17 +138,29 @@ class PatientLevelSegmentationDataset(Dataset):
             series_path = os.path.join(images_basepath, str(series))
             series_images = read_series_as_volume(series_path)
 
-            if self.transform_3d is not None:
-                series_images = self.transform_3d(np.expand_dims(series_images, 0))  # .data
+            if factor is None:
+                factor = np.array(series_images.shape) / np.array(self.vol_size)
 
-            images.append(torch.tensor(series_images, dtype=torch.half).squeeze(0))
+            series_images = self.transform_resize(np.expand_dims(series_images, 0))
 
-        series_data = self.dataframe.loc[(self.dataframe["study_id"] == curr["study_id"]) &
-                                         (self.dataframe["series_description"].str.contains(self.data_type))]
+            images.append(torch.tensor(series_images).squeeze(0))
 
-        label = self._get_vol_segments(images[0], series_data)
+            if series_data is None:
+                series_data = self.dataframe.loc[(self.dataframe["study_id"] == curr["study_id"]) &
+                                                 (self.dataframe["series_id"] == series)]
 
-        return torch.stack(images), torch.tensor(label, dtype=torch.half)
+        label = self._get_vol_segments(images[0], series_data, factor)
+        volume = torch.stack(images)
+
+        subj = tio.Subject(
+            one_image=tio.ScalarImage(tensor=volume),
+            a_segmentation=tio.LabelMap(tensor=label),
+        )
+
+        if self.transform_3d is not None:
+            subj = self.transform_3d(subj)  # .data
+
+        return subj["one_image"].tensor, subj["a_segmentation"].tensor
 
     def _get_bounding_boxes(self, series_data):
         coords = []
@@ -168,13 +184,18 @@ class PatientLevelSegmentationDataset(Dataset):
 
         return coords_groups[["x_s", "x_e", "y_s", "y_e", "z_s", "z_e"]]
 
-    def _get_vol_segments(self, volume, series_data):
+    def _get_vol_segments(self, volume, series_data, factor):
         ret = []
 
         bounding_boxes = self._get_bounding_boxes(series_data)
         for level_id, level in enumerate(["L1/L2", "L2/L3", "L3/L4", "L4/L5", "L5/S1"]):
-            box = bounding_boxes.loc[level]
-            x_s, x_e, y_s, y_e, z_s, z_e = box.values.astype(int)
+            box = bounding_boxes.loc[level].values
+
+            box[:2] /= factor[0]
+            box[2:4] /= factor[1]
+            box[4:6] /= factor[2]
+
+            x_s, x_e, y_s, y_e, z_s, z_e = box.astype(int)
 
             segmentation = np.zeros(volume.shape)
             segmentation[x_s:x_e, y_s:y_e, z_s:z_e] = 1
@@ -248,7 +269,7 @@ def create_subject_level_segmentation_datasets_and_loaders(df: pd.DataFrame,
                                                            random_seed=42,
                                                            batch_size=1,
                                                            num_workers=0,
-                                                           pin_memory=True,):
+                                                           pin_memory=True, ):
     df = df.dropna()
     # This drops any subjects with nans
 
