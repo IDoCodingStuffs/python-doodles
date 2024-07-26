@@ -96,15 +96,42 @@ class PatientLevelDataset(Dataset):
 
             study_id = name[0]
 
-            # One-hot
-            # labels[study_id] = []
-            # for label in label_indices:
-            #     curr = [0 if label != i else 1 for i in range(3)]
-            #     labels[study_id].append(curr)
-            # labels[study_id] = np.array(labels[study_id]).flatten()
             labels[study_id] = label_indices
 
         return labels
+
+
+class PatientLevelSegmentationDataset(PatientLevelDataset):
+    def __init__(self, base_path: str, dataframe: pd.DataFrame, is_train=False, use_mirror_trick=False):
+        super().__init__(base_path, dataframe, is_train, use_mirror_trick)
+        self.dataframe = dataframe
+
+
+    def _get_labels(self):
+        pass
+
+    def get_bounding_boxes(self, series_data):
+        coords = []
+        slice_instances = series_data["instance_number"].unique()
+
+        for i in slice_instances:
+            subset = series_data[series_data["instance_number"] == i].sort_values(by="level")
+            for index, row in subset.iterrows():
+                coords.append([row["level"], i, row["y"], row["x"]])
+
+        coords = pd.DataFrame(coords, columns=("level", "x", "y", "z"))
+        coords_groups = coords.groupby("level").agg(("min", "max"))
+
+        # !TODO: Buffer sizes for slices. 1/3 or 1/4 overall maybe
+        coords_groups["x_s"] = coords_groups[("x", "min")].values - 3
+        coords_groups["x_e"] = coords_groups[("x", "max")].values + 3
+        coords_groups["y_s"] = coords_groups[("y", "min")].values - 20
+        coords_groups["y_e"] = coords_groups[("y", "max")].values + 20
+        coords_groups["z_s"] = coords_groups[("z", "min")].values - 20
+        coords_groups["z_e"] = coords_groups[("z", "max")].values + 20
+
+        return coords_groups[["x_s", "x_e", "y_s", "y_e", "z_s", "z_e"]]
+
 
 def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
                                               base_path: str,
