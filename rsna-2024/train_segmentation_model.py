@@ -168,7 +168,7 @@ class SegmentationLoss(nn.Module):
 
     def forward(self, input, target):
         ce_loss = F.binary_cross_entropy_with_logits(input, target)
-        dice_loss = self.dice_loss(F.softmax(input, dim=1), target, multiclass=True)
+        dice_loss = self.dice_loss(F.softmax(input, dim=1), target, multiclass=False)
 
         return ce_loss + dice_loss
 
@@ -194,7 +194,7 @@ class SegmentationLoss(nn.Module):
     def dice_loss(self, input: Tensor, target: Tensor, multiclass: bool = False):
         # Dice loss (objective to minimize) between 0 and 1
         fn = self.multiclass_dice_coeff if multiclass else self.dice_coeff
-        return 1 - fn(input, target, reduce_batch_first=True)
+        return 1 - fn(input, target)
 
 
 # endregion
@@ -245,10 +245,10 @@ def train_segmentation_model_3d(data_type: str, model_label: str):
 
     criteria = {
         "train": [
-            SegmentationLoss()
+            SegmentationLoss() for i in range(CONFIG["n_levels"])
         ],
         "val": [
-            nn.BCEWithLogitsLoss()
+            nn.BCEWithLogitsLoss() for i in range(CONFIG["n_levels"])
         ]
     }
 
