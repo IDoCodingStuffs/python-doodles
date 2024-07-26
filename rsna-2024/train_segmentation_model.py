@@ -28,7 +28,7 @@ TRAINING_DATA = retrieve_coordinate_training_data(DATA_BASEPATH)
 """Adapted from https://github.com/jphdotam/Unet3D/blob/main/unet3d.py"""
 
 
-class UNet(nn.Module):
+class UNet3D(nn.Module):
     def __init__(self, n_channels, n_classes, width_multiplier=1, trilinear=True, use_ds_conv=False):
         """A simple 3D Unet, adapted from a 2D Unet from https://github.com/milesial/Pytorch-UNet/tree/master/unet
         Arguments:
@@ -41,7 +41,7 @@ class UNet(nn.Module):
           use_ds_conv = if True, we use depthwise-separable convolutional layers. in my experience, this is of little help. This
                   appears to be because with 3D data, the vast vast majority of GPU RAM is the input data/labels, not the params, so little
                   VRAM is saved by using ds_conv, and yet performance suffers."""
-        super(UNet, self).__init__()
+        super(UNet3D, self).__init__()
         _channels = (32, 64, 128, 256, 512)
         self.n_channels = n_channels
         self.n_classes = n_classes
@@ -233,7 +233,7 @@ def train_segmentation_model_3d(data_type: str, model_label: str):
     NUM_EPOCHS = CONFIG["epochs"]
 
     num_channels = 2 if data_type == "Sagittal" else 1
-    model = UNet(n_channels=num_channels, n_classes=CONFIG["n_levels"]).to(device)
+    model = UNet3D(n_channels=num_channels, n_classes=CONFIG["n_levels"]).to(device)
     optimizers = [
         torch.optim.Adam(model.parameters(), lr=1e-3),
     ]
