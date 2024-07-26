@@ -1,4 +1,6 @@
 import torch.nn.functional as F
+from torch import Tensor
+
 from training_utils import *
 from rsna_dataloader import *
 
@@ -159,6 +161,41 @@ class DepthwiseSeparableConv3d(nn.Module):
 
 # endregion
 
+# region loss
+class SegmentationLoss(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def forward(self, input, target):
+        ce_loss = F.cross_entropy(input, target)
+        dice_loss = self.dice_loss(input, target, multiclass=True)
+
+    def dice_coeff(self, input: Tensor, target: Tensor, reduce_batch_first: bool = False, epsilon: float = 1e-6):
+        # Average of Dice coefficient for all batches, or for a single mask
+        assert input.size() == target.size()
+        assert input.dim() == 3 or not reduce_batch_first
+
+        sum_dim = (-1, -2) if input.dim() == 2 or not reduce_batch_first else (-1, -2, -3)
+
+        inter = 2 * (input * target).sum(dim=sum_dim)
+        sets_sum = input.sum(dim=sum_dim) + target.sum(dim=sum_dim)
+        sets_sum = torch.where(sets_sum == 0, inter, sets_sum)
+
+        dice = (inter + epsilon) / (sets_sum + epsilon)
+        return dice.mean()
+
+    def multiclass_dice_coeff(self, input: Tensor, target: Tensor, reduce_batch_first: bool = False,
+                              epsilon: float = 1e-6):
+        # Average of Dice coefficient for all classes
+        return self.dice_coeff(input.flatten(0, 1), target.flatten(0, 1), reduce_batch_first, epsilon)
+
+    def dice_loss(self, input: Tensor, target: Tensor, multiclass: bool = False):
+        # Dice loss (objective to minimize) between 0 and 1
+        fn = self.multiclass_dice_coeff if multiclass else self.dice_coeff
+        return 1 - fn(input, target, reduce_batch_first=True)
+
+
+# endregion
 
 def train_segmentation_model_3d(data_type: str, model_label: str):
     transform_3d_train = tio.Compose([
@@ -197,41 +234,40 @@ def train_segmentation_model_3d(data_type: str, model_label: str):
 
     num_channels = 2 if data_type == "Sagittal" else 1
     model = UNet(n_channels=num_channels, n_classes=CONFIG["n_levels"]).to(device)
-    # optimizers = [
-    #     torch.optim.Adam(model.encoder.parameters(), lr=5e-5),
-    #     torch.optim.Adam(model.heads.parameters(), lr=1e-3),
-    # ]
-    # schedulers = [
-    # ]
-    # criteria = {
-    #     "train": [
-    #         CumulativeLinkLoss(class_weights=CONFIG["loss_weights"][i]) for i in range(CONFIG["num_classes"])
-    #     ],
-    #     "val": [
-    #         CumulativeLinkLoss() for i in range(CONFIG["num_classes"])
-    #     ]
-    # }
-    #
-    # train_model_with_validation(model,
-    #                             optimizers,
-    #                             schedulers,
-    #                             criteria,
-    #                             trainloader,
-    #                             valloader,
-    #                             model_desc=model_label,
-    #                             train_loader_desc=f"Training {model_label}",
-    #                             epochs=NUM_EPOCHS,
-    #                             freeze_backbone_initial_epochs=0,
-    #                             loss_weights=CONFIG["loss_weights"],
-    #                             callbacks=[model._ascension_callback]
-    #                             )
+    optimizers = [
+        torch.optim.Adam(model.parameters(), lr=1e-3),
+    ]
+
+    schedulers = [
+    ]
+
+    criteria = {
+        "train": [
+            SegmentationLoss()
+        ],
+        "val": [
+            nn.CrossEntropyLoss()
+        ]
+    }
+
+    train_model_with_validation(model,
+                                optimizers,
+                                schedulers,
+                                criteria,
+                                trainloader,
+                                valloader,
+                                model_desc=model_label,
+                                train_loader_desc=f"Training {model_label}",
+                                epochs=NUM_EPOCHS,
+                                freeze_backbone_initial_epochs=0,
+                                )
 
 
 def train():
     sagittal_model = train_segmentation_model_3d("Sagittal",
                                                  f"sagittal_segmentation_{CONFIG['vol_size'][0]}_3d")
     axial_model = train_segmentation_model_3d("Axial",
-                                                 f"axial_segmentation_{CONFIG['vol_size'][0]}_3d")
+                                              f"axial_segmentation_{CONFIG['vol_size'][0]}_3d")
 
 
 if __name__ == '__main__':
