@@ -29,6 +29,7 @@ MAX_IMAGES_IN_SERIES = {
     "Sagittal T1": 38,
 }
 
+
 class PatientLevelDataset(Dataset):
     def __init__(self,
                  base_path: str,
@@ -77,7 +78,7 @@ class PatientLevelDataset(Dataset):
                 label[10:20] = temp
 
             if self.transform_3d is not None:
-                series_images = self.transform_3d(np.expand_dims(series_images, 0)) #.data
+                series_images = self.transform_3d(np.expand_dims(series_images, 0))  # .data
 
             images.append(torch.tensor(series_images, dtype=torch.half).squeeze(0))
 
@@ -101,16 +102,51 @@ class PatientLevelDataset(Dataset):
         return labels
 
 
-class PatientLevelSegmentationDataset(PatientLevelDataset):
-    def __init__(self, base_path: str, dataframe: pd.DataFrame, is_train=False, use_mirror_trick=False):
-        super().__init__(base_path, dataframe, is_train, use_mirror_trick)
+class PatientLevelSegmentationDataset(Dataset):
+    def __init__(self, base_path: str, dataframe: pd.DataFrame, data_type: str, transform_3d=None):
         self.dataframe = dataframe
+        self.base_path = base_path
 
+        self.subjects = self.dataframe[['study_id']].drop_duplicates().reset_index(drop=True)
+        self.transform_3d = transform_3d
 
-    def _get_labels(self):
-        pass
+        # Axial or Sagittal
+        self.data_type = data_type
 
-    def get_bounding_boxes(self, series_data):
+    def __len__(self):
+        return len(self.subjects)
+
+    def __getitem__(self, index):
+        is_mirror = index >= len(self.subjects)
+        curr = self.subjects.iloc[index % len(self.subjects)]
+
+        images_basepath = os.path.join(self.base_path, str(curr["study_id"]))
+        images = []
+
+        for series_desc in CONDITIONS.keys():
+            if not self.data_type in series_desc:
+                continue
+
+            series = self.dataframe.loc[
+                (self.dataframe["study_id"] == curr["study_id"]) &
+                (self.dataframe["series_description"] == series_desc)].sort_values("series_id")['series_id'].iloc[0]
+
+            series_path = os.path.join(images_basepath, str(series))
+            series_images = read_series_as_volume(series_path)
+
+            if self.transform_3d is not None:
+                series_images = self.transform_3d(np.expand_dims(series_images, 0))  # .data
+
+            images.append(torch.tensor(series_images, dtype=torch.half).squeeze(0))
+
+        series_data = self.dataframe.loc[(self.dataframe["study_id"] == curr["study_id"]) &
+                                         (self.dataframe["series_description"].str.contains(self.data_type))]
+
+        label = self._get_vol_segments(images[0], series_data)
+
+        return torch.stack(images), torch.tensor(label, dtype=torch.long)
+
+    def _get_bounding_boxes(self, series_data):
         coords = []
         slice_instances = series_data["instance_number"].unique()
 
@@ -132,6 +168,20 @@ class PatientLevelSegmentationDataset(PatientLevelDataset):
 
         return coords_groups[["x_s", "x_e", "y_s", "y_e", "z_s", "z_e"]]
 
+    def _get_vol_segments(self, volume, series_data):
+        ret = []
+
+        bounding_boxes = self._get_bounding_boxes(series_data)
+        for level_id, level in enumerate(["L1/L2", "L2/L3", "L3/L4", "L4/L5", "L5/S1"]):
+            box = bounding_boxes.loc[level]
+            x_s, x_e, y_s, y_e, z_s, z_e = box.values.astype(int)
+
+            segmentation = np.zeros(volume.shape)
+            segmentation[x_s:x_e, y_s:y_e, z_s:z_e] = 1
+            ret.append(segmentation)
+
+        return np.array(ret)
+
 
 def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
                                               base_path: str,
@@ -143,9 +193,9 @@ def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
                                               num_workers=0,
                                               pin_memory=True,
                                               use_mirroring_trick=True):
-    # By defauly, 8-1.5-.5 split
     df = df.dropna()
     # This drops any subjects with nans
+
     filtered_df = pd.DataFrame(columns=df.columns)
     for series_desc in CONDITIONS.keys():
         subset = df[df['series_description'] == series_desc]
@@ -180,13 +230,56 @@ def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
     test_dataset = PatientLevelDataset(base_path, test_df,
                                        transform_3d=transform_3d_val)
 
-    # train_picker = WeightedRandomSampler(train_dataset.weights, num_samples=len(train_dataset))
-    # train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=train_picker, num_workers=num_workers)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=pin_memory)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_memory)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers,
+                              pin_memory=pin_memory)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers,
+                            pin_memory=pin_memory)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
-    # !TODO: Refactor
+    return train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset
+
+
+def create_subject_level_segmentation_datasets_and_loaders(df: pd.DataFrame,
+                                                           data_type: str,
+                                                           base_path: str,
+                                                           transform_3d_train=None,
+                                                           transform_3d_val=None,
+                                                           split_factor=0.2,
+                                                           random_seed=42,
+                                                           batch_size=1,
+                                                           num_workers=0,
+                                                           pin_memory=True,
+                                                           use_mirroring_trick=True):
+    train_studies, val_studies = train_test_split(df["study_id"].unique(), test_size=split_factor,
+                                                  random_state=random_seed)
+    val_studies, test_studies = train_test_split(val_studies, test_size=0.25, random_state=random_seed)
+
+    train_df = df[df["study_id"].isin(train_studies)]
+    val_df = df[df["study_id"].isin(val_studies)]
+    test_df = df[df["study_id"].isin(test_studies)]
+
+    train_df = train_df.reset_index(drop=True)
+    val_df = val_df.reset_index(drop=True)
+    test_df = test_df.reset_index(drop=True)
+
+    random.seed(random_seed)
+    train_dataset = PatientLevelSegmentationDataset(base_path, train_df,
+                                                    data_type=data_type,
+                                                    transform_3d=transform_3d_train,
+                                                    )
+    val_dataset = PatientLevelSegmentationDataset(base_path, val_df,
+                                                  data_type=data_type,
+                                                  transform_3d=transform_3d_val)
+    test_dataset = PatientLevelSegmentationDataset(base_path, test_df,
+                                                   data_type=data_type,
+                                                   transform_3d=transform_3d_val)
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers,
+                              pin_memory=pin_memory)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers,
+                            pin_memory=pin_memory)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+
     return train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset
 
 

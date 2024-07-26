@@ -6,12 +6,9 @@ _logger = logging.getLogger(__name__)
 
 CONFIG = dict(
     n_levels=5,
-    # backbone="efficientnet_b4",
-    backbone="tf_efficientnetv2_m",
     interpolation="bspline",
-    # interpolation="gaussian",
-    vol_size=(256, 256, 256),
-    num_workers=6,
+    vol_size=(64, 64, 64),
+    num_workers=0,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
@@ -25,9 +22,10 @@ CONFIG = dict(
 DATA_BASEPATH = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
 TRAINING_DATA = retrieve_coordinate_training_data(DATA_BASEPATH)
 
-
 # region unet
 """Adapted from https://github.com/jphdotam/Unet3D/blob/main/unet3d.py"""
+
+
 class UNet(nn.Module):
     def __init__(self, n_channels, n_classes, width_multiplier=1, trilinear=True, use_ds_conv=False):
         """A simple 3D Unet, adapted from a 2D Unet from https://github.com/milesial/Pytorch-UNet/tree/master/unet
@@ -45,7 +43,7 @@ class UNet(nn.Module):
         _channels = (32, 64, 128, 256, 512)
         self.n_channels = n_channels
         self.n_classes = n_classes
-        self.channels = [int(c*width_multiplier) for c in _channels]
+        self.channels = [int(c * width_multiplier) for c in _channels]
         self.trilinear = trilinear
         self.convtype = DepthwiseSeparableConv3d if use_ds_conv else nn.Conv3d
 
@@ -123,7 +121,6 @@ class Up(nn.Module):
             self.up = nn.ConvTranspose3d(in_channels, in_channels // 2, kernel_size=2, stride=2)
             self.conv = DoubleConv(in_channels, out_channels)
 
-
     def forward(self, x1, x2):
         x1 = self.up(x1)
         # input is CHW
@@ -158,26 +155,20 @@ class DepthwiseSeparableConv3d(nn.Module):
         out = self.depthwise(x)
         out = self.pointwise(out)
         return out
+
+
 # endregion
 
 
-
-def train_segmentation_model_3d(backbone, model_label: str):
+def train_segmentation_model_3d(data_type: str, model_label: str):
     transform_3d_train = tio.Compose([
         tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
         tio.RandomAffine(p=CONFIG["aug_prob"]),
-        # tio.OneOf({
-        #     tio.RandomElasticDeformation(): 0.3,
-        #     tio.RandomAffine(): 0.7,
-        # }, p=CONFIG["aug_prob"]),
         tio.RandomNoise(p=CONFIG["aug_prob"]),
         tio.RandomBlur(p=CONFIG["aug_prob"]),
         tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
-        # tio.RandomBiasField(p=CONFIG["aug_prob"]),
         tio.RandomSpike(p=CONFIG["aug_prob"]),
         tio.RandomGamma(p=CONFIG["aug_prob"]),
-        # tio.RandomSwap(p=CONFIG["aug_prob"]),
-        # tio.RandomGhosting(p=CONFIG["aug_prob"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
     ])
 
@@ -187,56 +178,60 @@ def train_segmentation_model_3d(backbone, model_label: str):
     ])
 
     (trainloader, valloader, test_loader,
-     trainset, valset, testset) = create_subject_level_datasets_and_loaders(TRAINING_DATA,
-                                                                            transform_3d_train=transform_3d_train,
-                                                                            transform_3d_val=transform_3d_val,
-                                                                            base_path=os.path.join(
-                                                                                DATA_BASEPATH,
-                                                                                "train_images"),
-                                                                            num_workers=CONFIG["num_workers"],
-                                                                            split_factor=0.3,
-                                                                            batch_size=CONFIG["batch_size"],
-                                                                            pin_memory=False
-                                                                            )
+     trainset, valset, testset) = create_subject_level_segmentation_datasets_and_loaders(TRAINING_DATA,
+                                                                                         data_type=data_type,
+                                                                                         transform_3d_train=transform_3d_train,
+                                                                                         transform_3d_val=transform_3d_val,
+                                                                                         base_path=os.path.join(
+                                                                                             DATA_BASEPATH,
+                                                                                             "train_images"),
+                                                                                         num_workers=CONFIG[
+                                                                                             "num_workers"],
+                                                                                         split_factor=0.3,
+                                                                                         batch_size=CONFIG[
+                                                                                             "batch_size"],
+                                                                                         pin_memory=False
+                                                                                         )
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = CNN_Model_3D_Multihead(backbone=backbone, in_chans=3, out_classes=CONFIG["num_classes"]).to(device)
-    optimizers = [
-        torch.optim.Adam(model.encoder.parameters(), lr=5e-5),
-        torch.optim.Adam(model.heads.parameters(), lr=1e-3),
-    ]
-    schedulers = [
-    ]
-    criteria = {
-        "train": [
-            CumulativeLinkLoss(class_weights=CONFIG["loss_weights"][i]) for i in range(CONFIG["num_classes"])
-        ],
-        "val": [
-            CumulativeLinkLoss() for i in range(CONFIG["num_classes"])
-        ]
-    }
-
-    train_model_with_validation(model,
-                                optimizers,
-                                schedulers,
-                                criteria,
-                                trainloader,
-                                valloader,
-                                model_desc=model_label,
-                                train_loader_desc=f"Training {model_label}",
-                                epochs=NUM_EPOCHS,
-                                freeze_backbone_initial_epochs=0,
-                                loss_weights=CONFIG["loss_weights"],
-                                callbacks=[model._ascension_callback]
-                                )
-
-    return model
+    num_channels = 2 if data_type == "Sagittal" else 1
+    model = UNet(n_channels=num_channels, n_classes=CONFIG["n_levels"]).to(device)
+    # optimizers = [
+    #     torch.optim.Adam(model.encoder.parameters(), lr=5e-5),
+    #     torch.optim.Adam(model.heads.parameters(), lr=1e-3),
+    # ]
+    # schedulers = [
+    # ]
+    # criteria = {
+    #     "train": [
+    #         CumulativeLinkLoss(class_weights=CONFIG["loss_weights"][i]) for i in range(CONFIG["num_classes"])
+    #     ],
+    #     "val": [
+    #         CumulativeLinkLoss() for i in range(CONFIG["num_classes"])
+    #     ]
+    # }
+    #
+    # train_model_with_validation(model,
+    #                             optimizers,
+    #                             schedulers,
+    #                             criteria,
+    #                             trainloader,
+    #                             valloader,
+    #                             model_desc=model_label,
+    #                             train_loader_desc=f"Training {model_label}",
+    #                             epochs=NUM_EPOCHS,
+    #                             freeze_backbone_initial_epochs=0,
+    #                             loss_weights=CONFIG["loss_weights"],
+    #                             callbacks=[model._ascension_callback]
+    #                             )
 
 
 def train():
-    model = train_model_3d(CONFIG['backbone'],
-                           f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d")
+    sagittal_model = train_segmentation_model_3d("Sagittal",
+                                                 f"sagittal_segmentation_{CONFIG['vol_size'][0]}_3d")
+    axial_model = train_segmentation_model_3d("Axial",
+                                                 f"axial_segmentation_{CONFIG['vol_size'][0]}_3d")
 
 
 if __name__ == '__main__':
