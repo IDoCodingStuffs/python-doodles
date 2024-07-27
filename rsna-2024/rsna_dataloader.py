@@ -7,6 +7,7 @@ import pandas as pd
 import glob
 import pydicom
 import torch
+import torchvision
 from torch import nn
 from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from sklearn.model_selection import train_test_split
@@ -205,6 +206,102 @@ class PatientLevelSegmentationDataset(Dataset):
             ret.append(segmentation)
 
         return np.array(ret)
+
+
+class SeriesLevelSegmentationDataset(Dataset):
+    def __init__(self, base_path: str, dataframe: pd.DataFrame, data_type: str, transform_2d=None, img_size=(512, 512)):
+        self.dataframe = dataframe
+        self.base_path = base_path
+        self.img_size = img_size
+
+        self.subjects = self.dataframe[['study_id']].drop_duplicates().reset_index(drop=True)
+        self.transform_2d = transform_2d
+        self.transform_resize = torchvision.transforms.Resize(img_size)
+
+        # Axial or Sagittal
+        self.data_type = data_type
+
+    def __len__(self):
+        return len(self.subjects)
+
+    def __getitem__(self, index):
+        curr = self.subjects.iloc[index % len(self.subjects)]
+
+        images_basepath = os.path.join(self.base_path, str(curr["study_id"]))
+        images = []
+
+        series_data = None
+        factor = None
+
+
+        series = self.dataframe.loc[
+            (self.dataframe["study_id"] == curr["study_id"]) &
+            (self.dataframe["series_description"] == self.data_type)].sort_values("series_id")['series_id'].iloc[0]
+
+        series_path = os.path.join(images_basepath, str(series))
+        instance_id = self.dataframe[(self.dataframe["study_id"] == curr["study_id"]) &
+                                     (self.dataframe["series_id"] == series)].sort_values(by="level")["instance_number"].iloc[0]
+
+        series_image = pydicom.read_file(os.path.join(series_path, instance_id + ".dcm")).pixel_array
+
+        if factor is None:
+            factor = np.array(series_image.shape) / np.array(self.img_size)
+
+        series_image = self.transform_resize(series_image)
+
+        if series_data is None:
+            series_data = self.dataframe.loc[(self.dataframe["study_id"] == curr["study_id"]) &
+                                             (self.dataframe["series_id"] == series)]
+
+        label = self._get_img_segments(series_image, series_data, factor)
+        volume = torch.stack(images)
+
+        subj = tio.Subject(
+            one_image=tio.ScalarImage(tensor=volume),
+            a_segmentation=tio.LabelMap(tensor=label),
+        )
+
+        if self.transform_3d is not None:
+            subj = self.transform_3d(subj)  # .data
+
+        return subj["one_image"].tensor, subj["a_segmentation"].tensor
+
+    def _get_bounding_boxes(self, series_data):
+        coords = series_data.sort_values(by="level")
+        coords_groups = coords.groupby("level").agg(("min", "max"))
+
+        # !TODO: Buffer sizes for slices. 1/3 or 1/4 overall maybe
+        coords_groups["x_s"] = coords_groups[("x", "min")].values - 5
+        coords_groups["x_e"] = coords_groups[("x", "max")].values + 5
+        coords_groups["y_s"] = coords_groups[("y", "min")].values - 25
+        coords_groups["y_e"] = coords_groups[("y", "max")].values + 25
+        coords_groups["z_s"] = coords_groups[("z", "min")].values - 25
+        coords_groups["z_e"] = coords_groups[("z", "max")].values + 25
+
+        return coords_groups[["x_s", "x_e", "y_s", "y_e", "z_s", "z_e"]]
+
+    def _get_vol_segments(self, volume, series_data, factor):
+        ret = []
+
+        bounding_boxes = self._get_bounding_boxes(series_data)
+        for level_id, level in enumerate(["L1/L2", "L2/L3", "L3/L4", "L4/L5", "L5/S1"]):
+            box = bounding_boxes.loc[level].values
+
+            box[:2] /= factor[0]
+            box[2:4] /= factor[1]
+            box[4:6] /= factor[2]
+
+            x_s, x_e, y_s, y_e, z_s, z_e = box.astype(int)
+
+            segmentation = np.zeros(volume.shape)
+            if self.data_type == "Sagittal":
+                segmentation[:, y_s:y_e, z_s:z_e] = 1
+            else:
+                segmentation[x_s:x_e, y_s:y_e, z_s:z_e] = 1
+            ret.append(segmentation)
+
+        return np.array(ret)
+
 
 
 def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
