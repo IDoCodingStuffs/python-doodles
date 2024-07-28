@@ -947,3 +947,7 @@ Random idea: When there is an extra axial set, use it in a 4th channel vs just d
 ### 1 PM
 After some fumbling around, finally managed to set up a basic UNet segmenter. It's not doing great though.
 Probably going to need a SAM model to be able to train vertebral segmentation. Then get the bounding boxes that way.
+
+## 7/28
+### 3 PM
+Just finished the initial implementation for 2D segmentation with SAM, just for sagittal for now.
