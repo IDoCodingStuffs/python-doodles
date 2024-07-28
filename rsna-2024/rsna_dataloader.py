@@ -255,14 +255,18 @@ class SeriesLevelSegmentationDataset(Dataset):
         series_image = cv2.resize(series_image, self.img_size, interpolation=cv2.INTER_CUBIC)
         series_image = cv2.convertScaleAbs(series_image)
 
+        series_image = cv2.cvtColor(series_image, cv2.COLOR_GRAY2RGB)
+
         if series_data is None:
             series_data = self.dataframe.loc[(self.dataframe["study_id"] == curr["study_id"]) &
                                              (self.dataframe["series_id"] == series)]
 
-        label = self._get_img_segments(series_image, series_data, factor)
+        label = self._get_img_segments(series_image, series_data, factor).float()
         if self.transform_2d is not None:
             series_image = torch.FloatTensor(series_image / 255)
-            series_image = self.transform_2d(series_image.unsqueeze(0))  # .data
+            series_image = self.transform_2d(series_image)  # .data
+
+        series_image = series_image.swapaxes(-1, -3).swapaxes(-1, -2)
 
         return series_image, label
 
@@ -307,10 +311,7 @@ class SeriesLevelSegmentationDataset(Dataset):
 
     def _get_img_segments(self, img, series_data, factor):
         points, bounding_boxes = self._get_points_and_bounding_boxes(series_data, factor)
-
-        image = cv2.convertScaleAbs(img)
-        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
-        masks, scores = self.__run_segmentation_with_points_and_boxes(image, points, bounding_boxes)
+        masks, scores = self.__run_segmentation_with_points_and_boxes(img, points, bounding_boxes)
 
         masks = masks[0]
         scores = scores[0]

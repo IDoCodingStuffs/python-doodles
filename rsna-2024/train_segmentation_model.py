@@ -369,19 +369,18 @@ def train_segmentation_model_3d(data_type: str, model_label: str):
 
 def train_segmentation_model_2d(data_type: str, model_label: str):
     transform_2d_train = transforms.Compose([
-        transforms.Resize(CONFIG["img_size"]),
+        # transforms.Resize(CONFIG["img_size"]),
         #tio.RandomAffine(p=CONFIG["aug_prob"]),
         # transforms.RandomNoise(p=CONFIG["aug_prob"]),
         # transforms.RandomBlur(p=CONFIG["aug_prob"]),
         # transforms.RandomAnisotropy(p=CONFIG["aug_prob"]),
         # transforms.RandomSpike(p=CONFIG["aug_prob"]),
         # transforms.RandomGamma(p=CONFIG["aug_prob"]),
-        transforms.ToTensor(),
         transforms.Normalize(mean=0.5, std=0.5),
     ])
 
     transform_2d_val = transforms.Compose([
-        transforms.Resize(CONFIG["img_size"]),
+        # transforms.Resize(CONFIG["img_size"]),
         transforms.Normalize(mean=0.5, std=0.5),
     ])
 
@@ -404,7 +403,7 @@ def train_segmentation_model_2d(data_type: str, model_label: str):
     NUM_EPOCHS = CONFIG["epochs"]
     # model = UNet3D(n_channels=num_channels, n_classes=CONFIG["n_levels"]).to(device)
 
-    model = torchvision.models.segmentation.fcn_resnet101(pretrained=True)
+    model = torchvision.models.segmentation.fcn_resnet101(num_classes=CONFIG["n_levels"]).to(device)
     optimizers = [
         torch.optim.Adam(model.parameters(), lr=1e-3),
     ]
@@ -439,7 +438,7 @@ def train():
     #                                              f"sagittal_segmentation_{CONFIG['vol_size'][0]}_3d")
     # axial_model = train_segmentation_model_3d("Axial",
     #                                           f"axial_segmentation_{CONFIG['vol_size'][0]}_3d")
-    sagittal_model = train_segmentation_model_2d("Sagittal T2/STIR", "foo")
+    sagittal_model = train_segmentation_model_2d("Sagittal T2/STIR", f"sagittal_segmentation_{CONFIG['img_size'][0]}_2d")
 
 if __name__ == '__main__':
     train()

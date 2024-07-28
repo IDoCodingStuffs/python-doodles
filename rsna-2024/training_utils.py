@@ -117,7 +117,8 @@ def train_model_with_validation(model,
             label = label.to(device) #.unsqueeze(-1)
 
             with autocast(enabled=device != "cpu", dtype=torch.bfloat16):
-                output = model(images.to(device))
+                # output = model(images.to(device))
+                output = model(images.to(device))["out"]
 
                 loss = sum([(loss_fn(output[:, loss_index], label[:, loss_index]) / gradient_accumulation_per) for
                             loss_index, loss_fn in enumerate(loss_fns["train"])])
