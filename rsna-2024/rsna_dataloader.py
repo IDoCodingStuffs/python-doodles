@@ -16,6 +16,7 @@ from enum import Enum
 import cv2
 import torchio as tio
 import itk
+from transformers import SamModel, SamProcessor
 
 LABEL_MAP = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
 CONDITIONS = {
@@ -30,6 +31,7 @@ MAX_IMAGES_IN_SERIES = {
     "Sagittal T1": 38,
 }
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 class PatientLevelDataset(Dataset):
     def __init__(self,
@@ -104,7 +106,8 @@ class PatientLevelDataset(Dataset):
 
 
 class PatientLevelSegmentationDataset(Dataset):
-    def __init__(self, base_path: str, dataframe: pd.DataFrame, data_type: str, transform_3d=None, vol_size=(64, 64, 64)):
+    def __init__(self, base_path: str, dataframe: pd.DataFrame, data_type: str, transform_3d=None,
+                 vol_size=(64, 64, 64)):
         self.dataframe = dataframe
         self.base_path = base_path
 
@@ -216,10 +219,11 @@ class SeriesLevelSegmentationDataset(Dataset):
 
         self.subjects = self.dataframe[['study_id']].drop_duplicates().reset_index(drop=True)
         self.transform_2d = transform_2d
-        self.transform_resize = torchvision.transforms.Resize(img_size)
 
         # Axial or Sagittal
         self.data_type = data_type
+
+        self.segmentation_model = self.__get_segmentation_model()
 
     def __len__(self):
         return len(self.subjects)
@@ -233,75 +237,87 @@ class SeriesLevelSegmentationDataset(Dataset):
         series_data = None
         factor = None
 
-
         series = self.dataframe.loc[
             (self.dataframe["study_id"] == curr["study_id"]) &
             (self.dataframe["series_description"] == self.data_type)].sort_values("series_id")['series_id'].iloc[0]
 
         series_path = os.path.join(images_basepath, str(series))
         instance_id = self.dataframe[(self.dataframe["study_id"] == curr["study_id"]) &
-                                     (self.dataframe["series_id"] == series)].sort_values(by="level")["instance_number"].iloc[0]
+                                     (self.dataframe["series_id"] == series)].sort_values(by="level")[
+            "instance_number"].iloc[0]
 
-        series_image = pydicom.read_file(os.path.join(series_path, instance_id + ".dcm")).pixel_array
+        image_path = glob.glob(os.path.join(series_path, "*" + str(instance_id) + ".dcm"))[0]
+        series_image = pydicom.read_file(image_path).pixel_array
 
         if factor is None:
             factor = np.array(series_image.shape) / np.array(self.img_size)
 
-        series_image = self.transform_resize(series_image)
+        series_image = cv2.resize(series_image, self.img_size, interpolation=cv2.INTER_CUBIC)
+        series_image = cv2.convertScaleAbs(series_image)
 
         if series_data is None:
             series_data = self.dataframe.loc[(self.dataframe["study_id"] == curr["study_id"]) &
                                              (self.dataframe["series_id"] == series)]
 
         label = self._get_img_segments(series_image, series_data, factor)
-        volume = torch.stack(images)
+        if self.transform_2d is not None:
+            series_image = torch.FloatTensor(series_image / 255)
+            series_image = self.transform_2d(series_image.unsqueeze(0))  # .data
 
-        subj = tio.Subject(
-            one_image=tio.ScalarImage(tensor=volume),
-            a_segmentation=tio.LabelMap(tensor=label),
+        return series_image, label
+
+    def __get_segmentation_model(self):
+        model = SamModel.from_pretrained("facebook/sam-vit-huge").to(device)
+        processor = SamProcessor.from_pretrained("facebook/sam-vit-huge")
+
+        return model, processor
+
+    def __run_segmentation_with_points_and_boxes(self, img, points, bounding_boxes):
+        # inputs = processor(raw_image, input_points=input_points, segmentation_maps=segmentation_map, return_tensors="pt").to(device)
+        model, processor = self.segmentation_model
+
+        inputs = processor(img, input_boxes=bounding_boxes, return_tensors="pt").to(device)
+        with torch.no_grad():
+            outputs = model(**inputs)
+
+        masks = processor.image_processor.post_process_masks(
+            outputs.pred_masks.cpu(), inputs["original_sizes"].cpu(), inputs["reshaped_input_sizes"].cpu()
         )
+        scores = outputs.iou_scores
 
-        if self.transform_3d is not None:
-            subj = self.transform_3d(subj)  # .data
+        return masks, scores
 
-        return subj["one_image"].tensor, subj["a_segmentation"].tensor
-
-    def _get_bounding_boxes(self, series_data):
+    def _get_points_and_bounding_boxes(self, series_data, factor):
         coords = series_data.sort_values(by="level")
         coords_groups = coords.groupby("level").agg(("min", "max"))
 
-        # !TODO: Buffer sizes for slices. 1/3 or 1/4 overall maybe
-        coords_groups["x_s"] = coords_groups[("x", "min")].values - 5
-        coords_groups["x_e"] = coords_groups[("x", "max")].values + 5
-        coords_groups["y_s"] = coords_groups[("y", "min")].values - 25
-        coords_groups["y_e"] = coords_groups[("y", "max")].values + 25
-        coords_groups["z_s"] = coords_groups[("z", "min")].values - 25
-        coords_groups["z_e"] = coords_groups[("z", "max")].values + 25
+        points_x = coords_groups[("x", "min")] + (coords_groups[("x", "max")] - coords_groups[("x", "min")]) / 2
+        points_y = coords_groups[("y", "min")] + (coords_groups[("y", "max")] - coords_groups[("y", "min")]) / 2
 
-        return coords_groups[["x_s", "x_e", "y_s", "y_e", "z_s", "z_e"]]
+        points = list(zip(points_x.values, points_y.values))
+        points = np.array(points) / factor
 
-    def _get_vol_segments(self, volume, series_data, factor):
-        ret = []
+        bounding_boxes = [[[e[0] - 100, e[1] - 15, e[0], e[1] + 10] for e in points]]
 
-        bounding_boxes = self._get_bounding_boxes(series_data)
-        for level_id, level in enumerate(["L1/L2", "L2/L3", "L3/L4", "L4/L5", "L5/S1"]):
-            box = bounding_boxes.loc[level].values
+        # !TODO: Use some curve fit and normal to expand into disc
+        bounding_boxes[0][-1][-1] += 20
+        bounding_boxes[0][-1][-3] += 20
 
-            box[:2] /= factor[0]
-            box[2:4] /= factor[1]
-            box[4:6] /= factor[2]
+        return points, bounding_boxes
 
-            x_s, x_e, y_s, y_e, z_s, z_e = box.astype(int)
+    def _get_img_segments(self, img, series_data, factor):
+        points, bounding_boxes = self._get_points_and_bounding_boxes(series_data, factor)
 
-            segmentation = np.zeros(volume.shape)
-            if self.data_type == "Sagittal":
-                segmentation[:, y_s:y_e, z_s:z_e] = 1
-            else:
-                segmentation[x_s:x_e, y_s:y_e, z_s:z_e] = 1
-            ret.append(segmentation)
+        image = cv2.convertScaleAbs(img)
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
+        masks, scores = self.__run_segmentation_with_points_and_boxes(image, points, bounding_boxes)
 
-        return np.array(ret)
+        masks = masks[0]
+        scores = scores[0]
 
+        masks = [mask_trio[torch.argmax(scores[i])].int() for i, mask_trio in enumerate(masks)]
+
+        return torch.stack(masks)
 
 
 def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
@@ -407,6 +423,63 @@ def create_subject_level_segmentation_datasets_and_loaders(df: pd.DataFrame,
     test_dataset = PatientLevelSegmentationDataset(base_path, test_df,
                                                    data_type=data_type,
                                                    transform_3d=transform_3d_val)
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers,
+                              pin_memory=pin_memory)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers,
+                            pin_memory=pin_memory)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+
+    return train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset
+
+
+def create_series_level_segmentation_datasets_and_loaders(df: pd.DataFrame,
+                                                          data_type: str,
+                                                          base_path: str,
+                                                          transform_2d_train=None,
+                                                          transform_2d_val=None,
+                                                          split_factor=0.2,
+                                                          random_seed=42,
+                                                          batch_size=1,
+                                                          num_workers=0,
+                                                          pin_memory=True, ):
+    df = df.dropna()
+    # This drops any subjects with nans
+
+    filtered_df = pd.DataFrame(columns=df.columns)
+    for series_desc in CONDITIONS.keys():
+        subset = df[df['series_description'] == series_desc]
+        if series_desc == "Sagittal T2/STIR":
+            subset = subset[subset.groupby(["study_id"]).transform('size') == 5]
+        else:
+            subset = subset[subset.groupby(["study_id"]).transform('size') == 10]
+        filtered_df = pd.concat([filtered_df, subset])
+
+    filtered_df = filtered_df[filtered_df.groupby(["study_id"]).transform('size') == 25]
+
+    train_studies, val_studies = train_test_split(filtered_df["study_id"].unique(), test_size=split_factor,
+                                                  random_state=random_seed)
+    val_studies, test_studies = train_test_split(val_studies, test_size=0.25, random_state=random_seed)
+
+    train_df = filtered_df[filtered_df["study_id"].isin(train_studies)]
+    val_df = filtered_df[filtered_df["study_id"].isin(val_studies)]
+    test_df = filtered_df[filtered_df["study_id"].isin(test_studies)]
+
+    train_df = train_df.reset_index(drop=True)
+    val_df = val_df.reset_index(drop=True)
+    test_df = test_df.reset_index(drop=True)
+
+    random.seed(random_seed)
+    train_dataset = SeriesLevelSegmentationDataset(base_path, train_df,
+                                                   data_type=data_type,
+                                                   transform_2d=transform_2d_train,
+                                                   )
+    val_dataset = SeriesLevelSegmentationDataset(base_path, val_df,
+                                                 data_type=data_type,
+                                                 transform_2d=transform_2d_val)
+    test_dataset = SeriesLevelSegmentationDataset(base_path, test_df,
+                                                  data_type=data_type,
+                                                  transform_2d=transform_2d_val)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers,
                               pin_memory=pin_memory)

@@ -1,5 +1,6 @@
 import torch.nn.functional as F
 from torch import Tensor
+import torchvision.transforms as transforms
 
 from training_utils import *
 from rsna_dataloader import *
@@ -10,7 +11,8 @@ CONFIG = dict(
     n_levels=5,
     interpolation="bspline",
     vol_size=(64, 64, 64),
-    num_workers=20,
+    img_size=(512, 512),
+    num_workers=0,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
@@ -365,12 +367,79 @@ def train_segmentation_model_3d(data_type: str, model_label: str):
                                 )
 
 
-def train():
-    sagittal_model = train_segmentation_model_3d("Sagittal",
-                                                 f"sagittal_segmentation_{CONFIG['vol_size'][0]}_3d")
-    axial_model = train_segmentation_model_3d("Axial",
-                                              f"axial_segmentation_{CONFIG['vol_size'][0]}_3d")
+def train_segmentation_model_2d(data_type: str, model_label: str):
+    transform_2d_train = transforms.Compose([
+        transforms.Resize(CONFIG["img_size"]),
+        #tio.RandomAffine(p=CONFIG["aug_prob"]),
+        # transforms.RandomNoise(p=CONFIG["aug_prob"]),
+        # transforms.RandomBlur(p=CONFIG["aug_prob"]),
+        # transforms.RandomAnisotropy(p=CONFIG["aug_prob"]),
+        # transforms.RandomSpike(p=CONFIG["aug_prob"]),
+        # transforms.RandomGamma(p=CONFIG["aug_prob"]),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=0.5, std=0.5),
+    ])
 
+    transform_2d_val = transforms.Compose([
+        transforms.Resize(CONFIG["img_size"]),
+        transforms.Normalize(mean=0.5, std=0.5),
+    ])
+
+    (trainloader, valloader, test_loader,
+     trainset, valset, testset) = create_series_level_segmentation_datasets_and_loaders(TRAINING_DATA,
+                                                                                         data_type=data_type,
+                                                                                         transform_2d_train=transform_2d_train,
+                                                                                         transform_2d_val=transform_2d_val,
+                                                                                         base_path=os.path.join(
+                                                                                             DATA_BASEPATH,
+                                                                                             "train_images"),
+                                                                                         num_workers=CONFIG[
+                                                                                             "num_workers"],
+                                                                                         split_factor=0.3,
+                                                                                         batch_size=CONFIG[
+                                                                                             "batch_size"],
+                                                                                         pin_memory=False
+                                                                                         )
+
+    NUM_EPOCHS = CONFIG["epochs"]
+    # model = UNet3D(n_channels=num_channels, n_classes=CONFIG["n_levels"]).to(device)
+
+    model = torchvision.models.segmentation.fcn_resnet101(pretrained=True)
+    optimizers = [
+        torch.optim.Adam(model.parameters(), lr=1e-3),
+    ]
+
+    schedulers = [
+    ]
+
+    criteria = {
+        "train": [
+            SegmentationLoss() for i in range(CONFIG["n_levels"])
+        ],
+        "val": [
+            nn.BCEWithLogitsLoss() for i in range(CONFIG["n_levels"])
+        ]
+    }
+
+    train_model_with_validation(model,
+                                optimizers,
+                                schedulers,
+                                criteria,
+                                trainloader,
+                                valloader,
+                                model_desc=model_label,
+                                train_loader_desc=f"Training {model_label}",
+                                epochs=NUM_EPOCHS,
+                                freeze_backbone_initial_epochs=0,
+                                )
+
+
+def train():
+    # sagittal_model = train_segmentation_model_3d("Sagittal",
+    #                                              f"sagittal_segmentation_{CONFIG['vol_size'][0]}_3d")
+    # axial_model = train_segmentation_model_3d("Axial",
+    #                                           f"axial_segmentation_{CONFIG['vol_size'][0]}_3d")
+    sagittal_model = train_segmentation_model_2d("Sagittal T2/STIR", "foo")
 
 if __name__ == '__main__':
     train()
