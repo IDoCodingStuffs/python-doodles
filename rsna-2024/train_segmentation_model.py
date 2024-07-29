@@ -1,6 +1,7 @@
 import torch.nn.functional as F
 from torch import Tensor
 import torchvision.transforms as transforms
+from torchvision.transforms import v2
 
 from training_utils import *
 from rsna_dataloader import *
@@ -28,6 +29,8 @@ TRAINING_DATA = retrieve_coordinate_training_data(DATA_BASEPATH)
 
 # region unet3d
 """Adapted from https://github.com/jphdotam/Unet3D/blob/main/unet3d.py"""
+
+
 class UNet3D(nn.Module):
     def __init__(self, n_channels, n_classes, width_multiplier=1, trilinear=True, use_ds_conv=False):
         """A simple 3D Unet, adapted from a 2D Unet from https://github.com/milesial/Pytorch-UNet/tree/master/unet
@@ -194,6 +197,7 @@ class UNet(nn.Module):
         logits = self.outc(x)
         return logits
 
+
 class DoubleConv(nn.Module):
     """(convolution => [BN] => ReLU) * 2"""
 
@@ -265,6 +269,7 @@ class OutConv(nn.Module):
     def forward(self, x):
         return self.conv(x)
 
+
 # endregion
 
 # region segment_loss
@@ -299,12 +304,14 @@ class SegmentationLoss(nn.Module):
         # Dice loss (objective to minimize) between 0 and 1
         fn = self.multiclass_dice_coeff if multiclass else self.dice_coeff
         return 1 - fn(input, target, reduce_batch_first=True)
+
+
 # endregion
 
 def train_segmentation_model_3d(data_type: str, model_label: str):
     transform_3d_train = tio.Compose([
         tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
-        #tio.RandomAffine(p=CONFIG["aug_prob"]),
+        # tio.RandomAffine(p=CONFIG["aug_prob"]),
         tio.RandomNoise(p=CONFIG["aug_prob"]),
         tio.RandomBlur(p=CONFIG["aug_prob"]),
         tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
@@ -370,12 +377,23 @@ def train_segmentation_model_3d(data_type: str, model_label: str):
 def train_segmentation_model_2d(data_type: str, model_label: str):
     transform_2d_train = transforms.Compose([
         # transforms.Resize(CONFIG["img_size"]),
-        #tio.RandomAffine(p=CONFIG["aug_prob"]),
+        # tio.RandomAffine(p=CONFIG["aug_prob"]),
         # transforms.RandomNoise(p=CONFIG["aug_prob"]),
         # transforms.RandomBlur(p=CONFIG["aug_prob"]),
         # transforms.RandomAnisotropy(p=CONFIG["aug_prob"]),
         # transforms.RandomSpike(p=CONFIG["aug_prob"]),
         # transforms.RandomGamma(p=CONFIG["aug_prob"]),
+        v2.RandomChoice((
+            v2.GaussianBlur(kernel_size=(3, 3)),
+            v2.GaussianBlur(kernel_size=(5, 5)),
+            v2.GaussianBlur(kernel_size=(7, 7)),
+            v2.Identity()
+        ),
+            p=[0.2, 0.2, 0.2, 0.4]),
+        v2.RandomChoice((
+            v2.ColorJitter(),
+            v2.Identity()
+        ), p=[0.7, 0.3]),
         transforms.Normalize(mean=0.5, std=0.5),
     ])
 
@@ -386,19 +404,19 @@ def train_segmentation_model_2d(data_type: str, model_label: str):
 
     (trainloader, valloader, test_loader,
      trainset, valset, testset) = create_series_level_segmentation_datasets_and_loaders(TRAINING_DATA,
-                                                                                         data_type=data_type,
-                                                                                         transform_2d_train=transform_2d_train,
-                                                                                         transform_2d_val=transform_2d_val,
-                                                                                         base_path=os.path.join(
-                                                                                             DATA_BASEPATH,
-                                                                                             "train_images"),
-                                                                                         num_workers=CONFIG[
-                                                                                             "num_workers"],
-                                                                                         split_factor=0.3,
-                                                                                         batch_size=CONFIG[
-                                                                                             "batch_size"],
-                                                                                         pin_memory=False
-                                                                                         )
+                                                                                        data_type=data_type,
+                                                                                        transform_2d_train=transform_2d_train,
+                                                                                        transform_2d_val=transform_2d_val,
+                                                                                        base_path=os.path.join(
+                                                                                            DATA_BASEPATH,
+                                                                                            "train_images"),
+                                                                                        num_workers=CONFIG[
+                                                                                            "num_workers"],
+                                                                                        split_factor=0.3,
+                                                                                        batch_size=CONFIG[
+                                                                                            "batch_size"],
+                                                                                        pin_memory=False
+                                                                                        )
 
     NUM_EPOCHS = CONFIG["epochs"]
     # model = UNet3D(n_channels=num_channels, n_classes=CONFIG["n_levels"]).to(device)
@@ -438,7 +456,10 @@ def train():
     #                                              f"sagittal_segmentation_{CONFIG['vol_size'][0]}_3d")
     # axial_model = train_segmentation_model_3d("Axial",
     #                                           f"axial_segmentation_{CONFIG['vol_size'][0]}_3d")
-    sagittal_model = train_segmentation_model_2d("Sagittal T2/STIR", f"sagittal_segmentation_{CONFIG['img_size'][0]}_2d")
+    # torch.multiprocessing.set_start_method('spawn')
+    sagittal_model = train_segmentation_model_2d("Sagittal T2/STIR",
+                                                 f"sagittal_segmentation_{CONFIG['img_size'][0]}_2d")
+
 
 if __name__ == '__main__':
     train()

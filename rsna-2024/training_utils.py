@@ -33,7 +33,9 @@ def model_validation_loss(model, val_loader, loss_fns, epoch, loss_weights=None)
             label = label.to(device) #.unsqueeze(-1)
 
             with autocast(enabled=device != "cpu", dtype=torch.bfloat16):
-                output = model(images.to(device))
+                # output = model(images.to(device))
+                output = model(images.to(device))["out"]
+
                 for index, loss_fn in enumerate(loss_fns["val"]):
                     loss = loss_fn(output[:, index], label[:, index]) / len(loss_fns["val"])
                     total_loss += loss.cpu().item()
@@ -160,7 +162,7 @@ def train_model_with_validation(model,
             or epoch_validation_loss < min(epoch_validation_losses)) \
                 or alt_epoch_validation_loss < min(alt_epoch_validation_losses):
             os.makedirs(f'./models/{model_desc}', exist_ok=True)
-            torch.save(model,
+            torch.save(model.state_dict(),
                        # torch.jit.script(model),
                        f'./models/{model_desc}/{model_desc}' + "_" + str(epoch) + ".pt")
 
