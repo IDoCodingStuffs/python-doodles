@@ -33,15 +33,20 @@ def model_validation_loss(model, val_loader, loss_fns, epoch, loss_weights=None)
             label = label.to(device) #.unsqueeze(-1)
 
             with autocast(enabled=device != "cpu", dtype=torch.bfloat16):
-                # output = model(images.to(device))
-                output = model(images.to(device))["out"]
-
-                for index, loss_fn in enumerate(loss_fns["val"]):
-                    loss = loss_fn(output[:, index], label[:, index]) / len(loss_fns["val"])
-                    total_loss += loss.cpu().item()
+                output = model(images.to(device))
 
                 for index, loss_fn in enumerate(loss_fns["train"]):
-                    loss = loss_fn(output[:, index], label[:, index]) / len(loss_fns["train"])
+                    if len(loss_fns["train"]) > 1:
+                        loss = loss_fn(output[:, index], label[:, index]) / len(loss_fns["train"])
+                    else:
+                        loss = loss_fn(output, label) / len(loss_fns["train"])
+                    total_loss += loss.cpu().item()
+
+                for index, loss_fn in enumerate(loss_fns["val"]):
+                    if len(loss_fns["val"]) > 1:
+                        loss = loss_fn(output[:, index], label[:, index]) / len(loss_fns["val"])
+                    else:
+                        loss = loss_fn(output, label) / len(loss_fns["val"])
                     weighted_loss += loss.cpu().item()
 
             del output
@@ -119,12 +124,13 @@ def train_model_with_validation(model,
             label = label.to(device) #.unsqueeze(-1)
 
             with autocast(enabled=device != "cpu", dtype=torch.bfloat16):
-                # output = model(images.to(device))
-                output = model(images.to(device))["out"]
+                output = model(images.to(device))
 
-                loss = sum([(loss_fn(output[:, loss_index], label[:, loss_index]) / gradient_accumulation_per) for
+                if len(loss_fns["train"]) > 1:
+                    loss = sum([(loss_fn(output[:, loss_index], label[:, loss_index]) / gradient_accumulation_per) for
                             loss_index, loss_fn in enumerate(loss_fns["train"])])
-                # loss = loss_fn(output, label) / gradient_accumulation_per
+                else:
+                    loss = loss_fns["train"][0](output, label) / gradient_accumulation_per
                 epoch_loss += loss.detach().cpu().item() * gradient_accumulation_per / len(loss_fns["train"])
 
             scaler.scale(loss).backward()

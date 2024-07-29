@@ -1,6 +1,7 @@
 import torch.nn.functional as F
 from torch import Tensor
 import torchvision.transforms as transforms
+import segmentation_models_pytorch as smp
 from torchvision.transforms import v2
 
 from training_utils import *
@@ -383,7 +384,7 @@ def train_segmentation_model_2d(data_type: str, model_label: str):
         # transforms.RandomAnisotropy(p=CONFIG["aug_prob"]),
         # transforms.RandomSpike(p=CONFIG["aug_prob"]),
         # transforms.RandomGamma(p=CONFIG["aug_prob"]),
-        v2.AutoAugment(),
+        # v2.AutoAugment(),
         v2.RandomChoice((
             v2.GaussianBlur(kernel_size=(3, 3)),
             v2.GaussianBlur(kernel_size=(5, 5)),
@@ -422,7 +423,9 @@ def train_segmentation_model_2d(data_type: str, model_label: str):
     NUM_EPOCHS = CONFIG["epochs"]
     # model = UNet3D(n_channels=num_channels, n_classes=CONFIG["n_levels"]).to(device)
 
-    model = torchvision.models.segmentation.fcn_resnet101(num_classes=CONFIG["n_levels"]).to(device)
+    model = smp.Unet(
+        classes=CONFIG["n_levels"]
+    ).to(device)
     optimizers = [
         torch.optim.Adam(model.parameters(), lr=1e-3),
     ]
@@ -432,7 +435,7 @@ def train_segmentation_model_2d(data_type: str, model_label: str):
 
     criteria = {
         "train": [
-            SegmentationLoss() for i in range(CONFIG["n_levels"])
+            smp.losses.DiceLoss(mode="binary") for i in range(CONFIG["n_levels"])
         ],
         "val": [
             nn.BCEWithLogitsLoss() for i in range(CONFIG["n_levels"])
