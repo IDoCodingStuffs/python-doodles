@@ -383,6 +383,7 @@ def train_segmentation_model_2d(data_type: str, model_label: str):
         # transforms.RandomAnisotropy(p=CONFIG["aug_prob"]),
         # transforms.RandomSpike(p=CONFIG["aug_prob"]),
         # transforms.RandomGamma(p=CONFIG["aug_prob"]),
+        v2.AutoAugment(),
         v2.RandomChoice((
             v2.GaussianBlur(kernel_size=(3, 3)),
             v2.GaussianBlur(kernel_size=(5, 5)),

@@ -262,11 +262,11 @@ class SeriesLevelSegmentationDataset(Dataset):
                                              (self.dataframe["series_id"] == series)]
 
         label = self._get_img_segments(series_image, series_data, factor).float()
+
         if self.transform_2d is not None:
             series_image = torch.FloatTensor(series_image / 255)
+            series_image = series_image.swapaxes(-1, -3).swapaxes(-1, -2)
             series_image = self.transform_2d(series_image)  # .data
-
-        series_image = series_image.swapaxes(-1, -3).swapaxes(-1, -2)
 
         return series_image, label
 
