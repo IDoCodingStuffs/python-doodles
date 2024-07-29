@@ -956,3 +956,9 @@ Just finished the initial implementation for 2D segmentation with SAM, just for 
 ### 7 AM
 That approach is definitely not working. I'll need to use some external data for the segmentation model.
 Segmentation won't just train on specific vertebrae. It will need to be parsing all vertebrae first, then postprocess to get specific ones.
+
+### 10 AM
+Found a couple of new datasets for segmentation. I might be able to do full volume segmentations with these, bypassing the 2D step.
+
+### 11 AM
+Implemented for some tiny dataset with just 23 volumes. Next, `spine_segmentation_nnunet_v2` with a size over some 70GB.

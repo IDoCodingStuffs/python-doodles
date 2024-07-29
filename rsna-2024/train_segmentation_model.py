@@ -25,8 +25,8 @@ CONFIG = dict(
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
 )
-DATA_BASEPATH = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
-TRAINING_DATA = retrieve_coordinate_training_data(DATA_BASEPATH)
+DATA_BASEPATH = "./data/lumbar-segmentation/nii/"
+# TRAINING_DATA = retrieve_segmentation_training_data(DATA_BASEPATH)
 
 # region unet3d
 """Adapted from https://github.com/jphdotam/Unet3D/blob/main/unet3d.py"""
@@ -288,7 +288,7 @@ class SegmentationLoss(nn.Module):
 
 # endregion
 
-def train_segmentation_model_3d(data_type: str, model_label: str):
+def train_segmentation_model_3d(model_label: str):
     transform_3d_train = tio.Compose([
         tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
         # tio.RandomAffine(p=CONFIG["aug_prob"]),
@@ -306,25 +306,21 @@ def train_segmentation_model_3d(data_type: str, model_label: str):
     ])
 
     (trainloader, valloader, test_loader,
-     trainset, valset, testset) = create_subject_level_segmentation_datasets_and_loaders(TRAINING_DATA,
-                                                                                         data_type=data_type,
-                                                                                         transform_3d_train=transform_3d_train,
-                                                                                         transform_3d_val=transform_3d_val,
-                                                                                         base_path=os.path.join(
-                                                                                             DATA_BASEPATH,
-                                                                                             "train_images"),
-                                                                                         num_workers=CONFIG[
-                                                                                             "num_workers"],
-                                                                                         split_factor=0.3,
-                                                                                         batch_size=CONFIG[
-                                                                                             "batch_size"],
-                                                                                         pin_memory=False
-                                                                                         )
+     trainset, valset, testset) = create_segmentation_datasets_and_loaders(
+        transform_3d_train=transform_3d_train,
+        transform_3d_val=transform_3d_val,
+        base_path=DATA_BASEPATH,
+        num_workers=CONFIG[
+            "num_workers"],
+        split_factor=0.3,
+        batch_size=CONFIG[
+            "batch_size"],
+        pin_memory=False
+    )
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    num_channels = 2 if data_type == "Sagittal" else 1
-    model = UNet3D(n_channels=num_channels, n_classes=CONFIG["n_levels"]).to(device)
+    model = UNet3D(n_channels=1, n_classes=1).to(device)
     optimizers = [
         torch.optim.Adam(model.parameters(), lr=1e-3),
     ]
@@ -334,10 +330,10 @@ def train_segmentation_model_3d(data_type: str, model_label: str):
 
     criteria = {
         "train": [
-            SegmentationLoss() for i in range(CONFIG["n_levels"])
+            SegmentationLoss()
         ],
         "val": [
-            nn.BCEWithLogitsLoss() for i in range(CONFIG["n_levels"])
+            nn.BCEWithLogitsLoss()
         ]
     }
 
@@ -435,13 +431,8 @@ def train_segmentation_model_2d(data_type: str, model_label: str):
 
 
 def train():
-    # sagittal_model = train_segmentation_model_3d("Sagittal",
-    #                                              f"sagittal_segmentation_{CONFIG['vol_size'][0]}_3d")
-    # axial_model = train_segmentation_model_3d("Axial",
-    #                                           f"axial_segmentation_{CONFIG['vol_size'][0]}_3d")
+    model = train_segmentation_model_3d(f"segmentation_{CONFIG['vol_size'][0]}_3d")
     # torch.multiprocessing.set_start_method('spawn')
-    sagittal_model = train_segmentation_model_2d("Sagittal T2/STIR",
-                                                 f"sagittal_segmentation_{CONFIG['img_size'][0]}_2d")
 
 
 if __name__ == '__main__':

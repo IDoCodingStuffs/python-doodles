@@ -1,6 +1,8 @@
 import random
+from typing import List, Tuple
 
 import matplotlib.pyplot as plt
+import nibabel as nib
 import os
 import numpy as np
 import pandas as pd
@@ -32,6 +34,7 @@ MAX_IMAGES_IN_SERIES = {
 }
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+
 
 class PatientLevelDataset(Dataset):
     def __init__(self,
@@ -321,6 +324,34 @@ class SeriesLevelSegmentationDataset(Dataset):
         return torch.stack(masks)
 
 
+class SegmentationDataset(Dataset):
+    def __init__(self, data: List[Tuple], transform_3d=None, vol_size=(64, 64, 64)):
+        self.data = data
+
+        self.transform_3d = transform_3d
+        self.vol_size = vol_size
+        self.transform_resize = tio.Resize((64, 64, 64), image_interpolation='bspline')
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        item_path, label_path = self.data[index]
+
+        volume = np.expand_dims(np.array(nib.load(item_path).dataobj), 0)
+        label = np.expand_dims(np.array(nib.load(label_path).dataobj), 0)
+
+        subj = tio.Subject(
+            one_image=tio.ScalarImage(tensor=volume),
+            a_segmentation=tio.LabelMap(tensor=label),
+        )
+
+        if self.transform_3d is not None:
+            subj = self.transform_3d(subj)  # .data
+
+        return subj["one_image"].tensor, subj["a_segmentation"].tensor.to(torch.float32)
+
+
 def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
                                               base_path: str,
                                               transform_3d_train=None,
@@ -487,6 +518,45 @@ def create_series_level_segmentation_datasets_and_loaders(df: pd.DataFrame,
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers,
                             pin_memory=pin_memory)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+
+    return train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset
+
+
+def create_segmentation_datasets_and_loaders(base_path: str,
+                                             transform_3d_train=None,
+                                             transform_3d_val=None,
+                                             split_factor=0.2,
+                                             random_seed=42,
+                                             batch_size=1,
+                                             num_workers=0,
+                                             pin_memory=True, ):
+    items = glob.glob(os.path.join(base_path, "images", "*.nii"))
+    labels = glob.glob(os.path.join(base_path, "masks", "*.nii"))
+
+    data = list(zip(items, labels))
+
+    train_data, val_data = train_test_split(data, test_size=split_factor,
+                                            random_state=random_seed)
+    # val_data, test_data = train_test_split(val_data, test_size=0.25, random_state=random_seed)
+
+    train_dataset = SegmentationDataset(train_data,
+                                        transform_3d=transform_3d_train,
+                                        )
+    val_dataset = SegmentationDataset(val_data,
+                                      transform_3d=transform_3d_val
+                                      )
+    # test_dataset = SegmentationDataset(test_data,
+    #                                    transform_3d=transform_3d_val
+    #                                    )
+
+    test_dataset = None
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers,
+                              pin_memory=pin_memory)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers,
+                            pin_memory=pin_memory)
+    # test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    test_loader = None
 
     return train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset
 
