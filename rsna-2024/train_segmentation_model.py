@@ -14,7 +14,7 @@ CONFIG = dict(
     interpolation="bspline",
     vol_size=(64, 64, 64),
     img_size=(512, 512),
-    num_workers=20,
+    num_workers=8,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
@@ -288,7 +288,8 @@ class SegmentationLoss(nn.Module):
 def train_segmentation_model_3d(model_label: str):
     transform_3d_train = tio.Compose([
         tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
-        # tio.RandomAffine(p=CONFIG["aug_prob"]),
+        tio.RandomAffine(p=CONFIG["aug_prob"]),
+        tio.RandomFlip(p=CONFIG["aug_prob"]),
         tio.RandomNoise(p=CONFIG["aug_prob"]),
         tio.RandomBlur(p=CONFIG["aug_prob"]),
         tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
