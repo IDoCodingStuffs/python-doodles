@@ -349,7 +349,13 @@ class SegmentationDataset(Dataset):
         if self.transform_3d is not None:
             subj = self.transform_3d(subj)  # .data
 
-        return subj["one_image"].tensor, subj["a_segmentation"].tensor.to(torch.float32)
+        # labels = []
+        # for i in range(self.class_count):
+        #     label_ = torch.zeros_like(subj["a_segmentation"].tensor.squeeze(0))
+        #     label_[label_ == i + 1] = 1
+        #     labels.append(label_.squeeze(0))
+
+        return subj["one_image"].tensor, subj["a_segmentation"].tensor.to(torch.int64).squeeze(0)
 
 
 def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
@@ -530,8 +536,8 @@ def create_segmentation_datasets_and_loaders(base_path: str,
                                              batch_size=1,
                                              num_workers=0,
                                              pin_memory=True, ):
-    items = glob.glob(os.path.join(base_path, "images", "*.nii"))
-    labels = glob.glob(os.path.join(base_path, "masks", "*.nii"))
+    items = glob.glob(os.path.join(base_path, "volumes", "*.nii"))
+    labels = glob.glob(os.path.join(base_path, "segmentations", "*.nii"))
 
     data = list(zip(items, labels))
 

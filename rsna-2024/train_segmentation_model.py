@@ -25,7 +25,7 @@ CONFIG = dict(
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
 )
-DATA_BASEPATH = "./data/lumbar-segmentation/nii/"
+DATA_BASEPATH = "./data/spine_segmentation_nnunet_v2/"
 # TRAINING_DATA = retrieve_segmentation_training_data(DATA_BASEPATH)
 
 # region unet3d
@@ -277,10 +277,10 @@ class OutConv(nn.Module):
 class SegmentationLoss(nn.Module):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.dice = smp.losses.DiceLoss(mode="binary")
+        self.dice = smp.losses.DiceLoss(mode="multiclass")
 
     def forward(self, input, target):
-        ce_loss = F.binary_cross_entropy_with_logits(input, target)
+        ce_loss = F.cross_entropy(input, target)
         dice_loss = self.dice(input, target)
 
         return (ce_loss + dice_loss) / 2
@@ -320,7 +320,7 @@ def train_segmentation_model_3d(model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = UNet3D(n_channels=1, n_classes=1).to(device)
+    model = UNet3D(n_channels=1, n_classes=24).to(device)
     optimizers = [
         torch.optim.Adam(model.parameters(), lr=1e-3),
     ]
@@ -333,7 +333,7 @@ def train_segmentation_model_3d(model_label: str):
             SegmentationLoss()
         ],
         "val": [
-            nn.BCEWithLogitsLoss()
+            nn.CrossEntropyLoss()
         ]
     }
 
