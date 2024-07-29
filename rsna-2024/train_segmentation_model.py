@@ -14,7 +14,7 @@ CONFIG = dict(
     interpolation="bspline",
     vol_size=(64, 64, 64),
     img_size=(512, 512),
-    num_workers=0,
+    num_workers=20,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
@@ -282,10 +282,7 @@ class SegmentationLoss(nn.Module):
     def forward(self, input, target):
         ce_loss = F.cross_entropy(input, target)
         dice_loss = self.dice(input, target)
-
         return (ce_loss + dice_loss) / 2
-
-
 # endregion
 
 def train_segmentation_model_3d(model_label: str):
@@ -320,7 +317,7 @@ def train_segmentation_model_3d(model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = UNet3D(n_channels=1, n_classes=24).to(device)
+    model = UNet3D(n_channels=1, n_classes=26).to(device)
     optimizers = [
         torch.optim.Adam(model.parameters(), lr=1e-3),
     ]
