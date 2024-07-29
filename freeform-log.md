@@ -951,3 +951,8 @@ Probably going to need a SAM model to be able to train vertebral segmentation. T
 ## 7/28
 ### 3 PM
 Just finished the initial implementation for 2D segmentation with SAM, just for sagittal for now.
+
+## 7/29
+### 7 AM
+That approach is definitely not working. I'll need to use some external data for the segmentation model.
+Segmentation won't just train on specific vertebrae. It will need to be parsing all vertebrae first, then postprocess to get specific ones.
