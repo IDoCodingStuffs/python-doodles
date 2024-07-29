@@ -283,13 +283,17 @@ class SegmentationLoss(nn.Module):
         ce_loss = F.cross_entropy(input, target)
         dice_loss = self.dice(input, target)
         return (ce_loss + dice_loss) / 2
+
+
 # endregion
 
 def train_segmentation_model_3d(model_label: str):
     transform_3d_train = tio.Compose([
         tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
         tio.RandomAffine(p=CONFIG["aug_prob"]),
-        tio.RandomFlip(p=CONFIG["aug_prob"]),
+        tio.RandomFlip(axes=0, p=CONFIG["aug_prob"]/3),
+        tio.RandomFlip(axes=1, p=CONFIG["aug_prob"]/3),
+        tio.RandomFlip(axes=2, p=CONFIG["aug_prob"]/3),
         tio.RandomNoise(p=CONFIG["aug_prob"]),
         tio.RandomBlur(p=CONFIG["aug_prob"]),
         tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
