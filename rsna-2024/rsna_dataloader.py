@@ -301,7 +301,7 @@ class SeriesLevelSegmentationDataset(Dataset):
         points = list(zip(points_x.values, points_y.values))
         points = np.array(points) / factor
 
-        bounding_boxes = [[[e[0] - 100, e[1] - 15, e[0], e[1] + 10] for e in points]]
+        bounding_boxes = [[[e[0] - 100, e[1] - 5, e[0], e[1] + 10] for e in points]]
 
         # !TODO: Use some curve fit and normal to expand into disc
         bounding_boxes[0][-1][-1] += 20

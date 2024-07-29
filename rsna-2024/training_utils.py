@@ -128,7 +128,7 @@ def train_model_with_validation(model,
 
                 if len(loss_fns["train"]) > 1:
                     loss = sum([(loss_fn(output[:, loss_index], label[:, loss_index]) / gradient_accumulation_per) for
-                            loss_index, loss_fn in enumerate(loss_fns["train"])])
+                            loss_index, loss_fn in enumerate(loss_fns["train"])]) / len(loss_fns)
                 else:
                     loss = loss_fns["train"][0](output, label) / gradient_accumulation_per
                 epoch_loss += loss.detach().cpu().item() * gradient_accumulation_per / len(loss_fns["train"])
