@@ -281,7 +281,7 @@ class SegmentationLoss(nn.Module):
 
     def forward(self, input, target):
         ce_loss = F.cross_entropy(input, target)
-        dice_loss = self.dice_loss(F.sigmoid(input), target, multiclass=True)
+        dice_loss = self.dice_loss(F.softmax(input, dim=1), target, multiclass=True)
         return (ce_loss + dice_loss) / 2
 
     def dice_coeff(self, input: Tensor, target: Tensor, reduce_batch_first: bool = False, epsilon: float = 1e-6):
