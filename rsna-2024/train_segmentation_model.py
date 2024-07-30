@@ -14,7 +14,7 @@ CONFIG = dict(
     interpolation="bspline",
     vol_size=(96, 96, 96),
     img_size=(512, 512),
-    num_workers=8,
+    num_workers=16,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
@@ -321,9 +321,9 @@ def train_segmentation_model_3d(model_label: str):
         tio.RandomFlip(axes=2, p=CONFIG["aug_prob"] / 3),
         tio.RandomNoise(p=CONFIG["aug_prob"]),
         tio.RandomBlur(p=CONFIG["aug_prob"]),
-        tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
-        tio.RandomSpike(p=CONFIG["aug_prob"]),
-        tio.RandomGamma(p=CONFIG["aug_prob"]),
+        # tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
+        # tio.RandomSpike(p=CONFIG["aug_prob"]),
+        # tio.RandomGamma(p=CONFIG["aug_prob"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
     ])
 
@@ -463,7 +463,7 @@ def train_segmentation_model_2d(data_type: str, model_label: str):
 
 
 def train():
-    model = train_segmentation_model_3d(f"efficientnetb4_unet_segmentation_{CONFIG['vol_size'][0]}_3d")
+    model = train_segmentation_model_3d(f"efficientnetb4_unet_segmentation_{CONFIG['vol_size'][0]}_3d_2")
     # torch.multiprocessing.set_start_method('spawn')
 
 
