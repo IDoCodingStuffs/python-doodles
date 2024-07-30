@@ -14,7 +14,7 @@ CONFIG = dict(
     interpolation="bspline",
     vol_size=(64, 64, 64),
     img_size=(512, 512),
-    num_workers=0,
+    num_workers=8,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
@@ -277,11 +277,11 @@ class OutConv(nn.Module):
 class SegmentationLoss(nn.Module):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        #self.dice = smp.losses.DiceLoss(mode="multiclass")
+        # self.dice = smp.losses.DiceLoss(mode="multiclass")
 
     def forward(self, input, target):
         ce_loss = F.cross_entropy(input, target)
-        dice_loss = self.dice_loss(input, target, multiclass=True)
+        dice_loss = self.dice_loss(F.softmax(input, dim=1), target, multiclass=True)
         return (ce_loss + dice_loss) / 2
 
     def dice_coeff(self, input: Tensor, target: Tensor, reduce_batch_first: bool = False, epsilon: float = 1e-6):
@@ -300,22 +300,25 @@ class SegmentationLoss(nn.Module):
                               epsilon: float = 1e-6):
         # Average of Dice coefficient for all classes
         # !TODO: Configurable num classes
-        return self.dice_coeff(input.flatten(0, 1), F.one_hot(target, num_classes=26).permute(0,-1,1,2,3).flatten(0, 1),
+        return self.dice_coeff(input.flatten(0, 1),
+                               F.one_hot(target, num_classes=26).permute(0, -1, 1, 2, 3).flatten(0, 1),
                                reduce_batch_first, epsilon)
 
     def dice_loss(self, input: Tensor, target: Tensor, multiclass: bool = False):
         # Dice loss (objective to minimize) between 0 and 1
         fn = self.multiclass_dice_coeff if multiclass else self.dice_coeff
         return 1 - fn(input, target, reduce_batch_first=True)
+
+
 # endregion
 
 def train_segmentation_model_3d(model_label: str):
     transform_3d_train = tio.Compose([
         tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
         tio.RandomAffine(p=CONFIG["aug_prob"]),
-        tio.RandomFlip(axes=0, p=CONFIG["aug_prob"]/3),
-        tio.RandomFlip(axes=1, p=CONFIG["aug_prob"]/3),
-        tio.RandomFlip(axes=2, p=CONFIG["aug_prob"]/3),
+        tio.RandomFlip(axes=0, p=CONFIG["aug_prob"] / 3),
+        tio.RandomFlip(axes=1, p=CONFIG["aug_prob"] / 3),
+        tio.RandomFlip(axes=2, p=CONFIG["aug_prob"] / 3),
         tio.RandomNoise(p=CONFIG["aug_prob"]),
         tio.RandomBlur(p=CONFIG["aug_prob"]),
         tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
