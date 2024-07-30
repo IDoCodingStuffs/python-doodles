@@ -1,7 +1,7 @@
 import torch.nn.functional as F
 from torch import Tensor
 import torchvision.transforms as transforms
-import segmentation_models_pytorch as smp
+import segmentation_models_pytorch_3d as smp3d
 from torchvision.transforms import v2
 
 from training_utils import *
@@ -12,7 +12,7 @@ _logger = logging.getLogger(__name__)
 CONFIG = dict(
     n_levels=5,
     interpolation="bspline",
-    vol_size=(64, 64, 64),
+    vol_size=(96, 96, 96),
     img_size=(512, 512),
     num_workers=8,
     drop_rate=0.5,
@@ -347,7 +347,12 @@ def train_segmentation_model_3d(model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = UNet3D(n_channels=1, n_classes=26).to(device)
+    # model = UNet3D(n_channels=1, n_classes=26).to(device)
+    model = smp3d.Unet(
+        encoder_name="efficientnet-b4",  # choose encoder, e.g. resnet34
+        in_channels=1,  # model input channels (1 for gray-scale volumes, 3 for RGB, etc.)
+        classes=26,  # model output channels (number of classes in your dataset)
+    ).to(device)
     optimizers = [
         torch.optim.Adam(model.parameters(), lr=1e-3),
     ]
@@ -458,7 +463,7 @@ def train_segmentation_model_2d(data_type: str, model_label: str):
 
 
 def train():
-    model = train_segmentation_model_3d(f"segmentation_{CONFIG['vol_size'][0]}_3d")
+    model = train_segmentation_model_3d(f"efficientnetb4_unet_segmentation_{CONFIG['vol_size'][0]}_3d")
     # torch.multiprocessing.set_start_method('spawn')
 
 
