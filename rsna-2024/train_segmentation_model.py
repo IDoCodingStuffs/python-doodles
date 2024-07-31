@@ -12,6 +12,7 @@ _logger = logging.getLogger(__name__)
 CONFIG = dict(
     n_levels=5,
     interpolation="bspline",
+    backbone="efficientnet-b5",
     vol_size=(96, 96, 96),
     img_size=(512, 512),
     num_workers=16,
@@ -27,251 +28,6 @@ CONFIG = dict(
 )
 DATA_BASEPATH = "./data/spine_segmentation_nnunet_v2/"
 # TRAINING_DATA = retrieve_segmentation_training_data(DATA_BASEPATH)
-
-# region unet3d
-"""Adapted from https://github.com/jphdotam/Unet3D/blob/main/unet3d.py"""
-
-
-class UNet3D(nn.Module):
-    def __init__(self, n_channels, n_classes, width_multiplier=1, trilinear=True, use_ds_conv=False):
-        """A simple 3D Unet, adapted from a 2D Unet from https://github.com/milesial/Pytorch-UNet/tree/master/unet
-        Arguments:
-          n_channels = number of input channels; 3 for RGB, 1 for grayscale input
-          n_classes = number of output channels/classes
-          width_multiplier = how much 'wider' your UNet should be compared with a standard UNet
-                  default is 1;, meaning 32 -> 64 -> 128 -> 256 -> 512 -> 256 -> 128 -> 64 -> 32
-                  higher values increase the number of kernels pay layer, by that factor
-          trilinear = use trilinear interpolation to upsample; if false, 3D convtranspose layers will be used instead
-          use_ds_conv = if True, we use depthwise-separable convolutional layers. in my experience, this is of little help. This
-                  appears to be because with 3D data, the vast vast majority of GPU RAM is the input data/labels, not the params, so little
-                  VRAM is saved by using ds_conv, and yet performance suffers."""
-        super(UNet3D, self).__init__()
-        _channels = (32, 64, 128, 256, 512)
-        self.n_channels = n_channels
-        self.n_classes = n_classes
-        self.channels = [int(c * width_multiplier) for c in _channels]
-        self.trilinear = trilinear
-        self.convtype = DepthwiseSeparableConv3d if use_ds_conv else nn.Conv3d
-
-        self.inc = DoubleConv3D(n_channels, self.channels[0], conv_type=self.convtype)
-        self.down1 = Down3D(self.channels[0], self.channels[1], conv_type=self.convtype)
-        self.down2 = Down3D(self.channels[1], self.channels[2], conv_type=self.convtype)
-        self.down3 = Down3D(self.channels[2], self.channels[3], conv_type=self.convtype)
-        factor = 2 if trilinear else 1
-        self.down4 = Down3D(self.channels[3], self.channels[4] // factor, conv_type=self.convtype)
-        self.up1 = Up3D(self.channels[4], self.channels[3] // factor, trilinear)
-        self.up2 = Up3D(self.channels[3], self.channels[2] // factor, trilinear)
-        self.up3 = Up3D(self.channels[2], self.channels[1] // factor, trilinear)
-        self.up4 = Up3D(self.channels[1], self.channels[0], trilinear)
-        self.outc = OutConv3D(self.channels[0], n_classes)
-
-    def forward(self, x):
-        x1 = self.inc(x)
-        x2 = self.down1(x1)
-        x3 = self.down2(x2)
-        x4 = self.down3(x3)
-        x5 = self.down4(x4)
-        x = self.up1(x5, x4)
-        x = self.up2(x, x3)
-        x = self.up3(x, x2)
-        x = self.up4(x, x1)
-        logits = self.outc(x)
-        return logits
-
-
-class DoubleConv3D(nn.Module):
-    """(convolution => [BN] => ReLU) * 2"""
-
-    def __init__(self, in_channels, out_channels, conv_type=nn.Conv3d, mid_channels=None):
-        super().__init__()
-        if not mid_channels:
-            mid_channels = out_channels
-        self.double_conv = nn.Sequential(
-            conv_type(in_channels, mid_channels, kernel_size=3, padding=1),
-            nn.BatchNorm3d(mid_channels),
-            nn.ReLU(inplace=True),
-            conv_type(mid_channels, out_channels, kernel_size=3, padding=1),
-            nn.BatchNorm3d(out_channels),
-            nn.ReLU(inplace=True)
-        )
-
-    def forward(self, x):
-        return self.double_conv(x)
-
-
-class Down3D(nn.Module):
-    """Downscaling with maxpool then double conv"""
-
-    def __init__(self, in_channels, out_channels, conv_type=nn.Conv3d):
-        super().__init__()
-        self.maxpool_conv = nn.Sequential(
-            nn.MaxPool3d(2),
-            DoubleConv3D(in_channels, out_channels, conv_type=conv_type)
-        )
-
-    def forward(self, x):
-        return self.maxpool_conv(x)
-
-
-class Up3D(nn.Module):
-    """Upscaling then double conv"""
-
-    def __init__(self, in_channels, out_channels, trilinear=True):
-        super().__init__()
-
-        # if trilinear, use the normal convolutions to reduce the number of channels
-        if trilinear:
-            self.up = nn.Upsample(scale_factor=2, mode='trilinear', align_corners=True)
-            self.conv = DoubleConv3D(in_channels, out_channels, mid_channels=in_channels // 2)
-        else:
-            self.up = nn.ConvTranspose3d(in_channels, in_channels // 2, kernel_size=2, stride=2)
-            self.conv = DoubleConv3D(in_channels, out_channels)
-
-    def forward(self, x1, x2):
-        x1 = self.up(x1)
-        # input is CHW
-        diffY = x2.size()[2] - x1.size()[2]
-        diffX = x2.size()[3] - x1.size()[3]
-
-        x1 = F.pad(x1, [diffX // 2, diffX - diffX // 2,
-                        diffY // 2, diffY - diffY // 2])
-        # if you have padding issues, see
-        # https://github.com/HaiyongJiang/U-Net-Pytorch-Unstructured-Buggy/commit/0e854509c2cea854e247a9c615f175f76fbb2e3a
-        # https://github.com/xiaopeng-liao/Pytorch-UNet/commit/8ebac70e633bac59fc22bb5195e513d5832fb3bd
-        x = torch.cat([x2, x1], dim=1)
-        return self.conv(x)
-
-
-class OutConv3D(nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super(OutConv3D, self).__init__()
-        self.conv = nn.Conv3d(in_channels, out_channels, kernel_size=1)
-
-    def forward(self, x):
-        return self.conv(x)
-
-
-class DepthwiseSeparableConv3d(nn.Module):
-    def __init__(self, nin, nout, kernel_size, padding, kernels_per_layer=1):
-        super(DepthwiseSeparableConv3d, self).__init__()
-        self.depthwise = nn.Conv3d(nin, nin * kernels_per_layer, kernel_size=kernel_size, padding=padding, groups=nin)
-        self.pointwise = nn.Conv3d(nin * kernels_per_layer, nout, kernel_size=1)
-
-    def forward(self, x):
-        out = self.depthwise(x)
-        out = self.pointwise(out)
-        return out
-
-
-# endregion
-
-# region unet
-class UNet(nn.Module):
-    def __init__(self, n_channels, n_classes, bilinear=False):
-        super(UNet, self).__init__()
-        self.n_channels = n_channels
-        self.n_classes = n_classes
-        self.bilinear = bilinear
-
-        self.inc = (DoubleConv(n_channels, 64))
-        self.down1 = (Down(64, 128))
-        self.down2 = (Down(128, 256))
-        self.down3 = (Down(256, 512))
-        factor = 2 if bilinear else 1
-        self.down4 = (Down(512, 1024 // factor))
-        self.up1 = (Up(1024, 512 // factor, bilinear))
-        self.up2 = (Up(512, 256 // factor, bilinear))
-        self.up3 = (Up(256, 128 // factor, bilinear))
-        self.up4 = (Up(128, 64, bilinear))
-        self.outc = (OutConv(64, n_classes))
-
-    def forward(self, x):
-        x1 = self.inc(x)
-        x2 = self.down1(x1)
-        x3 = self.down2(x2)
-        x4 = self.down3(x3)
-        x5 = self.down4(x4)
-        x = self.up1(x5, x4)
-        x = self.up2(x, x3)
-        x = self.up3(x, x2)
-        x = self.up4(x, x1)
-        logits = self.outc(x)
-        return logits
-
-
-class DoubleConv(nn.Module):
-    """(convolution => [BN] => ReLU) * 2"""
-
-    def __init__(self, in_channels, out_channels, mid_channels=None):
-        super().__init__()
-        if not mid_channels:
-            mid_channels = out_channels
-        self.double_conv = nn.Sequential(
-            nn.Conv2d(in_channels, mid_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(mid_channels),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(mid_channels, out_channels, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True)
-        )
-
-    def forward(self, x):
-        return self.double_conv(x)
-
-
-class Down(nn.Module):
-    """Downscaling with maxpool then double conv"""
-
-    def __init__(self, in_channels, out_channels):
-        super().__init__()
-        self.maxpool_conv = nn.Sequential(
-            nn.MaxPool2d(2),
-            DoubleConv(in_channels, out_channels)
-        )
-
-    def forward(self, x):
-        return self.maxpool_conv(x)
-
-
-class Up(nn.Module):
-    """Upscaling then double conv"""
-
-    def __init__(self, in_channels, out_channels, bilinear=True):
-        super().__init__()
-
-        # if bilinear, use the normal convolutions to reduce the number of channels
-        if bilinear:
-            self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
-            self.conv = DoubleConv(in_channels, out_channels, in_channels // 2)
-        else:
-            self.up = nn.ConvTranspose2d(in_channels, in_channels // 2, kernel_size=2, stride=2)
-            self.conv = DoubleConv(in_channels, out_channels)
-
-    def forward(self, x1, x2):
-        x1 = self.up(x1)
-        # input is CHW
-        diffY = x2.size()[2] - x1.size()[2]
-        diffX = x2.size()[3] - x1.size()[3]
-
-        x1 = F.pad(x1, [diffX // 2, diffX - diffX // 2,
-                        diffY // 2, diffY - diffY // 2])
-        # if you have padding issues, see
-        # https://github.com/HaiyongJiang/U-Net-Pytorch-Unstructured-Buggy/commit/0e854509c2cea854e247a9c615f175f76fbb2e3a
-        # https://github.com/xiaopeng-liao/Pytorch-UNet/commit/8ebac70e633bac59fc22bb5195e513d5832fb3bd
-        x = torch.cat([x2, x1], dim=1)
-        return self.conv(x)
-
-
-class OutConv(nn.Module):
-    def __init__(self, in_channels, out_channels):
-        super(OutConv, self).__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=1)
-
-    def forward(self, x):
-        return self.conv(x)
-
-
-# endregion
 
 # region segment_loss
 class SegmentationLoss(nn.Module):
@@ -312,9 +68,40 @@ class SegmentationLoss(nn.Module):
 
 # endregion
 
+# region random_crop
+class RandomCrop:
+    """Random cropping on subject."""
+
+    def __init__(self, roi_size: Tuple):
+        """Init.
+
+        Args:
+            roi_size: cropping size.
+        """
+        self.sampler = tio.data.LabelSampler(patch_size=roi_size, label_name="label")
+
+    def __call__(self, subject: tio.Subject) -> tio.Subject:
+        """Use patch sampler to crop.
+
+        Args:
+            subject: subject having image and label.
+
+        Returns:
+            cropped subject
+        """
+        for patch in self.sampler(subject=subject, num_patches=1):
+            return patch
+# endregion
+
 def train_segmentation_model_3d(model_label: str):
     transform_3d_train = tio.Compose([
-        tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
+        tio.OneOf([
+            tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
+            tio.Compose([
+                tio.Resize(tuple(e * 2 for e in CONFIG["vol_size"]), image_interpolation=CONFIG["interpolation"]),
+                RandomCrop(roi_size=CONFIG["vol_size"])
+            ])
+        ]),
         tio.RandomAffine(p=CONFIG["aug_prob"]),
         tio.RandomFlip(axes=0, p=CONFIG["aug_prob"] / 3),
         tio.RandomFlip(axes=1, p=CONFIG["aug_prob"] / 3),
@@ -347,9 +134,8 @@ def train_segmentation_model_3d(model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    # model = UNet3D(n_channels=1, n_classes=26).to(device)
     model = smp3d.Unet(
-        encoder_name="efficientnet-b4",  # choose encoder, e.g. resnet34
+        encoder_name=CONFIG["backbone"],  # choose encoder, e.g. resnet34
         in_channels=1,  # model input channels (1 for gray-scale volumes, 3 for RGB, etc.)
         classes=26,  # model output channels (number of classes in your dataset)
     ).to(device)
@@ -464,7 +250,7 @@ def train_segmentation_model_2d(data_type: str, model_label: str):
 
 
 def train():
-    model = train_segmentation_model_3d(f"efficientnetb4_unet_segmentation_{CONFIG['vol_size'][0]}_3d")
+    model = train_segmentation_model_3d(f"{CONFIG['backbone']}_unet_segmentation_{CONFIG['vol_size'][0]}_3d")
     # torch.multiprocessing.set_start_method('spawn')
 
 
