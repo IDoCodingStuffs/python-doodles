@@ -27,6 +27,8 @@ CONFIG = dict(
     seed=2024
 )
 DATA_BASEPATH = "./data/spine_segmentation_nnunet_v2/"
+
+
 # TRAINING_DATA = retrieve_segmentation_training_data(DATA_BASEPATH)
 
 # region segment_loss
@@ -40,8 +42,8 @@ class SegmentationLoss(nn.Module):
         if self.multiclass:
             ce_loss = F.cross_entropy(input, target)
         else:
-            ce_loss = F.binary_cross_entropy_with_logits(input, target.unsqueeze(1).to(torch.float))
-        dice_loss = self.dice_loss(F.softmax(input, dim=1), target if self.multiclass else target.unsqueeze(1))
+            ce_loss = F.binary_cross_entropy_with_logits(input, target)
+        dice_loss = self.dice_loss(F.softmax(input, dim=1) if self.multiclass else F.sigmoid(input), target)
         return (ce_loss + dice_loss) / 2
 
     def dice_coeff(self, input: Tensor, target: Tensor, reduce_batch_first: bool = False, epsilon: float = 1e-6):
@@ -131,7 +133,8 @@ def train_segmentation_model_3d(model_label: str):
             SegmentationLoss()
         ],
         "val": [
-            nn.CrossEntropyLoss()
+            # nn.CrossEntropyLoss()
+            nn.BCEWithLogitsLoss()
         ]
     }
 

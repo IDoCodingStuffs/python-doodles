@@ -356,8 +356,9 @@ class SegmentationDataset(Dataset):
         #     labels.append(label_.squeeze(0))
 
         # Binary label
-        label = subj["a_segmentation"].tensor.to(torch.int64).squeeze(0)
+        label = subj["a_segmentation"].tensor
         label[label > 0] = 1
+        label = label.to(torch.float)
 
         return subj["one_image"].tensor, label
 
