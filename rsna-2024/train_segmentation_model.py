@@ -74,6 +74,17 @@ class SegmentationLoss(nn.Module):
 
 # endregion
 
+
+class RandomFlipIntensity:
+    def __call__(self, input: tio.Subject, p=0.5):
+        if np.random.random() <= p:
+            input = tio.Subject(
+                one_image=tio.ScalarImage(tensor=1 - input["one_image"].tensor),
+                a_segmentation=tio.LabelMap(tensor=input["a_segmentation"].tensor),
+            )
+        return input
+
+
 def train_segmentation_model_3d(model_label: str):
     transform_3d_train = tio.Compose([
         tio.RandomAffine(p=CONFIG["aug_prob"]),
@@ -88,11 +99,12 @@ def train_segmentation_model_3d(model_label: str):
             ])
         ]),
         tio.RandomNoise(p=CONFIG["aug_prob"]),
-        tio.RandomBlur(p=CONFIG["aug_prob"]),
-        tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
-        tio.RandomSpike(p=CONFIG["aug_prob"]),
-        tio.RandomGamma(p=CONFIG["aug_prob"]),
+        # tio.RandomBlur(p=CONFIG["aug_prob"]),
+        # tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
+        # tio.RandomSpike(p=CONFIG["aug_prob"]),
+        # tio.RandomGamma(p=CONFIG["aug_prob"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
+        RandomFlipIntensity(),
     ])
 
     transform_3d_val = tio.Compose([
