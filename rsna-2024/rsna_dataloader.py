@@ -355,7 +355,11 @@ class SegmentationDataset(Dataset):
         #     label_[label_ == i + 1] = 1
         #     labels.append(label_.squeeze(0))
 
-        return subj["one_image"].tensor, subj["a_segmentation"].tensor.to(torch.int64).squeeze(0)
+        # Binary label
+        label = subj["a_segmentation"].tensor.to(torch.int64).squeeze(0)
+        label[label > 0] = 1
+
+        return subj["one_image"].tensor, label
 
 
 def create_subject_level_datasets_and_loaders(df: pd.DataFrame,

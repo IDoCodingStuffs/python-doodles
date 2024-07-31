@@ -31,13 +31,17 @@ DATA_BASEPATH = "./data/spine_segmentation_nnunet_v2/"
 
 # region segment_loss
 class SegmentationLoss(nn.Module):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, multiclass=False):
+        super().__init__()
+        self.multiclass = multiclass
         # self.dice = smp.losses.DiceLoss(mode="multiclass")
 
     def forward(self, input, target):
-        ce_loss = F.cross_entropy(input, target)
-        dice_loss = self.dice_loss(F.softmax(input, dim=1), target, multiclass=True)
+        if self.multiclass:
+            ce_loss = F.cross_entropy(input, target)
+        else:
+            ce_loss = F.binary_cross_entropy_with_logits(input, target.unsqueeze(1).to(torch.float))
+        dice_loss = self.dice_loss(F.softmax(input, dim=1), target if self.multiclass else target.unsqueeze(1))
         return (ce_loss + dice_loss) / 2
 
     def dice_coeff(self, input: Tensor, target: Tensor, reduce_batch_first: bool = False, epsilon: float = 1e-6):
@@ -60,9 +64,9 @@ class SegmentationLoss(nn.Module):
                                F.one_hot(target, num_classes=26).permute(0, -1, 1, 2, 3).flatten(0, 1),
                                reduce_batch_first, epsilon)
 
-    def dice_loss(self, input: Tensor, target: Tensor, multiclass: bool = False):
+    def dice_loss(self, input: Tensor, target: Tensor):
         # Dice loss (objective to minimize) between 0 and 1
-        fn = self.multiclass_dice_coeff if multiclass else self.dice_coeff
+        fn = self.multiclass_dice_coeff if self.multiclass else self.dice_coeff
         return 1 - fn(input, target, reduce_batch_first=True)
 
 
@@ -112,7 +116,7 @@ def train_segmentation_model_3d(model_label: str):
     model = smp3d.Unet(
         encoder_name=CONFIG["backbone"],  # choose encoder, e.g. resnet34
         in_channels=1,  # model input channels (1 for gray-scale volumes, 3 for RGB, etc.)
-        classes=26,  # model output channels (number of classes in your dataset)
+        classes=1,  # model output channels (number of classes in your dataset)
     ).to(device)
 
     optimizers = [
@@ -225,7 +229,7 @@ def train_segmentation_model_2d(data_type: str, model_label: str):
 
 
 def train():
-    model = train_segmentation_model_3d(f"{CONFIG['backbone']}_unet_segmentation_{CONFIG['vol_size'][0]}_3d")
+    model = train_segmentation_model_3d(f"{CONFIG['backbone']}_unet_segmentation_{CONFIG['vol_size'][0]}_3d_binary")
     # torch.multiprocessing.set_start_method('spawn')
 
 
