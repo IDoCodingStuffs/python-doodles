@@ -33,7 +33,7 @@ DATA_BASEPATH = "./data/spine_segmentation_nnunet_v2/"
 # TRAINING_DATA = retrieve_segmentation_training_data(DATA_BASEPATH)
 
 # region segment_loss
-class SegmentationLoss(nn.Module):
+class DiceCELoss(nn.Module):
     def __init__(self, multiclass=False):
         super().__init__()
         self.multiclass = multiclass
@@ -71,38 +71,6 @@ class SegmentationLoss(nn.Module):
         # Dice loss (objective to minimize) between 0 and 1
         fn = self.multiclass_dice_coeff if self.multiclass else self.dice_coeff
         return 1 - fn(input, target, reduce_batch_first=True)
-
-    def multiclass_center_distance_loss(self, input: Tensor, target: Tensor):
-        num_classes = input.shape[1]
-        cutoff_prob = 1 / num_classes
-
-        input_ = input.flatten(0, 1)
-        target_ = F.one_hot(target, num_classes=num_classes).permute(0, -1, 1, 2, 3).flatten(0, 1)
-
-        # !TODO: Vectorize
-        return torch.mean(
-            torch.tensor([self.center_distance_loss(input_[i], target_[i], cutoff_prob) for i in range(len(input_))]))
-
-    def center_distance_loss(self, input: Tensor, target: Tensor, cutoff_prob):
-        input_coords = torch.nonzero(input > cutoff_prob)
-        target_coords = torch.nonzero(target)
-
-        input_centroid = self._get_centroid(input_coords)
-        target_centroid = self._get_centroid(target_coords)
-
-        return F.mse_loss(input_centroid, target_centroid)
-
-    def _get_centroid(self, coords):
-        # !TODO: Vectorize
-        return torch.tensor([
-            self._get_midpoint(torch.min(coords[:, 0]), torch.max(coords[:, 0])),
-            self._get_midpoint(torch.min(coords[:, 1]), torch.max(coords[:, 1])),
-            self._get_midpoint(torch.min(coords[:, 2]), torch.max(coords[:, 2])),
-        ])
-
-    def _get_midpoint(self, val1, val2):
-        return val1 + (val2 - val1) / 2
-
 
 # endregion
 
@@ -165,7 +133,7 @@ def train_segmentation_model_3d(model_label: str):
 
     criteria = {
         "train": [
-            SegmentationLoss(multiclass=True)
+            DiceCELoss(multiclass=True)
         ],
         "val": [
             nn.BCEWithLogitsLoss() if CONFIG["segmentation_type"] == "binary" else nn.CrossEntropyLoss(ignore_index=0)
@@ -245,7 +213,7 @@ def train_segmentation_model_2d(data_type: str, model_label: str):
 
     criteria = {
         "train": [
-            SegmentationLoss() for i in range(CONFIG["n_levels"])
+            DiceCELoss() for i in range(CONFIG["n_levels"])
         ],
         "val": [
             nn.BCEWithLogitsLoss() for i in range(CONFIG["n_levels"])
