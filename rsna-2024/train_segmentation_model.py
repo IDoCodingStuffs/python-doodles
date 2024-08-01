@@ -63,8 +63,8 @@ class SegmentationLoss(nn.Module):
                               epsilon: float = 1e-6):
         # Average of Dice coefficient for all classes
         # !TODO: Configurable num classes
-        return self.dice_coeff(input.flatten(0, 1),
-                               F.one_hot(target, num_classes=26).permute(0, -1, 1, 2, 3).flatten(0, 1),
+        return self.dice_coeff(input[:, 1:].flatten(0, 1),
+                               F.one_hot(target, num_classes=26).permute(0, -1, 1, 2, 3)[:,1:].flatten(0, 1),
                                reduce_batch_first, epsilon)
 
     def dice_loss(self, input: Tensor, target: Tensor):
