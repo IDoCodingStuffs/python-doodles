@@ -94,10 +94,10 @@ def train_segmentation_model_3d(model_label: str):
         tio.RandomFlip(axes=2, p=CONFIG["aug_prob"] / 3),
         tio.OneOf([
             tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
-            tio.Compose([
-                tio.Resize(tuple(e * 2 for e in CONFIG["vol_size"]), image_interpolation=CONFIG["interpolation"]),
-                tio.CropOrPad(CONFIG["vol_size"])
-            ])
+            # tio.Compose([
+            #     tio.Resize(tuple(e * 2 for e in CONFIG["vol_size"]), image_interpolation=CONFIG["interpolation"]),
+            #     tio.CropOrPad(CONFIG["vol_size"])
+            # ])
         ]),
         tio.RandomNoise(p=CONFIG["aug_prob"]),
         # tio.RandomBlur(p=CONFIG["aug_prob"]),
