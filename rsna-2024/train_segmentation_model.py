@@ -106,13 +106,13 @@ def train_segmentation_model_3d(model_label: str):
         # tio.RandomGamma(p=CONFIG["aug_prob"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
         RandomFlipIntensity(),
-        tio.ZNormalization()
+        # tio.ZNormalization()
     ])
 
     transform_3d_val = tio.Compose([
         tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
-        tio.ZNormalization()
+        # tio.ZNormalization()
     ])
 
     (trainloader, valloader, test_loader,
