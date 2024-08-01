@@ -359,7 +359,7 @@ class SegmentationDataset(Dataset):
         label = subj["a_segmentation"].tensor
         # label[label > 0] = 1
         # label = label.to(torch.float)
-        label = label.to(torch.long)
+        label = label.to(torch.long).squeeze(0)
         return subj["one_image"].tensor, label
 
 
