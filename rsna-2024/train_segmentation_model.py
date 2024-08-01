@@ -13,6 +13,7 @@ CONFIG = dict(
     n_levels=5,
     interpolation="bspline",
     backbone="efficientnet-b5",
+    segmentation_type="per_vertebrae", # {per_vertebrae, binary}
     vol_size=(96, 96, 96),
     img_size=(512, 512),
     num_workers=16,
@@ -40,7 +41,7 @@ class SegmentationLoss(nn.Module):
 
     def forward(self, input, target):
         if self.multiclass:
-            ce_loss = F.cross_entropy(input, target)
+            ce_loss = F.cross_entropy(input, target, ignore_index=0)
         else:
             ce_loss = F.binary_cross_entropy_with_logits(input, target)
         dice_loss = self.dice_loss(F.softmax(input, dim=1) if self.multiclass else F.sigmoid(input), target)
@@ -131,8 +132,8 @@ def train_segmentation_model_3d(model_label: str):
 
     model = smp3d.Unet(
         encoder_name=CONFIG["backbone"],  # choose encoder, e.g. resnet34
-        in_channels=1,  # model input channels (1 for gray-scale volumes, 3 for RGB, etc.)
-        classes=1,  # model output channels (number of classes in your dataset)
+        classes=1 if CONFIG["segmentation_type"] == "binary" else 26,  # model input channels (1 for gray-scale volumes, 3 for RGB, etc.)
+        in_channels=1,  # model output channels (number of classes in your dataset)
     ).to(device)
 
     optimizers = [
@@ -144,11 +145,10 @@ def train_segmentation_model_3d(model_label: str):
 
     criteria = {
         "train": [
-            SegmentationLoss()
+            SegmentationLoss(multiclass=True)
         ],
         "val": [
-            # nn.CrossEntropyLoss()
-            nn.BCEWithLogitsLoss()
+            nn.BCEWithLogitsLoss() if CONFIG["segmentation_type"] == "binary" else nn.CrossEntropyLoss(ignore_index=0)
         ]
     }
 
@@ -246,7 +246,7 @@ def train_segmentation_model_2d(data_type: str, model_label: str):
 
 
 def train():
-    model = train_segmentation_model_3d(f"{CONFIG['backbone']}_unet_segmentation_{CONFIG['vol_size'][0]}_3d_binary")
+    model = train_segmentation_model_3d(f"{CONFIG['backbone']}_unet_segmentation_{CONFIG['vol_size'][0]}_3d_{CONFIG['segmentation_type']}")
     # torch.multiprocessing.set_start_method('spawn')
 
 
