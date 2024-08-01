@@ -19,6 +19,7 @@ import cv2
 import torchio as tio
 import itk
 from transformers import SamModel, SamProcessor
+import torch.nn.functional as F
 
 LABEL_MAP = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
 CONDITIONS = {
@@ -325,17 +326,22 @@ class SeriesLevelSegmentationDataset(Dataset):
 
 
 class SegmentationDataset(Dataset):
-    def __init__(self, data: List[Tuple], transform_3d=None, vol_size=(64, 64, 64)):
+    def __init__(self, data: List[Tuple], transform_3d=None, vol_size=(64, 64, 64), num_classes=26):
         self.data = data
 
         self.transform_3d = transform_3d
         self.vol_size = vol_size
         self.transform_resize = tio.Resize((64, 64, 64), image_interpolation='bspline')
+        self.num_classes = num_classes
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, index):
+        #return self._getitem_conventional(index)
+        return self._getitem_softseg(index)
+
+    def _getitem_conventional(self, index):
         item_path, label_path = self.data[index]
 
         volume = np.expand_dims(np.array(nib.load(item_path).dataobj), 0)
@@ -361,6 +367,20 @@ class SegmentationDataset(Dataset):
         # label = label.to(torch.float)
         label = label.to(torch.long).squeeze(0)
         return subj["one_image"].tensor, label
+
+    def _getitem_softseg(self, index):
+        item_path, label_path = self.data[index]
+
+        volume = torch.tensor(np.array(nib.load(item_path).dataobj))
+        label = torch.tensor(np.array(nib.load(label_path).dataobj), dtype=torch.int64)
+        label = F.one_hot(label, num_classes=self.num_classes).permute(-1, 0, 1, 2)
+
+        combo = torch.concat((volume.unsqueeze(0), label), dim=0)
+
+        if self.transform_3d is not None:
+            combo = self.transform_3d(combo)  # .data
+
+        return combo[0].unsqueeze(0), combo[1:].unsqueeze(0)
 
 
 def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
