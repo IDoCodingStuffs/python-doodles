@@ -41,7 +41,7 @@ class SegmentationLoss(nn.Module):
 
     def forward(self, input, target):
         if self.multiclass:
-            ce_loss = F.cross_entropy(input, target, ignore_index=0)
+            ce_loss = F.cross_entropy(input, target)
         else:
             ce_loss = F.binary_cross_entropy_with_logits(input, target)
         dice_loss = self.dice_loss(F.softmax(input, dim=1) if self.multiclass else F.sigmoid(input), target)
@@ -63,8 +63,8 @@ class SegmentationLoss(nn.Module):
                               epsilon: float = 1e-6):
         # Average of Dice coefficient for all classes
         # !TODO: Configurable num classes
-        return self.dice_coeff(input[:, 1:].flatten(0, 1),
-                               F.one_hot(target, num_classes=26).permute(0, -1, 1, 2, 3)[:,1:].flatten(0, 1),
+        return self.dice_coeff(input.flatten(0, 1),
+                               F.one_hot(target, num_classes=26).permute(0, -1, 1, 2, 3).flatten(0, 1),
                                reduce_batch_first, epsilon)
 
     def dice_loss(self, input: Tensor, target: Tensor):
@@ -88,31 +88,20 @@ class RandomFlipIntensity:
 
 def train_segmentation_model_3d(model_label: str):
     transform_3d_train = tio.Compose([
+        tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
         tio.RandomAffine(p=CONFIG["aug_prob"]),
-        tio.RandomFlip(axes=0, p=CONFIG["aug_prob"] / 3),
-        tio.RandomFlip(axes=1, p=CONFIG["aug_prob"] / 3),
-        tio.RandomFlip(axes=2, p=CONFIG["aug_prob"] / 3),
-        tio.OneOf([
-            tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
-            # tio.Compose([
-            #     tio.Resize(tuple(e * 2 for e in CONFIG["vol_size"]), image_interpolation=CONFIG["interpolation"]),
-            #     tio.CropOrPad(CONFIG["vol_size"])
-            # ])
-        ]),
         tio.RandomNoise(p=CONFIG["aug_prob"]),
-        # tio.RandomBlur(p=CONFIG["aug_prob"]),
-        # tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
-        # tio.RandomSpike(p=CONFIG["aug_prob"]),
-        # tio.RandomGamma(p=CONFIG["aug_prob"]),
+        tio.RandomBlur(p=CONFIG["aug_prob"]),
+        tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
+        tio.RandomSpike(p=CONFIG["aug_prob"]),
+        tio.RandomGamma(p=CONFIG["aug_prob"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
         RandomFlipIntensity(),
-        # tio.ZNormalization()
     ])
 
     transform_3d_val = tio.Compose([
         tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
-        # tio.ZNormalization()
     ])
 
     (trainloader, valloader, test_loader,
