@@ -46,10 +46,10 @@ class SegmentationLoss(nn.Module):
         dice_loss = self.dice_loss(F.softmax(input, dim=1) if self.multiclass else F.sigmoid(input), target)
         return (ce_loss + dice_loss) / 2
 
-    def dice_coeff(self, input: Tensor, target: Tensor, reduce_batch_first: bool = False, epsilon: float = 1e-6):
+    def dice_coeff(self, input: Tensor, target: Tensor, epsilon: float = 1e-6):
         # Average of Dice coefficient for all batches, or for a single mask
         assert input.size() == target.size()
-        sum_dim = (-1, -2) if input.dim() == 2 or not reduce_batch_first else (-1, -2, -3)
+        sum_dim = (-1, -2) if input.dim() == 2 else (-1, -2, -3)
 
         inter = 2 * (input * target).sum(dim=sum_dim)
         sets_sum = input.sum(dim=sum_dim) + target.sum(dim=sum_dim)
@@ -61,15 +61,46 @@ class SegmentationLoss(nn.Module):
     def multiclass_dice_coeff(self, input: Tensor, target: Tensor, reduce_batch_first: bool = False,
                               epsilon: float = 1e-6):
         # Average of Dice coefficient for all classes
-        # !TODO: Configurable num classes
+        num_classes = input.shape[1]
         return self.dice_coeff(input.flatten(0, 1),
-                               F.one_hot(target, num_classes=26).permute(0, -1, 1, 2, 3).flatten(0, 1),
-                               reduce_batch_first, epsilon)
+                               F.one_hot(target, num_classes=num_classes).permute(0, -1, 1, 2, 3).flatten(0, 1),
+                               epsilon)
 
     def dice_loss(self, input: Tensor, target: Tensor):
         # Dice loss (objective to minimize) between 0 and 1
         fn = self.multiclass_dice_coeff if self.multiclass else self.dice_coeff
         return 1 - fn(input, target, reduce_batch_first=True)
+
+    def multiclass_center_distance_loss(self, input: Tensor, target: Tensor):
+        num_classes = input.shape[1]
+        cutoff_prob = 1 / num_classes
+
+        input_ = input.flatten(0, 1)
+        target_ = F.one_hot(target, num_classes=num_classes).permute(0, -1, 1, 2, 3).flatten(0, 1)
+
+        # !TODO: Vectorize
+        return torch.mean(
+            torch.tensor([self.center_distance_loss(input_[i], target_[i], cutoff_prob) for i in range(len(input_))]))
+
+    def center_distance_loss(self, input: Tensor, target: Tensor, cutoff_prob):
+        input_coords = torch.nonzero(input > cutoff_prob)
+        target_coords = torch.nonzero(target)
+
+        input_centroid = self._get_centroid(input_coords)
+        target_centroid = self._get_centroid(target_coords)
+
+        return F.mse_loss(input_centroid, target_centroid)
+
+    def _get_centroid(self, coords):
+        # !TODO: Vectorize
+        return torch.tensor([
+            self._get_midpoint(torch.min(coords[:, 0]), torch.max(coords[:, 0])),
+            self._get_midpoint(torch.min(coords[:, 1]), torch.max(coords[:, 1])),
+            self._get_midpoint(torch.min(coords[:, 2]), torch.max(coords[:, 2])),
+        ])
+
+    def _get_midpoint(self, val1, val2):
+        return val1 + (val2 - val1) / 2
 
 
 # endregion
