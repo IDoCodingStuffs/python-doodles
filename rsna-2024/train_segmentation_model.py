@@ -73,6 +73,9 @@ class DiceCELoss(nn.Module):
         return 1 - fn(input, target, reduce_batch_first=True)
 
 class AdaptiveWingLoss(nn.Module):
+    """
+    Inputs are assumed to be raw logits, and will be normalized+ReLUed
+    """
     def __init__(self, omega=14, theta=0.5, epsilon=1, alpha=2.1):
         super(AdaptiveWingLoss, self).__init__()
         self.omega = omega
@@ -88,7 +91,7 @@ class AdaptiveWingLoss(nn.Module):
         '''
 
         y = target
-        y_hat = pred
+        y_hat = F.relu(F.normalize(pred))
         delta_y = (y - y_hat).abs()
         delta_y1 = delta_y[delta_y < self.theta]
         delta_y2 = delta_y[delta_y >= self.theta]
@@ -161,7 +164,7 @@ def train_segmentation_model_3d(model_label: str):
 
     criteria = {
         "train": [
-            DiceCELoss(multiclass=True)
+            AdaptiveWingLoss()
         ],
         "val": [
             nn.BCEWithLogitsLoss() if CONFIG["segmentation_type"] == "binary" else nn.CrossEntropyLoss(ignore_index=0)
