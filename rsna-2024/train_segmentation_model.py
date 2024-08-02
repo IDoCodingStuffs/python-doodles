@@ -20,7 +20,7 @@ CONFIG = dict(
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
-    aug_prob=0.7,
+    aug_prob=0.9,
     out_dim=3,
     epochs=50,
     batch_size=8,
@@ -124,10 +124,10 @@ def train_segmentation_model_3d(model_label: str):
         tio.RandomNoise(p=CONFIG["aug_prob"]),
         tio.RandomBlur(p=CONFIG["aug_prob"]),
         tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
-        # tio.RandomSpike(p=CONFIG["aug_prob"]),
+        tio.RandomSpike(p=CONFIG["aug_prob"]),
         tio.RandomGamma(p=CONFIG["aug_prob"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
-        # RandomFlipIntensity(),
+        RandomFlipIntensity(),
     ])
 
     transform_3d_val = tio.Compose([
