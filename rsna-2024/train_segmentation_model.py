@@ -16,7 +16,7 @@ CONFIG = dict(
     segmentation_type="per_vertebrae", # {per_vertebrae, binary}
     vol_size=(96, 96, 96),
     img_size=(512, 512),
-    num_workers=26,
+    num_workers=16,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
@@ -169,7 +169,7 @@ def train_segmentation_model_3d(model_label: str):
             AdaptiveWingLoss()
         ],
         "val": [
-            nn.BCEWithLogitsLoss() if CONFIG["segmentation_type"] == "binary" else nn.CrossEntropyLoss(ignore_index=0)
+            DiceCELoss(multiclass=True)
         ]
     }
 
