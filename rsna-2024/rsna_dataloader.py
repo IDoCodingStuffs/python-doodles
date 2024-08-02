@@ -338,8 +338,8 @@ class SegmentationDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, index):
-        #return self._getitem_conventional(index)
-        return self._getitem_softseg(index)
+        return self._getitem_conventional(index)
+        #return self._getitem_softseg(index)
 
     def _getitem_conventional(self, index):
         item_path, label_path = self.data[index]
@@ -380,7 +380,7 @@ class SegmentationDataset(Dataset):
         if self.transform_3d is not None:
             combo = self.transform_3d(combo)  # .data
 
-        return combo[0].unsqueeze(0), combo[1:].unsqueeze(0)
+        return combo[0].unsqueeze(0).to(torch.half), combo[1:].unsqueeze(0).to(torch.half)
 
 
 def create_subject_level_datasets_and_loaders(df: pd.DataFrame,

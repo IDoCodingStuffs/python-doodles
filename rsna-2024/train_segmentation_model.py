@@ -90,8 +90,9 @@ class AdaptiveWingLoss(nn.Module):
         :return:
         '''
 
-        y = target
+        y = target.squeeze(1)
         y_hat = F.relu(F.normalize(pred))
+
         delta_y = (y - y_hat).abs()
         delta_y1 = delta_y[delta_y < self.theta]
         delta_y2 = delta_y[delta_y >= self.theta]
@@ -123,10 +124,10 @@ def train_segmentation_model_3d(model_label: str):
         tio.RandomNoise(p=CONFIG["aug_prob"]),
         tio.RandomBlur(p=CONFIG["aug_prob"]),
         tio.RandomAnisotropy(p=CONFIG["aug_prob"]),
-        tio.RandomSpike(p=CONFIG["aug_prob"]),
+        # tio.RandomSpike(p=CONFIG["aug_prob"]),
         tio.RandomGamma(p=CONFIG["aug_prob"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
-        RandomFlipIntensity(),
+        # RandomFlipIntensity(),
     ])
 
     transform_3d_val = tio.Compose([
