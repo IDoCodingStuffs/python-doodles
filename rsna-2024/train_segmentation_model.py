@@ -16,7 +16,7 @@ CONFIG = dict(
     segmentation_type="per_vertebrae", # {per_vertebrae, binary}
     vol_size=(96, 96, 96),
     img_size=(512, 512),
-    num_workers=16,
+    num_workers=26,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
@@ -90,7 +90,8 @@ class AdaptiveWingLoss(nn.Module):
         :return:
         '''
 
-        y = target.squeeze(1)
+        num_classes = pred.shape[1]
+        y = F.one_hot(target, num_classes=num_classes).permute(0, -1, 1, 2, 3)
         y_hat = F.relu(F.normalize(pred))
 
         delta_y = (y - y_hat).abs()
