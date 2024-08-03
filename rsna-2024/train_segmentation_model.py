@@ -16,13 +16,13 @@ CONFIG = dict(
     segmentation_type="per_vertebrae", # {per_vertebrae, binary}
     vol_size=(96, 96, 96),
     img_size=(512, 512),
-    num_workers=0,
+    num_workers=20,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
     aug_prob=0.9,
     out_dim=3,
-    epochs=50,
+    epochs=200,
     batch_size=8,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
@@ -76,13 +76,12 @@ class AdaptiveWingLoss(nn.Module):
     """
     Inputs are assumed to be raw logits, and will be normalized+ReLUed
     """
-    def __init__(self, weight=50, omega=14, theta=0.5, epsilon=1, alpha=2.1):
+    def __init__(self, omega=14, theta=0.5, epsilon=1, alpha=2.1):
         super(AdaptiveWingLoss, self).__init__()
         self.omega = omega
         self.theta = theta
         self.epsilon = epsilon
         self.alpha = alpha
-        self.weight = weight
 
     def forward(self, pred, target):
         '''
@@ -105,7 +104,7 @@ class AdaptiveWingLoss(nn.Module):
             torch.pow(self.theta / self.epsilon, self.alpha - y2 - 1)) * (1 / self.epsilon)
         C = self.theta * A - self.omega * torch.log(1 + torch.pow(self.theta / self.epsilon, self.alpha - y2))
         loss2 = A * delta_y2 - C
-        return self.weight * (loss1.sum() + loss2.sum()) / (len(loss1) + len(loss2))
+        return (loss1.sum() + loss2.sum()) / (len(loss1) + len(loss2))
 # endregion
 
 
@@ -239,7 +238,7 @@ def train_segmentation_model_2d(data_type: str, model_label: str):
         classes=CONFIG["n_levels"]
     ).to(device)
     optimizers = [
-        torch.optim.Adam(model.parameters(), lr=1e-3),
+        torch.optim.Adam(model.parameters(), lr=5e-2),
     ]
 
     schedulers = [

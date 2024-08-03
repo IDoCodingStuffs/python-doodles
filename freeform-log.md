@@ -962,3 +962,7 @@ Found a couple of new datasets for segmentation. I might be able to do full volu
 
 ### 11 AM
 Implemented for some tiny dataset with just 23 volumes. Next, `spine_segmentation_nnunet_v2` with a size over some 70GB.
+
+## 8/3
+### 10 AM
+UNet 3D segmentation fails to generalize across modalities. It just won't work. I should look into path based training approaches.
