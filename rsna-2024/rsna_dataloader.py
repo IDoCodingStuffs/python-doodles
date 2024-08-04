@@ -109,7 +109,7 @@ class PatientLevelDataset(Dataset):
                             if self.transform_3d is not None:
                                 image_patch = self.transform_3d(np.expand_dims(image_patch, 0))  # .data
 
-                            images.append(torch.tensor(image_patch, dtype=torch.half).squeeze(0))
+                            images.append(image_patch)
             else:
                 for j in range(3):
                     for k in range(3):
@@ -127,9 +127,9 @@ class PatientLevelDataset(Dataset):
                         if self.transform_3d is not None:
                             image_patch = self.transform_3d(np.expand_dims(image_patch, 0))  # .data
 
-                        images.append(torch.tensor(image_patch, dtype=torch.half).squeeze(0))
+                        images.append(image_patch)
 
-        return torch.stack(images), F.one_hot(torch.tensor(label, dtype=torch.long), num_classes=3)
+        return images, label
 
     def _get_labels(self):
         labels = dict()
