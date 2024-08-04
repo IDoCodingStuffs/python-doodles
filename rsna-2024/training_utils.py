@@ -30,7 +30,7 @@ def model_validation_loss(model, val_loader, loss_fns, epoch, loss_weights=None)
         model.eval()
 
         for images, label in tqdm(val_loader, desc=f"Validating epoch {epoch}"):
-            label = label.to(device)  # .unsqueeze(-1)
+            label = label.to(device) #.unsqueeze(-1)
 
             with autocast(enabled=device != "cpu", dtype=torch.bfloat16):
                 output = model(images.to(device))
@@ -121,8 +121,7 @@ def train_model_with_validation(model,
 
         for index, val in enumerate(tqdm(train_loader, desc=f"Epoch {epoch}")):
             images, label = val
-            images = torch.stack(images).half().permute(1, 0, 3, 4, 5, 2).squeeze(-1)
-            label = F.one_hot(label.long(), num_classes=3).to(device)
+            label = label.to(device) #.unsqueeze(-1)
 
             with autocast(enabled=device != "cpu", dtype=torch.bfloat16):
                 output = model(images.to(device))
@@ -131,7 +130,7 @@ def train_model_with_validation(model,
 
                 if len(loss_fns["train"]) > 1:
                     loss = sum([(loss_fn(output[:, loss_index], label[:, loss_index]) / gradient_accumulation_per) for
-                                loss_index, loss_fn in enumerate(loss_fns["train"])]) / len(loss_fns["train"])
+                            loss_index, loss_fn in enumerate(loss_fns["train"])]) / len(loss_fns["train"])
                 else:
                     loss = loss_fns["train"][0](output, label) / gradient_accumulation_per
                 epoch_loss += loss.detach().cpu().item() * gradient_accumulation_per
