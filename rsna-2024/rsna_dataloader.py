@@ -84,22 +84,26 @@ class PatientLevelDataset(Dataset):
                 label[:10] = label[10:20].copy()
                 label[10:20] = temp
 
-            slice_lens = np.array(series_images.shape) // 4
+            slice_lens = np.array(series_images.shape) // 3
             if series_desc == "Axial T2":
-                for i in range(4):
-                    for j in range(4):
-                        for k in range(4):
+                for i in range(3):
+                    for j in range(3):
+                        for k in range(3):
                             x_s = slice_lens[0] * i
                             x_e = slice_lens[0] * (i + 1)
                             y_s = slice_lens[1] * j
                             y_e = slice_lens[1] * (j + 1)
                             z_s = slice_lens[2] * k
                             z_e = slice_lens[2] * (k + 1)
+
+                            if j == 0 and k == 0 or j == 2 and k == 0 or j == 2 and k == 2 or j == 0 and k == 2:
+                                continue
+
                             image_patch = series_images[x_s:x_e, y_s:y_e, z_s:z_e]
 
                             # !TODO: Not hardcoded
-                            if image_patch.shape[1] > 64:
-                                image_patch = np.array([cv2.resize(e, (64, 64), interpolation=cv2.INTER_NEAREST)
+                            if image_patch.shape[1] > 128:
+                                image_patch = np.array([cv2.resize(e, (128, 128), interpolation=cv2.INTER_NEAREST)
                                                         for e in image_patch])
 
                             if self.transform_3d is not None:
@@ -107,8 +111,8 @@ class PatientLevelDataset(Dataset):
 
                             images.append(torch.tensor(image_patch, dtype=torch.half).squeeze(0))
             else:
-                for j in range(4):
-                    for k in range(4):
+                for j in range(3):
+                    for k in range(3):
                         y_s = slice_lens[1] * j
                         y_e = slice_lens[1] * (j + 1)
                         z_s = slice_lens[2] * k
@@ -116,8 +120,8 @@ class PatientLevelDataset(Dataset):
                         image_patch = series_images[:, y_s:y_e, z_s:z_e]
 
                         # !TODO: Not hardcoded
-                        if image_patch.shape[1] > 64:
-                            image_patch = np.array([cv2.resize(e, (64, 64), interpolation=cv2.INTER_NEAREST)
+                        if image_patch.shape[1] > 128:
+                            image_patch = np.array([cv2.resize(e, (128, 128), interpolation=cv2.INTER_NEAREST)
                                                     for e in image_patch])
 
                         if self.transform_3d is not None:

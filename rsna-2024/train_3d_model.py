@@ -19,8 +19,8 @@ CONFIG = dict(
     backbone="tf_efficientnetv2_m",
     interpolation="bspline",
     # interpolation="gaussian",
-    vol_size=(64, 64, 64),
-    num_workers=10,
+    vol_size=(128, 128, 128),
+    num_workers=6,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
@@ -176,7 +176,7 @@ def train_model_3d(backbone, model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = CNN_Model_3D_Multihead(backbone=backbone, in_chans=96, out_classes=CONFIG["num_classes"]).to(device)
+    model = CNN_Model_3D_Multihead(backbone=backbone, in_chans=33, out_classes=CONFIG["num_classes"]).to(device)
     optimizers = [
         torch.optim.Adam(model.encoder.parameters(), lr=5e-5),
         torch.optim.Adam(model.heads.parameters(), lr=1e-3),
