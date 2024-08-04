@@ -103,7 +103,7 @@ class PatientLevelDataset(Dataset):
 
                             # !TODO: Not hardcoded
                             if image_patch.shape[1] > 128:
-                                image_patch = np.array([cv2.resize(e, (128, 128), interpolation=cv2.INTER_NEAREST)
+                                image_patch = np.array([cv2.resize(e, (128, 128), interpolation=cv2.INTER_CUBIC)
                                                         for e in image_patch])
 
                             if self.transform_3d is not None:
@@ -121,7 +121,7 @@ class PatientLevelDataset(Dataset):
 
                         # !TODO: Not hardcoded
                         if image_patch.shape[1] > 128:
-                            image_patch = np.array([cv2.resize(e, (128, 128), interpolation=cv2.INTER_NEAREST)
+                            image_patch = np.array([cv2.resize(e, (128, 128), interpolation=cv2.INTER_CUBIC)
                                                     for e in image_patch])
 
                         if self.transform_3d is not None:

@@ -20,14 +20,15 @@ CONFIG = dict(
     interpolation="bspline",
     # interpolation="gaussian",
     vol_size=(128, 128, 128),
-    num_workers=6,
+    num_workers=4,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
     aug_prob=0.7,
     out_dim=3,
     epochs=25,
-    batch_size=8,
+    batch_size=4,
+    split_rate=0.2,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
 )
@@ -169,7 +170,7 @@ def train_model_3d(backbone, model_label: str):
                                                                                 DATA_BASEPATH,
                                                                                 "train_images"),
                                                                             num_workers=CONFIG["num_workers"],
-                                                                            split_factor=0.3,
+                                                                            split_factor=CONFIG["split_rate"],
                                                                             batch_size=CONFIG["batch_size"],
                                                                             pin_memory=False
                                                                             )
