@@ -41,6 +41,8 @@ class PatientLevelDataset(Dataset):
     def __init__(self,
                  base_path: str,
                  dataframe: pd.DataFrame,
+                 patch_split_factor=3,
+                 patch_size=96,
                  transform_3d=None,
                  is_train=False,
                  use_mirror_trick=False):
@@ -57,6 +59,9 @@ class PatientLevelDataset(Dataset):
 
         self.levels = sorted(self.dataframe["level"].unique())
         self.labels = self._get_labels()
+
+        self.patch_split_factor = patch_split_factor
+        self.patch_size = patch_size
 
     def __len__(self):
         return len(self.subjects) * (2 if self.use_mirror_trick else 1)
@@ -84,11 +89,11 @@ class PatientLevelDataset(Dataset):
                 label[:10] = label[10:20].copy()
                 label[10:20] = temp
 
-            slice_lens = np.array(series_images.shape) // 3
+            slice_lens = np.array(series_images.shape) // self.patch_split_factor
             if series_desc == "Axial T2":
-                for i in range(3):
-                    for j in range(3):
-                        for k in range(3):
+                for i in range(self.patch_split_factor):
+                    for j in range(self.patch_split_factor):
+                        for k in range(self.patch_split_factor):
                             x_s = slice_lens[0] * i
                             x_e = slice_lens[0] * (i + 1)
                             y_s = slice_lens[1] * j
@@ -96,14 +101,14 @@ class PatientLevelDataset(Dataset):
                             z_s = slice_lens[2] * k
                             z_e = slice_lens[2] * (k + 1)
 
-                            if j == 0 and k == 0 or j == 2 and k == 0 or j == 2 and k == 2 or j == 0 and k == 2:
+                            if j in (0, self.patch_split_factor - 1) and k in (0, self.patch_split_factor - 1):
                                 continue
 
                             image_patch = series_images[x_s:x_e, y_s:y_e, z_s:z_e]
 
-                            # !TODO: Not hardcoded
-                            if image_patch.shape[1] > 128:
-                                image_patch = np.array([cv2.resize(e, (128, 128), interpolation=cv2.INTER_CUBIC)
+                            if image_patch.shape[1] > self.patch_size:
+                                image_patch = np.array([cv2.resize(e, (self.patch_size, self.patch_size),
+                                                                   interpolation=cv2.INTER_CUBIC)
                                                         for e in image_patch])
 
                             if self.transform_3d is not None:
@@ -111,17 +116,17 @@ class PatientLevelDataset(Dataset):
 
                             images.append(torch.tensor(image_patch, dtype=torch.half).squeeze(0))
             else:
-                for j in range(3):
-                    for k in range(3):
+                for j in range(self.patch_split_factor):
+                    for k in range(self.patch_split_factor):
                         y_s = slice_lens[1] * j
                         y_e = slice_lens[1] * (j + 1)
                         z_s = slice_lens[2] * k
                         z_e = slice_lens[2] * (k + 1)
                         image_patch = series_images[:, y_s:y_e, z_s:z_e]
 
-                        # !TODO: Not hardcoded
-                        if image_patch.shape[1] > 128:
-                            image_patch = np.array([cv2.resize(e, (128, 128), interpolation=cv2.INTER_CUBIC)
+                        if image_patch.shape[1] > self.patch_size:
+                            image_patch = np.array([cv2.resize(e, (self.patch_size, self.patch_size),
+                                                               interpolation=cv2.INTER_CUBIC)
                                                     for e in image_patch])
 
                         if self.transform_3d is not None:
@@ -379,7 +384,7 @@ class SegmentationDataset(Dataset):
 
     def __getitem__(self, index):
         return self._getitem_conventional(index)
-        #return self._getitem_softseg(index)
+        # return self._getitem_softseg(index)
 
     def _getitem_conventional(self, index):
         item_path, label_path = self.data[index]
