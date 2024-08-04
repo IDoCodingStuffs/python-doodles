@@ -84,12 +84,29 @@ class PatientLevelDataset(Dataset):
                 label[:10] = label[10:20].copy()
                 label[10:20] = temp
 
-            if self.transform_3d is not None:
-                series_images = self.transform_3d(np.expand_dims(series_images, 0))  # .data
+            slice_lens = np.array(series_images.shape) // 4
+            for i in range(4):
+                for j in range(4):
+                    for k in range(4):
+                        x_s = slice_lens[0] * i
+                        x_e = slice_lens[0] * (i + 1)
+                        y_s = slice_lens[1] * j
+                        y_e = slice_lens[1] * (j + 1)
+                        z_s = slice_lens[2] * k
+                        z_e = slice_lens[2] * (k + 1)
+                        image_patch = series_images[x_s:x_e, y_s:y_e, z_s:z_e]
 
-            images.append(torch.tensor(series_images, dtype=torch.half).squeeze(0))
+                        # !TODO: Not hardcoded
+                        if image_patch.shape[1] > 64:
+                            image_patch = np.array([cv2.resize(e, (64, 64), interpolation=cv2.INTER_NEAREST)
+                                                    for e in image_patch])
 
-        return torch.stack(images), torch.tensor(label, dtype=torch.long)
+                        if self.transform_3d is not None:
+                            image_patch = self.transform_3d(np.expand_dims(image_patch, 0))  # .data
+
+                        images.append(torch.tensor(image_patch, dtype=torch.half).squeeze(0))
+
+        return torch.stack(images), F.one_hot(torch.tensor(label, dtype=torch.long), num_classes=3)
 
     def _get_labels(self):
         labels = dict()
