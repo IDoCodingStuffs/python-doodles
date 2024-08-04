@@ -97,7 +97,7 @@ class PatientLevelDataset(Dataset):
                         image_patch = series_images[x_s:x_e, y_s:y_e, z_s:z_e]
 
                         # !TODO: Not hardcoded
-                        if image_patch.shape[1] > 64:
+                        if image_patch.shape[1] > 128:
                             image_patch = np.array([cv2.resize(e, (64, 64), interpolation=cv2.INTER_NEAREST)
                                                     for e in image_patch])
 

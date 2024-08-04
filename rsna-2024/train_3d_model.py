@@ -27,7 +27,7 @@ CONFIG = dict(
     aug_prob=0.7,
     out_dim=3,
     epochs=25,
-    batch_size=4,
+    batch_size=6,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
 )
@@ -211,7 +211,7 @@ def train_model_3d(backbone, model_label: str):
 
 def train():
     model = train_model_3d(CONFIG['backbone'],
-                           f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d")
+                           f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d_patched")
 
 
 if __name__ == '__main__':
