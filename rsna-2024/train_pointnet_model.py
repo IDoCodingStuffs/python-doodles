@@ -34,7 +34,7 @@ class STN3d(nn.Module):
         self.bn5 = nn.BatchNorm1d(256)
 
     def forward(self, x):
-        batchsize = x.size()[0]
+        batchsize = x.shape[0]
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
@@ -74,7 +74,7 @@ class STNkd(nn.Module):
         self.k = k
 
     def forward(self, x):
-        batchsize = x.size()[0]
+        batchsize = x.shape[0]
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
@@ -110,7 +110,7 @@ class PointNetEncoder(nn.Module):
             self.fstn = STNkd(k=64)
 
     def forward(self, x):
-        B, D, N = x.size()
+        B, D, N = x.shape
         trans = self.stn(x)
         x = x.transpose(2, 1)
         if D > 3:
@@ -173,7 +173,7 @@ CONFIG = dict(
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
 )
-DATA_BASEPATH = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
+DATA_BASEPATH = "../data/rsna-2024-lumbar-spine-degenerative-classification/"
 TRAINING_DATA = retrieve_coordinate_training_data(DATA_BASEPATH)
 
 CLASS_RELATIVE_WEIGHTS = torch.Tensor([[1., 29.34146341, 601.5, ],
@@ -320,8 +320,9 @@ def train_model_3d(backbone, model_label: str):
 
 
 def train():
-    model = train_model_3d(CONFIG['backbone'],
-                           f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d_patched")
+    pass
+    #model = train_model_3d(CONFIG['backbone'],
+    #                       f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d_patched")
 
 
 if __name__ == '__main__':
