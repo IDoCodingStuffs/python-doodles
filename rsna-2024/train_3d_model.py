@@ -1,16 +1,7 @@
-import math
-
-import timm
 import timm_3d
-import torchio as tio
 from spacecutter.losses import CumulativeLinkLoss
 from spacecutter.models import LogisticCumulativeLink
 from spacecutter.callbacks import AscensionCallback
-
-from multiprocessing import Pool
-from tqdm.contrib.concurrent import process_map
-from p_tqdm import p_map
-
 from training_utils import *
 from rsna_dataloader import *
 
@@ -216,14 +207,8 @@ def train_model_3d(backbone, model_label: str):
 
 
 def train():
-    dirs = glob.glob("./data/rsna-2024-lumbar-spine-degenerative-classification/train_images/*/*/")
-    # process_map(read_series_as_voxel_grid, dirs, chunksize=2, max_workers=4)
-    for dir in tqdm(dirs):
-        read_series_as_voxel_grid(dir)
-    exit(0)
-
-    # model = train_model_3d(CONFIG['backbone'],
-    #                        f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d_voxel_grid")
+    model = train_model_3d(CONFIG['backbone'],
+                           f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d_voxel_grid")
 
 
 if __name__ == '__main__':

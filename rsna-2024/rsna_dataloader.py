@@ -23,7 +23,7 @@ import torchio as tio
 import itk
 from transformers import SamModel, SamProcessor
 import torch.nn.functional as F
-import gzip
+import pgzip
 
 LABEL_MAP = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
 CONDITIONS = {
@@ -706,13 +706,17 @@ def read_series_as_pcd(dir_path):
 
 def read_series_as_voxel_grid(dir_path):
     cache_path = os.path.join(dir_path, "cached_grid.npy.gz")
+    f = None
     if os.path.exists(cache_path):
         try:
-            f = gzip.GzipFile(cache_path, "r")
+            f = pgzip.PgzipFile(cache_path, "r")
             ret = np.load(f)
             f.close()
             return ret
-        except zlib.error:
+        except Exception as e:
+            print(dir_path, "\n", e)
+            if f:
+                f.close()
             os.remove(cache_path)
 
     pcd_xyzd = read_series_as_pcd(dir_path)
@@ -738,7 +742,7 @@ def read_series_as_voxel_grid(dir_path):
     for index, coord in enumerate(coords):
         grid[(coord[1], coord[0], coord[2])] = vals[index]
 
-    f = gzip.GzipFile(cache_path, "w")
+    f = pgzip.PgzipFile(cache_path, "w")
     np.save(f, grid)
     f.close()
 
