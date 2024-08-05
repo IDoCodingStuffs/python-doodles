@@ -184,8 +184,8 @@ class PatientLevelDataset_PCD(Dataset):
 
         label = np.array(self.labels[(curr["study_id"])])
         images_basepath = os.path.join(self.base_path, str(curr["study_id"]))
-        images = []
 
+        pcds = []
         for series_desc in CONDITIONS.keys():
             # !TODO: Multiple matching series
             series = self.dataframe.loc[
@@ -193,60 +193,18 @@ class PatientLevelDataset_PCD(Dataset):
                 (self.dataframe["series_description"] == series_desc)].sort_values("series_id")['series_id'].iloc[0]
 
             series_path = os.path.join(images_basepath, str(series))
-            series_images = read_series_as_volume(series_path)
+            series_points = read_series_as_pcd(series_path)
 
-            if is_mirror:
-                series_images = np.flip(series_images, axis=2 if series_desc == "Axial T2" else 0)
-                temp = label[:10].copy()
-                label[:10] = label[10:20].copy()
-                label[10:20] = temp
+            # !TODO:
+            # if is_mirror:
+            #     series_images = np.flip(series_images, axis=2 if series_desc == "Axial T2" else 0)
+            #     temp = label[:10].copy()
+            #     label[:10] = label[10:20].copy()
+            #     label[10:20] = temp
 
-            slice_lens = np.array(series_images.shape) // self.patch_split_factor
-            if series_desc == "Axial T2":
-                for i in range(self.patch_split_factor):
-                    for j in range(self.patch_split_factor):
-                        for k in range(self.patch_split_factor):
-                            x_s = slice_lens[0] * i
-                            x_e = slice_lens[0] * (i + 1)
-                            y_s = slice_lens[1] * j
-                            y_e = slice_lens[1] * (j + 1)
-                            z_s = slice_lens[2] * k
-                            z_e = slice_lens[2] * (k + 1)
+            pcds.append(series_points)
 
-                            if j in (0, self.patch_split_factor - 1) and k in (0, self.patch_split_factor - 1):
-                                continue
-
-                            image_patch = series_images[x_s:x_e, y_s:y_e, z_s:z_e]
-
-                            if image_patch.shape[1] > self.patch_size:
-                                image_patch = np.array([cv2.resize(e, (self.patch_size, self.patch_size),
-                                                                   interpolation=cv2.INTER_CUBIC)
-                                                        for e in image_patch])
-
-                            if self.transform_3d is not None:
-                                image_patch = self.transform_3d(np.expand_dims(image_patch, 0))  # .data
-
-                            images.append(torch.tensor(image_patch, dtype=torch.half).squeeze(0))
-            else:
-                for j in range(self.patch_split_factor):
-                    for k in range(self.patch_split_factor):
-                        y_s = slice_lens[1] * j
-                        y_e = slice_lens[1] * (j + 1)
-                        z_s = slice_lens[2] * k
-                        z_e = slice_lens[2] * (k + 1)
-                        image_patch = series_images[:, y_s:y_e, z_s:z_e]
-
-                        if image_patch.shape[1] > self.patch_size:
-                            image_patch = np.array([cv2.resize(e, (self.patch_size, self.patch_size),
-                                                               interpolation=cv2.INTER_CUBIC)
-                                                    for e in image_patch])
-
-                        if self.transform_3d is not None:
-                            image_patch = self.transform_3d(np.expand_dims(image_patch, 0))  # .data
-
-                        images.append(torch.tensor(image_patch, dtype=torch.half).squeeze(0))
-
-        return torch.stack(images), F.one_hot(torch.tensor(label, dtype=torch.long), num_classes=3)
+        return pcds, F.one_hot(torch.tensor(label, dtype=torch.long), num_classes=3)
 
     def _get_labels(self):
         labels = dict()
@@ -778,7 +736,8 @@ def read_series_as_pcd(dir_path):
         pcds_xyz.extend(transformed_pcd.points)
         pcds_d.extend(vals)
 
-    return pcds_xyz, pcds_d
+    return np.hstack((pcds_xyz, np.expand_dims(pcds_d, -1)))
+
 
 def read_series_as_volume(dirName, verbose=False):
     cache_path = os.path.join(dirName, "cached.npy")
