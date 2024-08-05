@@ -701,6 +701,9 @@ def read_series_as_pcd(dir_path):
         pcds_xyz.extend(transformed_pcd.points)
         pcds_d.extend(vals)
 
+        pcd.clear()
+        transformed_pcd.clear()
+
     pcd_xyzd = np.hstack((pcds_xyz, np.expand_dims(pcds_d, -1)))
     f = gzip.GzipFile(cache_path, "w")
     np.save(f, pcd_xyzd)
@@ -729,6 +732,9 @@ def read_series_as_voxel_grid(dir_path):
 
     coords = np.array([voxel.grid_index for voxel in voxel_grid.get_voxels()])
     vals = pcd_xyzd[:, 3]
+
+    pcd_overall.clear()
+    voxel_grid.clear()
 
     size = np.max(coords, axis=0) + 1
     grid = np.zeros((size[1], size[0], size[2]))
