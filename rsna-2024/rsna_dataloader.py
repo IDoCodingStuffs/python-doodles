@@ -737,7 +737,7 @@ def read_series_as_voxel_grid(dir_path):
         grid[(coord[1], coord[0], coord[2])] = vals[index]
 
     f = gzip.GzipFile(cache_path, "w")
-    np.save(f, pcd_xyzd)
+    np.save(f, grid)
     f.close()
 
     del pcd_overall

@@ -6,6 +6,8 @@ import torchio as tio
 from spacecutter.losses import CumulativeLinkLoss
 from spacecutter.models import LogisticCumulativeLink
 from spacecutter.callbacks import AscensionCallback
+from multiprocessing import Pool
+from tqdm.contrib.concurrent import process_map
 
 from training_utils import *
 from rsna_dataloader import *
@@ -20,14 +22,14 @@ CONFIG = dict(
     interpolation="bspline",
     # interpolation="gaussian",
     vol_size=(128, 128, 128),
-    num_workers=0,
+    num_workers=12,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
     aug_prob=0.7,
     out_dim=3,
     epochs=25,
-    batch_size=12,
+    batch_size=8,
     split_rate=0.2,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
@@ -175,6 +177,11 @@ def train_model_3d(backbone, model_label: str):
                                                                             pin_memory=False,
                                                                             use_mirroring_trick=False
                                                                             )
+
+
+    for dataset in [trainset, valset, testset]:
+        process_map(lambda x: x, dataset, max_workers=os.cpu_count())
+    exit(0)
 
     NUM_EPOCHS = CONFIG["epochs"]
 
