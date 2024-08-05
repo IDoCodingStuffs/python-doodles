@@ -15,6 +15,7 @@ from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from sklearn.model_selection import train_test_split
 from scipy import ndimage
 from enum import Enum
+import open3d as o3d
 import cv2
 import torchio as tio
 import itk
@@ -62,6 +63,117 @@ class PatientLevelDataset(Dataset):
 
         self.patch_split_factor = patch_split_factor
         self.patch_size = patch_size
+
+    def __len__(self):
+        return len(self.subjects) * (2 if self.use_mirror_trick else 1)
+
+    def __getitem__(self, index):
+        is_mirror = index >= len(self.subjects)
+        curr = self.subjects.iloc[index % len(self.subjects)]
+
+        label = np.array(self.labels[(curr["study_id"])])
+        images_basepath = os.path.join(self.base_path, str(curr["study_id"]))
+        images = []
+
+        for series_desc in CONDITIONS.keys():
+            # !TODO: Multiple matching series
+            series = self.dataframe.loc[
+                (self.dataframe["study_id"] == curr["study_id"]) &
+                (self.dataframe["series_description"] == series_desc)].sort_values("series_id")['series_id'].iloc[0]
+
+            series_path = os.path.join(images_basepath, str(series))
+            series_images = read_series_as_volume(series_path)
+
+            if is_mirror:
+                series_images = np.flip(series_images, axis=2 if series_desc == "Axial T2" else 0)
+                temp = label[:10].copy()
+                label[:10] = label[10:20].copy()
+                label[10:20] = temp
+
+            slice_lens = np.array(series_images.shape) // self.patch_split_factor
+            if series_desc == "Axial T2":
+                for i in range(self.patch_split_factor):
+                    for j in range(self.patch_split_factor):
+                        for k in range(self.patch_split_factor):
+                            x_s = slice_lens[0] * i
+                            x_e = slice_lens[0] * (i + 1)
+                            y_s = slice_lens[1] * j
+                            y_e = slice_lens[1] * (j + 1)
+                            z_s = slice_lens[2] * k
+                            z_e = slice_lens[2] * (k + 1)
+
+                            if j in (0, self.patch_split_factor - 1) and k in (0, self.patch_split_factor - 1):
+                                continue
+
+                            image_patch = series_images[x_s:x_e, y_s:y_e, z_s:z_e]
+
+                            if image_patch.shape[1] > self.patch_size:
+                                image_patch = np.array([cv2.resize(e, (self.patch_size, self.patch_size),
+                                                                   interpolation=cv2.INTER_CUBIC)
+                                                        for e in image_patch])
+
+                            if self.transform_3d is not None:
+                                image_patch = self.transform_3d(np.expand_dims(image_patch, 0))  # .data
+
+                            images.append(torch.tensor(image_patch, dtype=torch.half).squeeze(0))
+            else:
+                for j in range(self.patch_split_factor):
+                    for k in range(self.patch_split_factor):
+                        y_s = slice_lens[1] * j
+                        y_e = slice_lens[1] * (j + 1)
+                        z_s = slice_lens[2] * k
+                        z_e = slice_lens[2] * (k + 1)
+                        image_patch = series_images[:, y_s:y_e, z_s:z_e]
+
+                        if image_patch.shape[1] > self.patch_size:
+                            image_patch = np.array([cv2.resize(e, (self.patch_size, self.patch_size),
+                                                               interpolation=cv2.INTER_CUBIC)
+                                                    for e in image_patch])
+
+                        if self.transform_3d is not None:
+                            image_patch = self.transform_3d(np.expand_dims(image_patch, 0))  # .data
+
+                        images.append(torch.tensor(image_patch, dtype=torch.half).squeeze(0))
+
+        return torch.stack(images), F.one_hot(torch.tensor(label, dtype=torch.long), num_classes=3)
+
+    def _get_labels(self):
+        labels = dict()
+        for name, group in self.dataframe.groupby(["study_id"]):
+            group = group[["condition", "level", "severity"]].drop_duplicates().sort_values(["condition", "level"])
+            label_indices = []
+            for index, row in group.iterrows():
+                if row["severity"] in LABEL_MAP:
+                    label_indices.append(LABEL_MAP[row["severity"]])
+                else:
+                    raise ValueError()
+
+            study_id = name[0]
+
+            labels[study_id] = label_indices
+
+        return labels
+
+class PatientLevelDataset_PCD(Dataset):
+    def __init__(self,
+                 base_path: str,
+                 dataframe: pd.DataFrame,
+                 transform_3d=None,
+                 is_train=False,
+                 use_mirror_trick=False):
+        self.base_path = base_path
+        self.is_train = is_train
+        self.use_mirror_trick = use_mirror_trick
+
+        self.dataframe = (dataframe[['study_id', "series_id", "series_description", "condition", "severity", "level"]]
+                          .drop_duplicates())
+
+        self.subjects = self.dataframe[['study_id']].drop_duplicates().reset_index(drop=True)
+
+        self.transform_3d = transform_3d
+
+        self.levels = sorted(self.dataframe["level"].unique())
+        self.labels = self._get_labels()
 
     def __len__(self):
         return len(self.subjects) * (2 if self.use_mirror_trick else 1)
@@ -636,6 +748,37 @@ def create_segmentation_datasets_and_loaders(base_path: str,
 
     return train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset
 
+
+# Returns series in pcd form i.e. x,y,z,d
+def read_series_as_pcd(dir_path):
+    pcds_xyz = []
+    pcds_d = []
+
+    paths = glob.glob(os.path.join(dir_path, "*.dcm"))
+    for path in paths:
+        dicom_slice = pydicom.read_file(path)
+        img = np.repeat(np.expand_dims(dicom_slice.pixel_array, -1), dicom_slice.SliceThickness, -1)
+        pcd = o3d.geometry.PointCloud()
+        x, y, z = np.where(img)
+
+        index_voxel = np.vstack((x, y, z))
+        grid_index_array = index_voxel.T
+        pcd.points = o3d.utility.Vector3dVector(grid_index_array)
+
+        vals = np.array([img[x, y, z] for x, y, z in grid_index_array])
+
+        dX, dY = dicom_slice.PixelSpacing
+        X = np.array(list(dicom_slice.ImageOrientationPatient[:3]) + [0]) * dX
+        Y = np.array(list(dicom_slice.ImageOrientationPatient[3:]) + [0]) * dY
+        S = np.array(list(dicom_slice.ImagePositionPatient) + [1])
+
+        transform_matrix = np.array([X, Y, np.zeros(len(X)), S]).T
+        transformed_pcd = pcd.transform(transform_matrix)
+
+        pcds_xyz.extend(transformed_pcd.points)
+        pcds_d.extend(vals)
+
+    return pcds_xyz, pcds_d
 
 def read_series_as_volume(dirName, verbose=False):
     cache_path = os.path.join(dirName, "cached.npy")
