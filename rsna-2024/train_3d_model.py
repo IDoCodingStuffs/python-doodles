@@ -217,7 +217,9 @@ def train_model_3d(backbone, model_label: str):
 
 def train():
     dirs = glob.glob("./data/rsna-2024-lumbar-spine-degenerative-classification/train_images/*/*/")
-    process_map(read_series_as_voxel_grid, dirs, chunksize=2, max_workers=4)
+    # process_map(read_series_as_voxel_grid, dirs, chunksize=2, max_workers=4)
+    for dir in tqdm(dirs):
+        read_series_as_voxel_grid(dir)
     exit(0)
 
     # model = train_model_3d(CONFIG['backbone'],

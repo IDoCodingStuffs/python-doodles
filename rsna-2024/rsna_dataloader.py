@@ -1,4 +1,6 @@
 import random
+import zipfile
+import zlib
 from typing import List, Tuple
 
 import open3d as o3d
@@ -667,13 +669,6 @@ def create_segmentation_datasets_and_loaders(base_path: str,
 
 # Returns series in pcd form i.e. x,y,z,d
 def read_series_as_pcd(dir_path):
-    cache_path = os.path.join(dir_path, "cached_pcd.npy.gz")
-    if os.path.exists(cache_path):
-        f = gzip.GzipFile(cache_path, "r")
-        ret = np.load(f)
-        f.close()
-        return ret
-
     pcds_xyz = []
     pcds_d = []
 
@@ -705,9 +700,6 @@ def read_series_as_pcd(dir_path):
         transformed_pcd.clear()
 
     pcd_xyzd = np.hstack((pcds_xyz, np.expand_dims(pcds_d, -1)))
-    f = gzip.GzipFile(cache_path, "w")
-    np.save(f, pcd_xyzd)
-    f.close()
 
     return pcd_xyzd
 
@@ -715,10 +707,13 @@ def read_series_as_pcd(dir_path):
 def read_series_as_voxel_grid(dir_path):
     cache_path = os.path.join(dir_path, "cached_grid.npy.gz")
     if os.path.exists(cache_path):
-        f = gzip.GzipFile(cache_path, "r")
-        ret = np.load(f)
-        f.close()
-        return ret
+        try:
+            f = gzip.GzipFile(cache_path, "r")
+            ret = np.load(f)
+            f.close()
+            return ret
+        except zlib.error:
+            os.remove(cache_path)
 
     pcd_xyzd = read_series_as_pcd(dir_path)
 
