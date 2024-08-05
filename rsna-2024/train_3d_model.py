@@ -19,7 +19,7 @@ CONFIG = dict(
     backbone="tf_efficientnetv2_m",
     interpolation="bspline",
     # interpolation="gaussian",
-    vol_size=(96, 96, 96),
+    vol_size=(128, 128, 128),
     num_workers=12,
     drop_rate=0.5,
     drop_rate_last=0.1,
@@ -140,7 +140,7 @@ class CNN_Model_3D_Multihead(nn.Module):
 
 def train_model_3d(backbone, model_label: str):
     transform_3d_train = tio.Compose([
-        tio.CropOrPad(CONFIG["vol_size"]),
+        tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
         tio.RandomAffine(p=CONFIG["aug_prob"]),
         # tio.OneOf({
         #     tio.RandomElasticDeformation(): 0.3,
@@ -177,7 +177,7 @@ def train_model_3d(backbone, model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = CNN_Model_3D_Multihead(backbone=backbone, in_chans=33, out_classes=CONFIG["num_classes"]).to(device)
+    model = CNN_Model_3D_Multihead(backbone=backbone, in_chans=3, out_classes=CONFIG["num_classes"]).to(device)
     optimizers = [
         torch.optim.Adam(model.encoder.parameters(), lr=5e-5),
         torch.optim.Adam(model.heads.parameters(), lr=1e-3),
@@ -212,7 +212,7 @@ def train_model_3d(backbone, model_label: str):
 
 def train():
     model = train_model_3d(CONFIG['backbone'],
-                           f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d_patched")
+                           f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d_voxel_grid")
 
 
 if __name__ == '__main__':

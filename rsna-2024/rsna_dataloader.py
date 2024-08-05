@@ -43,8 +43,6 @@ class PatientLevelDataset(Dataset):
     def __init__(self,
                  base_path: str,
                  dataframe: pd.DataFrame,
-                 patch_split_factor=3,
-                 patch_size=96,
                  transform_3d=None,
                  is_train=False,
                  use_mirror_trick=False):
@@ -61,9 +59,6 @@ class PatientLevelDataset(Dataset):
 
         self.levels = sorted(self.dataframe["level"].unique())
         self.labels = self._get_labels()
-
-        self.patch_split_factor = patch_split_factor
-        self.patch_size = patch_size
 
     def __len__(self):
         return len(self.subjects) * (2 if self.use_mirror_trick else 1)
@@ -83,7 +78,8 @@ class PatientLevelDataset(Dataset):
                 (self.dataframe["series_description"] == series_desc)].sort_values("series_id")['series_id'].iloc[0]
 
             series_path = os.path.join(images_basepath, str(series))
-            series_images = read_series_as_volume(series_path)
+            # series_images = read_series_as_volume(series_path)
+            series_images = read_series_as_voxel_grid(series_path)
 
             if is_mirror:
                 series_images = np.flip(series_images, axis=2 if series_desc == "Axial T2" else 0)
@@ -91,50 +87,10 @@ class PatientLevelDataset(Dataset):
                 label[:10] = label[10:20].copy()
                 label[10:20] = temp
 
-            slice_lens = np.array(series_images.shape) // self.patch_split_factor
-            if series_desc == "Axial T2":
-                for i in range(self.patch_split_factor):
-                    for j in range(self.patch_split_factor):
-                        for k in range(self.patch_split_factor):
-                            x_s = slice_lens[0] * i
-                            x_e = slice_lens[0] * (i + 1)
-                            y_s = slice_lens[1] * j
-                            y_e = slice_lens[1] * (j + 1)
-                            z_s = slice_lens[2] * k
-                            z_e = slice_lens[2] * (k + 1)
+            if self.transform_3d is not None:
+                series_images = self.transform_3d(np.expand_dims(series_images, 0)) #.data
 
-                            if j in (0, self.patch_split_factor - 1) and k in (0, self.patch_split_factor - 1):
-                                continue
-
-                            image_patch = series_images[x_s:x_e, y_s:y_e, z_s:z_e]
-
-                            if image_patch.shape[1] > self.patch_size:
-                                image_patch = np.array([cv2.resize(e, (self.patch_size, self.patch_size),
-                                                                   interpolation=cv2.INTER_CUBIC)
-                                                        for e in image_patch])
-
-                            if self.transform_3d is not None:
-                                image_patch = self.transform_3d(np.expand_dims(image_patch, 0))  # .data
-
-                            images.append(torch.tensor(image_patch, dtype=torch.half).squeeze(0))
-            else:
-                for j in range(self.patch_split_factor):
-                    for k in range(self.patch_split_factor):
-                        y_s = slice_lens[1] * j
-                        y_e = slice_lens[1] * (j + 1)
-                        z_s = slice_lens[2] * k
-                        z_e = slice_lens[2] * (k + 1)
-                        image_patch = series_images[:, y_s:y_e, z_s:z_e]
-
-                        if image_patch.shape[1] > self.patch_size:
-                            image_patch = np.array([cv2.resize(e, (self.patch_size, self.patch_size),
-                                                               interpolation=cv2.INTER_CUBIC)
-                                                    for e in image_patch])
-
-                        if self.transform_3d is not None:
-                            image_patch = self.transform_3d(np.expand_dims(image_patch, 0))  # .data
-
-                        images.append(torch.tensor(image_patch, dtype=torch.half).squeeze(0))
+            images.append(torch.tensor(series_images, dtype=torch.half).squeeze(0))
 
         return torch.stack(images), F.one_hot(torch.tensor(label, dtype=torch.long), num_classes=3)
 
@@ -753,6 +709,10 @@ def read_series_as_pcd(dir_path):
 
 
 def read_series_as_voxel_grid(dir_path):
+    cache_path = os.path.join(dir_path, "cached_grid.npy")
+    if os.path.exists(cache_path):
+        return np.load(cache_path)
+
     pcd_xyzd = read_series_as_pcd(dir_path)
 
     pcd_overall = o3d.geometry.PointCloud()
@@ -772,6 +732,8 @@ def read_series_as_voxel_grid(dir_path):
 
     for index, coord in enumerate(coords):
         grid[(coord[1], coord[0], coord[2])] = vals[index]
+
+    np.save(cache_path, grid)
 
     return grid
 
