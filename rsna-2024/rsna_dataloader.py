@@ -709,6 +709,10 @@ def create_segmentation_datasets_and_loaders(base_path: str,
 
 # Returns series in pcd form i.e. x,y,z,d
 def read_series_as_pcd(dir_path):
+    cache_path = os.path.join(dir_path, "cached_pcd.npy")
+    if os.path.exists(cache_path):
+        return np.load(cache_path)
+
     pcds_xyz = []
     pcds_d = []
 
@@ -736,8 +740,9 @@ def read_series_as_pcd(dir_path):
         pcds_xyz.extend(transformed_pcd.points)
         pcds_d.extend(vals)
 
-    return np.hstack((pcds_xyz, np.expand_dims(pcds_d, -1)))
-
+    pcd_xyzd = np.hstack((pcds_xyz, np.expand_dims(pcds_d, -1)))
+    np.save(cache_path, pcd_xyzd)
+    return pcd_xyzd
 
 def read_series_as_volume(dirName, verbose=False):
     cache_path = os.path.join(dirName, "cached.npy")
