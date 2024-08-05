@@ -155,6 +155,7 @@ class PatientLevelDataset(Dataset):
 
         return labels
 
+
 class PatientLevelDataset_PCD(Dataset):
     def __init__(self,
                  base_path: str,
@@ -749,6 +750,31 @@ def read_series_as_pcd(dir_path):
     np.save(f, pcd_xyzd)
     f.close()
     return pcd_xyzd
+
+
+def read_series_as_voxel_grid(dir_path):
+    pcd_xyzd = read_series_as_pcd(dir_path)
+
+    pcd_overall = o3d.geometry.PointCloud()
+    pcd_overall.points = o3d.utility.Vector3dVector(pcd_xyzd[:, :3])
+
+    paths = glob.glob(os.path.join(dir_path, "*.dcm"))
+    dicom_slice = pydicom.read_file(paths[0])
+    dX, dY = dicom_slice.PixelSpacing
+
+    voxel_grid = o3d.geometry.VoxelGrid().create_from_point_cloud(pcd_overall, dX)
+
+    coords = np.array([voxel.grid_index for voxel in voxel_grid.get_voxels()])
+    vals = pcd_xyzd[:, 3]
+
+    size = np.max(coords, axis=0) + 1
+    grid = np.zeros((size[1], size[0], size[2]))
+
+    for index, coord in enumerate(coords):
+        grid[(coord[1], coord[0], coord[2])] = vals[index]
+
+    return grid
+
 
 def read_series_as_volume(dirName, verbose=False):
     cache_path = os.path.join(dirName, "cached.npy")
