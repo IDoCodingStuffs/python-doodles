@@ -965,4 +965,10 @@ Implemented for some tiny dataset with just 23 volumes. Next, `spine_segmentatio
 
 ## 8/3
 ### 10 AM
-UNet 3D segmentation fails to generalize across modalities. It just won't work. I should look into path based training approaches.
+UNet 3D segmentation fails to generalize across modalities. It just won't work. I should look into patch based training approaches.
+
+## 8/4
+### 11 PM
+Patch based training performance was kinda meh. Next thing to look at it is point cloud methods I guess, which means I have two things to do:
+1. Try some ensemble PointNet model for each modality. Downside is, those things are extremely memory intensive and as such, I will need to downsample a lot. Which means I will have to see how that affects perf. 
+2. Try loading as a point cloud and converting to a voxel grid. This will help with the inaccuracy from the oblique axial slices
