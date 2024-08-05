@@ -21,6 +21,7 @@ import torchio as tio
 import itk
 from transformers import SamModel, SamProcessor
 import torch.nn.functional as F
+import gzip
 
 LABEL_MAP = {'normal_mild': 0, 'moderate': 1, 'severe': 2}
 CONDITIONS = {
@@ -709,9 +710,12 @@ def create_segmentation_datasets_and_loaders(base_path: str,
 
 # Returns series in pcd form i.e. x,y,z,d
 def read_series_as_pcd(dir_path):
-    cache_path = os.path.join(dir_path, "cached_pcd.npy")
+    cache_path = os.path.join(dir_path, "cached_pcd.npy.gz")
     if os.path.exists(cache_path):
-        return np.load(cache_path)
+        f = gzip.GzipFile(cache_path, "r")
+        ret = np.load(f)
+        f.close()
+        return ret
 
     pcds_xyz = []
     pcds_d = []
@@ -741,7 +745,9 @@ def read_series_as_pcd(dir_path):
         pcds_d.extend(vals)
 
     pcd_xyzd = np.hstack((pcds_xyz, np.expand_dims(pcds_d, -1)))
-    np.save(cache_path, pcd_xyzd)
+    f = gzip.GzipFile(cache_path, "w")
+    np.save(f, pcd_xyzd)
+    f.close()
     return pcd_xyzd
 
 def read_series_as_volume(dirName, verbose=False):
