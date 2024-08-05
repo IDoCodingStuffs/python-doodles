@@ -20,14 +20,14 @@ CONFIG = dict(
     interpolation="bspline",
     # interpolation="gaussian",
     vol_size=(128, 128, 128),
-    num_workers=12,
+    num_workers=0,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
     aug_prob=0.7,
     out_dim=3,
     epochs=25,
-    batch_size=8,
+    batch_size=12,
     split_rate=0.2,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
@@ -102,7 +102,7 @@ CLASS_NEG_VS_POS = torch.Tensor(
 
 COMP_WEIGHTS = torch.Tensor([[1, 2, 4] for i in range(25)]).to(CONFIG["device"])
 
-CONFIG["loss_weights"] = CLASS_LOGN_RELATIVE_WEIGHTS_MIRROR
+CONFIG["loss_weights"] = CLASS_LOGN_RELATIVE_WEIGHTS #_MIRROR
 
 class CNN_Model_3D_Multihead(nn.Module):
     def __init__(self, backbone="efficientnet_lite0", in_chans=1, out_classes=5, out_dim=3, pretrained=True):
@@ -172,7 +172,8 @@ def train_model_3d(backbone, model_label: str):
                                                                             num_workers=CONFIG["num_workers"],
                                                                             split_factor=CONFIG["split_rate"],
                                                                             batch_size=CONFIG["batch_size"],
-                                                                            pin_memory=False
+                                                                            pin_memory=False,
+                                                                            use_mirroring_trick=False
                                                                             )
 
     NUM_EPOCHS = CONFIG["epochs"]

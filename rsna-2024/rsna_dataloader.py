@@ -709,9 +709,12 @@ def read_series_as_pcd(dir_path):
 
 
 def read_series_as_voxel_grid(dir_path):
-    cache_path = os.path.join(dir_path, "cached_grid.npy")
+    cache_path = os.path.join(dir_path, "cached_grid.npy.gz")
     if os.path.exists(cache_path):
-        return np.load(cache_path)
+        f = gzip.GzipFile(cache_path, "r")
+        ret = np.load(f)
+        f.close()
+        return ret
 
     pcd_xyzd = read_series_as_pcd(dir_path)
 
@@ -733,7 +736,12 @@ def read_series_as_voxel_grid(dir_path):
     for index, coord in enumerate(coords):
         grid[(coord[1], coord[0], coord[2])] = vals[index]
 
-    np.save(cache_path, grid)
+    f = gzip.GzipFile(cache_path, "w")
+    np.save(f, pcd_xyzd)
+    f.close()
+
+    del pcd_overall
+    del voxel_grid
 
     return grid
 
