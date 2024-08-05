@@ -1,6 +1,7 @@
 import random
 from typing import List, Tuple
 
+import open3d as o3d
 import matplotlib.pyplot as plt
 import nibabel as nib
 import os
@@ -15,7 +16,6 @@ from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from sklearn.model_selection import train_test_split
 from scipy import ndimage
 from enum import Enum
-import open3d as o3d
 import cv2
 import torchio as tio
 import itk
