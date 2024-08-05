@@ -6,8 +6,10 @@ import torchio as tio
 from spacecutter.losses import CumulativeLinkLoss
 from spacecutter.models import LogisticCumulativeLink
 from spacecutter.callbacks import AscensionCallback
+
 from multiprocessing import Pool
 from tqdm.contrib.concurrent import process_map
+from p_tqdm import p_map
 
 from training_utils import *
 from rsna_dataloader import *
@@ -178,11 +180,6 @@ def train_model_3d(backbone, model_label: str):
                                                                             use_mirroring_trick=False
                                                                             )
 
-
-    for dataset in [trainset, valset, testset]:
-        process_map(lambda x: x, dataset, max_workers=os.cpu_count())
-    exit(0)
-
     NUM_EPOCHS = CONFIG["epochs"]
 
     model = CNN_Model_3D_Multihead(backbone=backbone, in_chans=3, out_classes=CONFIG["num_classes"]).to(device)
@@ -219,8 +216,12 @@ def train_model_3d(backbone, model_label: str):
 
 
 def train():
-    model = train_model_3d(CONFIG['backbone'],
-                           f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d_voxel_grid")
+    dirs = glob.glob("./data/rsna-2024-lumbar-spine-degenerative-classification/train_images/*/*/")
+    process_map(read_series_as_voxel_grid, dirs, chunksize=2, max_workers=4)
+    exit(0)
+
+    # model = train_model_3d(CONFIG['backbone'],
+    #                        f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d_voxel_grid")
 
 
 if __name__ == '__main__':

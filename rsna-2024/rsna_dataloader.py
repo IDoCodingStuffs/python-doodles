@@ -680,7 +680,7 @@ def read_series_as_pcd(dir_path):
     paths = glob.glob(os.path.join(dir_path, "*.dcm"))
     for path in paths:
         dicom_slice = pydicom.read_file(path)
-        img = np.repeat(np.expand_dims(dicom_slice.pixel_array, -1), dicom_slice.SliceThickness, -1)
+        img = np.expand_dims(dicom_slice.pixel_array, -1)
         pcd = o3d.geometry.PointCloud()
         x, y, z = np.where(img)
 
@@ -708,6 +708,7 @@ def read_series_as_pcd(dir_path):
     f = gzip.GzipFile(cache_path, "w")
     np.save(f, pcd_xyzd)
     f.close()
+
     return pcd_xyzd
 
 
