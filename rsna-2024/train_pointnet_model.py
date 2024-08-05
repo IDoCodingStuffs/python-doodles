@@ -136,10 +136,10 @@ class PointNetEncoder(nn.Module):
         x = torch.max(x, 2, keepdim=True)[0]
         x = x.view(-1, 1024)
         if self.global_feat:
-            return x, trans, trans_feat
+            return x #, trans, trans_feat
         else:
             x = x.view(-1, 1024, 1).repeat(1, 1, N)
-            return torch.cat([x, pointfeat], 1), trans, trans_feat
+            return torch.cat([x, pointfeat], 1) #, trans, trans_feat
 
 
 def feature_transform_reguliarzer(trans):
