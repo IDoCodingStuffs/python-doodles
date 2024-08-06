@@ -163,6 +163,7 @@ class PatientLevelDataset_PCD(Dataset):
             #     label[:10] = label[10:20].copy()
             #     label[10:20] = temp
 
+            np.random.shuffle(series_points)
             pcds.append(series_points[:20000])
 
         # !TODO: Only one series initially
