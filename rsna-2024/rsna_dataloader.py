@@ -119,6 +119,7 @@ class PatientLevelDataset_PCD(Dataset):
                  base_path: str,
                  dataframe: pd.DataFrame,
                  transform_3d=None,
+                 downsampling_factor=5,
                  is_train=False,
                  use_mirror_trick=False):
         self.base_path = base_path
@@ -129,7 +130,7 @@ class PatientLevelDataset_PCD(Dataset):
                           .drop_duplicates())
 
         self.subjects = self.dataframe[['study_id']].drop_duplicates().reset_index(drop=True)
-
+        self.downsampling_factor=downsampling_factor
         self.transform_3d = transform_3d
 
         self.levels = sorted(self.dataframe["level"].unique())
@@ -153,7 +154,7 @@ class PatientLevelDataset_PCD(Dataset):
                 (self.dataframe["series_description"] == series_desc)].sort_values("series_id")['series_id'].iloc[0]
 
             series_path = os.path.join(images_basepath, str(series))
-            series_points = read_series_as_pcd(series_path)
+            series_points = read_series_as_pcd(series_path, self.downsampling_factor)
 
             # !TODO:
             # if is_mirror:
@@ -522,6 +523,7 @@ def create_subject_level_pcd_datasets_and_loaders(df: pd.DataFrame,
                                               random_seed=42,
                                               batch_size=1,
                                               num_workers=0,
+                                              downsampling_factor=5,
                                               pin_memory=True,
                                               use_mirroring_trick=True):
     df = df.dropna()
@@ -553,13 +555,16 @@ def create_subject_level_pcd_datasets_and_loaders(df: pd.DataFrame,
     random.seed(random_seed)
     train_dataset = PatientLevelDataset_PCD(base_path, train_df,
                                         transform_3d=transform_3d_train,
+                                        downsampling_factor=downsampling_factor,
                                         is_train=True,
                                         use_mirror_trick=use_mirroring_trick
                                         )
     val_dataset = PatientLevelDataset_PCD(base_path, val_df,
-                                      transform_3d=transform_3d_val)
+                                          downsampling_factor=downsampling_factor,
+                                          transform_3d=transform_3d_val)
     test_dataset = PatientLevelDataset_PCD(base_path, test_df,
-                                       transform_3d=transform_3d_val)
+                                           downsampling_factor=downsampling_factor,
+                                           transform_3d=transform_3d_val)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers,
                               pin_memory=pin_memory)
@@ -725,7 +730,7 @@ def create_segmentation_datasets_and_loaders(base_path: str,
 
 
 # Returns series in pcd form i.e. x,y,z,d
-def read_series_as_pcd(dir_path):
+def read_series_as_pcd(dir_path, downsampling_factor=None):
     pcds_xyz = []
     pcds_d = []
 
@@ -757,7 +762,8 @@ def read_series_as_pcd(dir_path):
         transformed_pcd.clear()
 
     pcd_xyzd = np.hstack((pcds_xyz, np.expand_dims(pcds_d, -1)))
-
+    if downsampling_factor is not None:
+        pcd_xyzd = pcd_xyzd[::downsampling_factor]
     return pcd_xyzd
 
 

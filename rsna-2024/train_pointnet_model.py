@@ -165,10 +165,11 @@ CONFIG = dict(
     epochs=25,
     batch_size=2,
     split_rate=0.2,
+    downsampling_rate=25,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
 )
-DATA_BASEPATH = "../data/rsna-2024-lumbar-spine-degenerative-classification/"
+DATA_BASEPATH = "./data/rsna-2024-lumbar-spine-degenerative-classification/"
 TRAINING_DATA = retrieve_coordinate_training_data(DATA_BASEPATH)
 
 CLASS_RELATIVE_WEIGHTS = torch.Tensor([[1., 29.34146341, 601.5, ],
@@ -265,7 +266,7 @@ class PointNet_Model_3D_Multihead(nn.Module):
         for head in self.heads:
             self.ascension_callback.clip(head[1])
 
-def train_model_3d(backbone, model_label: str):
+def train_model_pcd(model_label: str):
     (trainloader, valloader, test_loader,
      trainset, valset, testset) = create_subject_level_pcd_datasets_and_loaders(TRAINING_DATA,
                                                                             # transform_3d_train=transform_3d_train,
@@ -276,6 +277,7 @@ def train_model_3d(backbone, model_label: str):
                                                                             num_workers=CONFIG["num_workers"],
                                                                             split_factor=CONFIG["split_rate"],
                                                                             batch_size=CONFIG["batch_size"],
+                                                                            downsampling_factor=CONFIG['downsampling_rate'],
                                                                             pin_memory=False
                                                                             )
 
@@ -315,9 +317,7 @@ def train_model_3d(backbone, model_label: str):
 
 
 def train():
-    pass
-    #model = train_model_3d(CONFIG['backbone'],
-    #                       f"{CONFIG['backbone']}_{CONFIG['vol_size'][0]}_3d_patched")
+    model = train_model_pcd(f"pointnet_downsampled_{CONFIG['downsampling_rate']}")
 
 
 if __name__ == '__main__':
