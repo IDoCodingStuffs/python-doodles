@@ -1,6 +1,7 @@
 import random
 import zipfile
 import zlib
+from pathlib import Path
 from typing import List, Tuple
 
 import open3d as o3d
@@ -13,6 +14,7 @@ import glob
 import pydicom
 import torch
 import torchvision
+from pydicom import dcmread
 from torch import nn
 from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from sklearn.model_selection import train_test_split
@@ -735,21 +737,19 @@ def create_segmentation_datasets_and_loaders(base_path: str,
 
 # Returns series in pcd form i.e. x,y,z,d
 def read_series_as_pcd(dir_path, downsampling_factor=None):
-    pcds_xyz = []
-    pcds_d = []
+    pcd_overall = o3d.geometry.PointCloud()
 
-    paths = glob.glob(os.path.join(dir_path, "*.dcm"))
-    for path in paths:
-        dicom_slice = pydicom.read_file(path)
+    for path in Path(dir_path).glob("*.dcm"):
+        dicom_slice = dcmread(path)
         img = np.expand_dims(dicom_slice.pixel_array, -1)
-        pcd = o3d.geometry.PointCloud()
         x, y, z = np.where(img)
 
         index_voxel = np.vstack((x, y, z))
         grid_index_array = index_voxel.T
-        pcd.points = o3d.utility.Vector3dVector(grid_index_array)
+        pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(grid_index_array))
 
-        vals = np.array([img[x, y, z] for x, y, z in grid_index_array])
+        vals = np.repeat(np.expand_dims(img[x, y, z], -1), 3, -1)
+        pcd.colors = o3d.utility.Vector3dVector(vals) # Converted to np.float64
 
         dX, dY = dicom_slice.PixelSpacing
         X = np.array(list(dicom_slice.ImageOrientationPatient[:3]) + [0]) * dX
@@ -757,19 +757,9 @@ def read_series_as_pcd(dir_path, downsampling_factor=None):
         S = np.array(list(dicom_slice.ImagePositionPatient) + [1])
 
         transform_matrix = np.array([X, Y, np.zeros(len(X)), S]).T
-        transformed_pcd = pcd.transform(transform_matrix)
+        pcd_overall += pcd.transform(transform_matrix)
 
-        pcds_xyz.extend(transformed_pcd.points)
-        pcds_d.extend(vals)
-
-        pcd.clear()
-        transformed_pcd.clear()
-
-    pcd_xyzd = np.hstack((pcds_xyz, np.expand_dims(pcds_d, -1)))
-    if downsampling_factor is not None:
-        pcd_xyzd = pcd_xyzd[::downsampling_factor]
-    return pcd_xyzd
-
+    return pcd_overall
 
 def read_series_as_voxel_grid(dir_path):
     cache_path = os.path.join(dir_path, "cached_grid.npy.gz")
@@ -786,36 +776,21 @@ def read_series_as_voxel_grid(dir_path):
                 f.close()
             os.remove(cache_path)
 
-    pcd_xyzd = read_series_as_pcd(dir_path)
+    pcd_overall = read_series_as_pcd(dir_path)
 
-    pcd_overall = o3d.geometry.PointCloud()
-    pcd_overall.points = o3d.utility.Vector3dVector(pcd_xyzd[:, :3])
-    pcd_overall.colors = o3d.utility.Vector3dVector(np.repeat(np.expand_dims(pcd_xyzd[:, 3], -1), 3, -1).astype(np.int32))
-
-    paths = glob.glob(os.path.join(dir_path, "*.dcm"))
-    dicom_slice = pydicom.read_file(paths[0])
+    path = next(Path(dir_path).glob("*.dcm"))
+    dicom_slice = dcmread(path)
     dX, dY = dicom_slice.PixelSpacing
 
     voxel_grid = o3d.geometry.VoxelGrid().create_from_point_cloud(pcd_overall, dX)
 
-    coords = []
-    vals = []
-
-    for voxel in voxel_grid.get_voxels():
-        coords.append(voxel.grid_index)
-        vals.append(voxel.color[0])
-
-    pcd_overall.clear()
-    voxel_grid.clear()
-
-    coords = np.array(coords)
-    vals = np.array(vals)
+    coords = np.array([voxel.grid_index for voxel in voxel_grid.get_voxels()])
+    vals = np.array([voxel.color[0] for voxel in voxel_grid.get_voxels()])
 
     size = np.max(coords, axis=0) + 1
     grid = np.zeros((size[0], size[1], size[2]))
 
-    for index, coord in enumerate(coords):
-        grid[(coord[0], coord[1], coord[2])] = vals[index]
+    grid[coords[:, 0], coords[:, 1], coords[:, 2]] = vals
 
     f = pgzip.PgzipFile(cache_path, "w")
     np.save(f, grid)
