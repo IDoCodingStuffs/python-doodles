@@ -83,7 +83,7 @@ class PatientLevelDataset(Dataset):
         #     label[10:20] = temp
 
         if self.transform_3d is not None:
-            study_images = self.transform_3d(np.expand_dims(study_images, 0))  # .data
+            study_images = self.transform_3d(study_images)  # .data
 
         return torch.HalfTensor(study_images), F.one_hot(torch.tensor(label, dtype=torch.long), num_classes=3)
 
