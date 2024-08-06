@@ -735,7 +735,6 @@ def create_segmentation_datasets_and_loaders(base_path: str,
     return train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset
 
 
-# Returns series in pcd form i.e. x,y,z,d
 def read_series_as_pcd(dir_path, downsampling_factor=None):
     pcd_overall = o3d.geometry.PointCloud()
 
@@ -757,6 +756,13 @@ def read_series_as_pcd(dir_path, downsampling_factor=None):
         S = np.array(list(dicom_slice.ImagePositionPatient) + [1])
 
         transform_matrix = np.array([X, Y, np.zeros(len(X)), S]).T
+        transform_matrix = transform_matrix @ np.matrix(
+            [[0, 1, 0, 0],
+            [1, 0, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1]]
+        )
+
         pcd_overall += pcd.transform(transform_matrix)
 
     return pcd_overall
@@ -779,6 +785,79 @@ def read_series_as_voxel_grid(dir_path):
     pcd_overall = read_series_as_pcd(dir_path)
 
     path = next(Path(dir_path).glob("*.dcm"))
+    dicom_slice = dcmread(path)
+    dX, dY = dicom_slice.PixelSpacing
+
+    voxel_grid = o3d.geometry.VoxelGrid().create_from_point_cloud(pcd_overall, dX)
+
+    coords = np.array([voxel.grid_index for voxel in voxel_grid.get_voxels()])
+    vals = np.array([voxel.color[0] for voxel in voxel_grid.get_voxels()])
+
+    size = np.max(coords, axis=0) + 1
+    grid = np.zeros((size[0], size[1], size[2]))
+
+    grid[coords[:, 0], coords[:, 1], coords[:, 2]] = vals
+
+    f = pgzip.PgzipFile(cache_path, "w")
+    np.save(f, grid)
+    f.close()
+
+    del pcd_overall
+    del voxel_grid
+
+    return grid
+
+def read_study_as_pcd(dir_path, downsampling_factor=None):
+    pcd_overall = o3d.geometry.PointCloud()
+
+    for path in glob.glob(os.path.join(dir_path, "**/*.dcm"), recursive=True):
+        dicom_slice = dcmread(path)
+        img = np.expand_dims(dicom_slice.pixel_array, -1)
+        x, y, z = np.where(img)
+
+        index_voxel = np.vstack((x, y, z))
+        grid_index_array = index_voxel.T
+        pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(grid_index_array))
+
+        vals = np.repeat(np.expand_dims(img[x, y, z], -1), 3, -1)
+        pcd.colors = o3d.utility.Vector3dVector(vals) # Converted to np.float64
+
+        dX, dY = dicom_slice.PixelSpacing
+        X = np.array(list(dicom_slice.ImageOrientationPatient[:3]) + [0]) * dX
+        Y = np.array(list(dicom_slice.ImageOrientationPatient[3:]) + [0]) * dY
+        S = np.array(list(dicom_slice.ImagePositionPatient) + [1])
+
+        transform_matrix = np.array([X, Y, np.zeros(len(X)), S]).T
+        transform_matrix = transform_matrix @ np.matrix(
+            [[0, 1, 0, 0],
+            [1, 0, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1]]
+        )
+
+        pcd_overall += pcd.transform(transform_matrix)
+
+    return pcd_overall
+
+
+def read_study_as_voxel_grid(dir_path):
+    cache_path = os.path.join(dir_path, "cached_grid.npy.gz")
+    f = None
+    if os.path.exists(cache_path):
+        try:
+            f = pgzip.PgzipFile(cache_path, "r")
+            ret = np.load(f)
+            f.close()
+            return ret
+        except Exception as e:
+            print(dir_path, "\n", e)
+            if f:
+                f.close()
+            os.remove(cache_path)
+
+    pcd_overall = read_study_as_pcd(dir_path)
+
+    path = next(glob.iglob(os.path.join(dir_path, "**/*.dcm"), recursive=True))
     dicom_slice = dcmread(path)
     dX, dY = dicom_slice.PixelSpacing
 
