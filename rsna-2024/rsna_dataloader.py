@@ -798,11 +798,18 @@ def read_series_as_voxel_grid(dir_path):
 
     voxel_grid = o3d.geometry.VoxelGrid().create_from_point_cloud(pcd_overall, dX)
 
-    coords = np.array([voxel.grid_index for voxel in voxel_grid.get_voxels()])
-    vals = np.array([voxel.color[0] for voxel in voxel_grid.get_voxels()])
+    coords = []
+    vals = []
+
+    for voxel in voxel_grid.get_voxels():
+        coords.append(voxel.grid_index)
+        vals.append(voxel.color[0])
 
     pcd_overall.clear()
     voxel_grid.clear()
+
+    coords = np.array(coords)
+    vals = np.array(vals)
 
     size = np.max(coords, axis=0) + 1
     grid = np.zeros((size[0], size[1], size[2]))
