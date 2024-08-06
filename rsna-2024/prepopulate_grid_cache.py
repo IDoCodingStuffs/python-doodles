@@ -1,3 +1,5 @@
+import math
+
 import open3d as o3d
 import pydicom
 import numpy as np
@@ -5,8 +7,7 @@ import glob
 import os
 import pgzip
 from tqdm import tqdm
-from tqdm.contrib.concurrent import process_map
-
+import argparse
 
 def read_series_as_pcd(dir_path):
     pcds_xyz = []
@@ -95,16 +96,15 @@ if __name__ == "__main__":
     dirs = glob.glob("./data/rsna-2024-lumbar-spine-degenerative-classification/train_images/*/*/")
     dirs = sorted(dirs)
 
-    dirs_1 = dirs[:len(dirs)//9]
-    dirs_2 = dirs[len(dirs)//9:2*len(dirs)//9]
-    dirs_3 = dirs[2*len(dirs)//9:3*len(dirs)//9]
-    dirs_4 = dirs[3*len(dirs)//9:4*len(dirs)//9]
-    dirs_5 = dirs[4*len(dirs)//9:5*len(dirs)//9]
-    dirs_6 = dirs[5*len(dirs)//9:6*len(dirs)//9]
-    dirs_7 = dirs[6*len(dirs)//9:7*len(dirs)//9]
-    dirs_8 = dirs[7*len(dirs)//9:8*len(dirs)//9]
-    dirs_9 = dirs[8*len(dirs)//9:]
+    parser = argparse.ArgumentParser(
+        prog='GridCachePrepop',
+    )
+    parser.add_argument('index', type=int)
+    parser.add_argument('count', type=int)
+    args = parser.parse_args()
 
-    #process_map(read_series_as_voxel_grid, dirs_2, chunksize=2, max_workers=4)
-    for dir in tqdm(dirs_9):
+    slice_size = math.ceil(len(dirs)/args.count)
+    dirslice = dirs[slice_size*args.index:slice_size*(args.index + 1)]
+
+    for dir in tqdm(dirslice):
         read_series_as_voxel_grid(dir)
