@@ -72,106 +72,20 @@ class PatientLevelDataset(Dataset):
         curr = self.subjects.iloc[index % len(self.subjects)]
 
         label = np.array(self.labels[(curr["study_id"])])
-        images_basepath = os.path.join(self.base_path, str(curr["study_id"]))
-        images = []
+        study_path = os.path.join(self.base_path, str(curr["study_id"]))
 
-        for series_desc in CONDITIONS.keys():
-            # !TODO: Multiple matching series
-            series = self.dataframe.loc[
-                (self.dataframe["study_id"] == curr["study_id"]) &
-                (self.dataframe["series_description"] == series_desc)].sort_values("series_id")['series_id'].iloc[0]
+        study_images = read_study_as_voxel_grid(study_path)
 
-            series_path = os.path.join(images_basepath, str(series))
-            # series_images = read_series_as_volume(series_path)
-            series_images = read_series_as_voxel_grid(series_path)
+        # if is_mirror:
+        #     series_images = np.flip(study_images, axis=2 if series_desc == "Axial T2" else 0)
+        #     temp = label[:10].copy()
+        #     label[:10] = label[10:20].copy()
+        #     label[10:20] = temp
 
-            if is_mirror:
-                series_images = np.flip(series_images, axis=2 if series_desc == "Axial T2" else 0)
-                temp = label[:10].copy()
-                label[:10] = label[10:20].copy()
-                label[10:20] = temp
+        if self.transform_3d is not None:
+            study_images = self.transform_3d(np.expand_dims(study_images, 0))  # .data
 
-            if self.transform_3d is not None:
-                series_images = self.transform_3d(np.expand_dims(series_images, 0))  # .data
-
-            images.append(torch.tensor(series_images, dtype=torch.half).squeeze(0))
-
-        return torch.stack(images), F.one_hot(torch.tensor(label, dtype=torch.long), num_classes=3)
-
-    def _get_labels(self):
-        labels = dict()
-        for name, group in self.dataframe.groupby(["study_id"]):
-            group = group[["condition", "level", "severity"]].drop_duplicates().sort_values(["condition", "level"])
-            label_indices = []
-            for index, row in group.iterrows():
-                if row["severity"] in LABEL_MAP:
-                    label_indices.append(LABEL_MAP[row["severity"]])
-                else:
-                    raise ValueError()
-
-            study_id = name[0]
-
-            labels[study_id] = label_indices
-
-        return labels
-
-
-class PatientLevelDataset_PCD(Dataset):
-    def __init__(self,
-                 base_path: str,
-                 dataframe: pd.DataFrame,
-                 transform_3d=None,
-                 downsampling_factor=5,
-                 is_train=False,
-                 use_mirror_trick=False):
-        self.base_path = base_path
-        self.is_train = is_train
-        self.use_mirror_trick = use_mirror_trick
-
-        self.dataframe = (dataframe[['study_id', "series_id", "series_description", "condition", "severity", "level"]]
-                          .drop_duplicates())
-
-        self.subjects = self.dataframe[['study_id']].drop_duplicates().reset_index(drop=True)
-        self.downsampling_factor = downsampling_factor
-        self.transform_3d = transform_3d
-
-        self.levels = sorted(self.dataframe["level"].unique())
-        self.labels = self._get_labels()
-
-    def __len__(self):
-        return len(self.subjects) * (2 if self.use_mirror_trick else 1)
-
-    def __getitem__(self, index):
-        is_mirror = index >= len(self.subjects)
-        curr = self.subjects.iloc[index % len(self.subjects)]
-
-        label = np.array(self.labels[(curr["study_id"])])
-        images_basepath = os.path.join(self.base_path, str(curr["study_id"]))
-
-        pcds = []
-        for series_desc in CONDITIONS.keys():
-            # !TODO: Multiple matching series
-            series = self.dataframe.loc[
-                (self.dataframe["study_id"] == curr["study_id"]) &
-                (self.dataframe["series_description"] == series_desc)].sort_values("series_id")['series_id'].iloc[0]
-
-            series_path = os.path.join(images_basepath, str(series))
-            series_points = read_series_as_pcd(series_path, self.downsampling_factor)
-
-            # !TODO:
-            # if is_mirror:
-            #     series_images = np.flip(series_images, axis=2 if series_desc == "Axial T2" else 0)
-            #     temp = label[:10].copy()
-            #     label[:10] = label[10:20].copy()
-            #     label[10:20] = temp
-
-            np.random.shuffle(series_points)
-            pcds.append(series_points[:20000])
-
-        # !TODO: Only one series initially
-        return (torch.tensor(pcds[0])
-                .float()
-                .permute(1, 0), F.one_hot(torch.tensor(label, dtype=torch.long), num_classes=3))
+        return torch.HalfTensor(study_images), F.one_hot(torch.tensor(label, dtype=torch.long), num_classes=3)
 
     def _get_labels(self):
         labels = dict()
