@@ -92,7 +92,7 @@ class PatientLevelDataset(Dataset):
                 label[10:20] = temp
 
             if self.transform_3d is not None:
-                series_images = self.transform_3d(np.expand_dims(series_images, 0)) #.data
+                series_images = self.transform_3d(np.expand_dims(series_images, 0))  # .data
 
             images.append(torch.tensor(series_images, dtype=torch.half).squeeze(0))
 
@@ -132,7 +132,7 @@ class PatientLevelDataset_PCD(Dataset):
                           .drop_duplicates())
 
         self.subjects = self.dataframe[['study_id']].drop_duplicates().reset_index(drop=True)
-        self.downsampling_factor=downsampling_factor
+        self.downsampling_factor = downsampling_factor
         self.transform_3d = transform_3d
 
         self.levels = sorted(self.dataframe["level"].unique())
@@ -522,16 +522,16 @@ def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
 
 
 def create_subject_level_pcd_datasets_and_loaders(df: pd.DataFrame,
-                                              base_path: str,
-                                              transform_3d_train=None,
-                                              transform_3d_val=None,
-                                              split_factor=0.2,
-                                              random_seed=42,
-                                              batch_size=1,
-                                              num_workers=0,
-                                              downsampling_factor=5,
-                                              pin_memory=True,
-                                              use_mirroring_trick=True):
+                                                  base_path: str,
+                                                  transform_3d_train=None,
+                                                  transform_3d_val=None,
+                                                  split_factor=0.2,
+                                                  random_seed=42,
+                                                  batch_size=1,
+                                                  num_workers=0,
+                                                  downsampling_factor=5,
+                                                  pin_memory=True,
+                                                  use_mirroring_trick=True):
     df = df.dropna()
     # This drops any subjects with nans
 
@@ -560,11 +560,11 @@ def create_subject_level_pcd_datasets_and_loaders(df: pd.DataFrame,
 
     random.seed(random_seed)
     train_dataset = PatientLevelDataset_PCD(base_path, train_df,
-                                        transform_3d=transform_3d_train,
-                                        downsampling_factor=downsampling_factor,
-                                        is_train=True,
-                                        use_mirror_trick=use_mirroring_trick
-                                        )
+                                            transform_3d=transform_3d_train,
+                                            downsampling_factor=downsampling_factor,
+                                            is_train=True,
+                                            use_mirror_trick=use_mirroring_trick
+                                            )
     val_dataset = PatientLevelDataset_PCD(base_path, val_df,
                                           downsampling_factor=downsampling_factor,
                                           transform_3d=transform_3d_val)
@@ -579,7 +579,6 @@ def create_subject_level_pcd_datasets_and_loaders(df: pd.DataFrame,
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
 
     return train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset
-
 
 
 def create_subject_level_segmentation_datasets_and_loaders(df: pd.DataFrame,
@@ -748,7 +747,7 @@ def read_series_as_pcd(dir_path, downsampling_factor=None):
         pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(grid_index_array))
 
         vals = np.repeat(np.expand_dims(img[x, y, z], -1), 3, -1)
-        pcd.colors = o3d.utility.Vector3dVector(vals) # Converted to np.float64
+        pcd.colors = o3d.utility.Vector3dVector(vals)  # Converted to np.float64
 
         dX, dY = dicom_slice.PixelSpacing
         X = np.array(list(dicom_slice.ImageOrientationPatient[:3]) + [0]) * dX
@@ -758,14 +757,15 @@ def read_series_as_pcd(dir_path, downsampling_factor=None):
         transform_matrix = np.array([X, Y, np.zeros(len(X)), S]).T
         transform_matrix = transform_matrix @ np.matrix(
             [[0, 1, 0, 0],
-            [1, 0, 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1]]
+             [1, 0, 0, 0],
+             [0, 0, 1, 0],
+             [0, 0, 0, 1]]
         )
 
         pcd_overall += pcd.transform(transform_matrix)
 
     return pcd_overall
+
 
 def read_series_as_voxel_grid(dir_path):
     cache_path = os.path.join(dir_path, "cached_grid.npy.gz")
@@ -807,6 +807,7 @@ def read_series_as_voxel_grid(dir_path):
 
     return grid
 
+
 def read_study_as_pcd(dir_path, downsampling_factor=None):
     pcd_overall = o3d.geometry.PointCloud()
 
@@ -819,8 +820,15 @@ def read_study_as_pcd(dir_path, downsampling_factor=None):
         grid_index_array = index_voxel.T
         pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(grid_index_array))
 
-        vals = np.repeat(np.expand_dims(img[x, y, z], -1), 3, -1)
-        pcd.colors = o3d.utility.Vector3dVector(vals) # Converted to np.float64
+        vals = np.expand_dims(img[x, y, z], -1)
+        if dicom_slice.SeriesDescription == "T1":
+            vals = np.pad(vals, ((0, 0), (0, 2)))
+        elif dicom_slice.SeriesDescription == "T2":
+            vals = np.pad(vals, ((0, 0), (1, 1)))
+        else:
+            raise ValueError("Unknown series desc")
+
+        pcd.colors = o3d.utility.Vector3dVector(vals)  # Converted to np.float64
 
         dX, dY = dicom_slice.PixelSpacing
         X = np.array(list(dicom_slice.ImageOrientationPatient[:3]) + [0]) * dX
@@ -830,9 +838,9 @@ def read_study_as_pcd(dir_path, downsampling_factor=None):
         transform_matrix = np.array([X, Y, np.zeros(len(X)), S]).T
         transform_matrix = transform_matrix @ np.matrix(
             [[0, 1, 0, 0],
-            [1, 0, 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1]]
+             [1, 0, 0, 0],
+             [0, 0, 1, 0],
+             [0, 0, 0, 1]]
         )
 
         pcd_overall += pcd.transform(transform_matrix)
@@ -864,12 +872,14 @@ def read_study_as_voxel_grid(dir_path):
     voxel_grid = o3d.geometry.VoxelGrid().create_from_point_cloud(pcd_overall, dX)
 
     coords = np.array([voxel.grid_index for voxel in voxel_grid.get_voxels()])
-    vals = np.array([voxel.color[0] for voxel in voxel_grid.get_voxels()])
+    vals = np.array([voxel.color[0:2] for voxel in voxel_grid.get_voxels()])
 
     size = np.max(coords, axis=0) + 1
-    grid = np.zeros((size[0], size[1], size[2]))
+    # 1 channel per pulse sequence type, CHWD (I think?)
+    grid = np.zeros((2, size[0], size[1], size[2]))
 
-    grid[coords[:, 0], coords[:, 1], coords[:, 2]] = vals
+    grid[0, coords[:, 0], coords[:, 1], coords[:, 2]] = vals[:, 0]
+    grid[1, coords[:, 0], coords[:, 1], coords[:, 2]] = vals[:, 1]
 
     f = pgzip.PgzipFile(cache_path, "w")
     np.save(f, grid)
