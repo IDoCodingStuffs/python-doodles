@@ -163,9 +163,12 @@ class PatientLevelDataset_PCD(Dataset):
             #     label[:10] = label[10:20].copy()
             #     label[10:20] = temp
 
-            pcds.append(series_points)
+            pcds.append(series_points[:20000])
 
-        return pcds, F.one_hot(torch.tensor(label, dtype=torch.long), num_classes=3)
+        # !TODO: Only one series initially
+        return (torch.tensor(pcds[0])
+                .float()
+                .permute(1, 0), F.one_hot(torch.tensor(label, dtype=torch.long), num_classes=3))
 
     def _get_labels(self):
         labels = dict()

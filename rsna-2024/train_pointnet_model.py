@@ -165,7 +165,7 @@ CONFIG = dict(
     epochs=25,
     batch_size=2,
     split_rate=0.2,
-    downsampling_rate=25,
+    downsampling_rate=50,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
 )
@@ -283,7 +283,7 @@ def train_model_pcd(model_label: str):
 
     NUM_EPOCHS = CONFIG["epochs"]
 
-    model = PointNet_Model_3D_Multihead().to(device)
+    model = PointNet_Model_3D_Multihead(out_classes=CONFIG["num_classes"]).to(device)
     optimizers = [
         torch.optim.Adam(model.encoder.parameters(), lr=5e-5),
         torch.optim.Adam(model.heads.parameters(), lr=1e-3),
