@@ -135,7 +135,8 @@ class CNN_Model_3D_Multihead(nn.Module):
 
 def train_model_3d(backbone, model_label: str):
     transform_3d_train = tio.Compose([
-        tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
+        # tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
+        nn.AdaptiveAvgPool3d(CONFIG["vol_size"]),
         tio.RandomAffine(p=CONFIG["aug_prob"]),
         # tio.OneOf({
         #     tio.RandomElasticDeformation(): 0.3,
@@ -153,7 +154,8 @@ def train_model_3d(backbone, model_label: str):
     ])
 
     transform_3d_val = tio.Compose([
-        tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
+        #tio.Resize(CONFIG["vol_size"], image_interpolation=CONFIG["interpolation"]),
+        nn.AdaptiveAvgPool3d(CONFIG["vol_size"]),
         tio.RescaleIntensity(out_min_max=(0, 1)),
     ])
 
