@@ -790,6 +790,7 @@ def read_series_as_voxel_grid(dir_path):
 
     pcd_overall = o3d.geometry.PointCloud()
     pcd_overall.points = o3d.utility.Vector3dVector(pcd_xyzd[:, :3])
+    pcd_overall.colors = o3d.utility.Vector3dVector(np.repeat(np.expand_dims(pcd_xyzd[:, 3], -1), 3, -1).astype(np.int32))
 
     paths = glob.glob(os.path.join(dir_path, "*.dcm"))
     dicom_slice = pydicom.read_file(paths[0])
@@ -798,16 +799,16 @@ def read_series_as_voxel_grid(dir_path):
     voxel_grid = o3d.geometry.VoxelGrid().create_from_point_cloud(pcd_overall, dX)
 
     coords = np.array([voxel.grid_index for voxel in voxel_grid.get_voxels()])
-    vals = pcd_xyzd[:, 3]
+    vals = np.array([voxel.color[0] for voxel in voxel_grid.get_voxels()])
 
     pcd_overall.clear()
     voxel_grid.clear()
 
     size = np.max(coords, axis=0) + 1
-    grid = np.zeros((size[1], size[0], size[2]))
+    grid = np.zeros((size[0], size[1], size[2]))
 
     for index, coord in enumerate(coords):
-        grid[(coord[1], coord[0], coord[2])] = vals[index]
+        grid[(coord[0], coord[1], coord[2])] = vals[index]
 
     f = pgzip.PgzipFile(cache_path, "w")
     np.save(f, grid)
