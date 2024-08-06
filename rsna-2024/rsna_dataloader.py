@@ -514,6 +514,63 @@ def create_subject_level_datasets_and_loaders(df: pd.DataFrame,
     return train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset
 
 
+def create_subject_level_pcd_datasets_and_loaders(df: pd.DataFrame,
+                                              base_path: str,
+                                              transform_3d_train=None,
+                                              transform_3d_val=None,
+                                              split_factor=0.2,
+                                              random_seed=42,
+                                              batch_size=1,
+                                              num_workers=0,
+                                              pin_memory=True,
+                                              use_mirroring_trick=True):
+    df = df.dropna()
+    # This drops any subjects with nans
+
+    filtered_df = pd.DataFrame(columns=df.columns)
+    for series_desc in CONDITIONS.keys():
+        subset = df[df['series_description'] == series_desc]
+        if series_desc == "Sagittal T2/STIR":
+            subset = subset[subset.groupby(["study_id"]).transform('size') == 5]
+        else:
+            subset = subset[subset.groupby(["study_id"]).transform('size') == 10]
+        filtered_df = pd.concat([filtered_df, subset])
+
+    filtered_df = filtered_df[filtered_df.groupby(["study_id"]).transform('size') == 25]
+
+    train_studies, val_studies = train_test_split(filtered_df["study_id"].unique(), test_size=split_factor,
+                                                  random_state=random_seed)
+    val_studies, test_studies = train_test_split(val_studies, test_size=0.25, random_state=random_seed)
+
+    train_df = filtered_df[filtered_df["study_id"].isin(train_studies)]
+    val_df = filtered_df[filtered_df["study_id"].isin(val_studies)]
+    test_df = filtered_df[filtered_df["study_id"].isin(test_studies)]
+
+    train_df = train_df.reset_index(drop=True)
+    val_df = val_df.reset_index(drop=True)
+    test_df = test_df.reset_index(drop=True)
+
+    random.seed(random_seed)
+    train_dataset = PatientLevelDataset_PCD(base_path, train_df,
+                                        transform_3d=transform_3d_train,
+                                        is_train=True,
+                                        use_mirror_trick=use_mirroring_trick
+                                        )
+    val_dataset = PatientLevelDataset_PCD(base_path, val_df,
+                                      transform_3d=transform_3d_val)
+    test_dataset = PatientLevelDataset_PCD(base_path, test_df,
+                                       transform_3d=transform_3d_val)
+
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers,
+                              pin_memory=pin_memory)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers,
+                            pin_memory=pin_memory)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+
+    return train_loader, val_loader, test_loader, train_dataset, val_dataset, test_dataset
+
+
+
 def create_subject_level_segmentation_datasets_and_loaders(df: pd.DataFrame,
                                                            data_type: str,
                                                            base_path: str,

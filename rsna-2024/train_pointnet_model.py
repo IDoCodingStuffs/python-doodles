@@ -156,19 +156,14 @@ def feature_transform_reguliarzer(trans):
 CONFIG = dict(
     n_levels=5,
     num_classes=25,
-    # backbone="efficientnet_b4",
-    backbone="tf_efficientnetv2_m",
-    interpolation="bspline",
-    # interpolation="gaussian",
-    vol_size=(96, 96, 96),
-    num_workers=12,
+    num_workers=2,
     drop_rate=0.5,
     drop_rate_last=0.1,
     drop_path_rate=0.5,
     aug_prob=0.7,
     out_dim=3,
     epochs=25,
-    batch_size=8,
+    batch_size=2,
     split_rate=0.2,
     device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
     seed=2024
@@ -273,8 +268,8 @@ class PointNet_Model_3D_Multihead(nn.Module):
 def train_model_3d(backbone, model_label: str):
     (trainloader, valloader, test_loader,
      trainset, valset, testset) = create_subject_level_pcd_datasets_and_loaders(TRAINING_DATA,
-                                                                            transform_3d_train=transform_3d_train,
-                                                                            transform_3d_val=transform_3d_val,
+                                                                            # transform_3d_train=transform_3d_train,
+                                                                            # transform_3d_val=transform_3d_val,
                                                                             base_path=os.path.join(
                                                                                 DATA_BASEPATH,
                                                                                 "train_images"),
