@@ -731,11 +731,11 @@ def read_study_as_pcd(dir_path, series_types_dict=None, downsampling_factor=None
     for path in glob.glob(os.path.join(dir_path, "**/*.dcm"), recursive=True):
         dicom_slice = dcmread(path)
 
-        if series_types_dict is None:
+        series_id = os.path.basename(os.path.dirname(path))
+        if series_types_dict is None or int(series_id) not in series_types_dict:
             series_desc = dicom_slice.SeriesDescription
         else:
-            series_id = os.path.basename(os.path.dirname(path))
-            series_desc = series_types_dict[series_id]
+            series_desc = series_types_dict[int(series_id)]
             series_desc = series_desc.split(" ")[-1]
             series_desc = series_desc.split("/")[0]
 
