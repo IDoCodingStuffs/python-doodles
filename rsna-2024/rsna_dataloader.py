@@ -806,14 +806,14 @@ def read_study_as_voxel_grid(dir_path, series_type_dict=None):
         vals.append(voxel.color[:2])
 
     coords = np.array(coords)
-    vals = np.array(vals)
+    vals = np.array(vals, dtype=np.float16)
 
     size = np.max(coords, axis=0) + 1
     # 1 channel per pulse sequence type, CHWD (I think?)
-    grid = np.zeros((2, size[0], size[1], size[2])).astype(np.float16)
+    grid = np.zeros((2, size[0], size[1], size[2]), dtype=np.float16)
 
-    grid[0, coords[:, 0], coords[:, 1], coords[:, 2]] = vals[:, 0].astype(np.float16)
-    grid[1, coords[:, 0], coords[:, 1], coords[:, 2]] = vals[:, 1].astype(np.float16)
+    grid[0, coords[:, 0], coords[:, 1], coords[:, 2]] = vals[:, 0]
+    grid[1, coords[:, 0], coords[:, 1], coords[:, 2]] = vals[:, 1]
 
     f = pgzip.PgzipFile(cache_path, "w")
     np.save(f, grid)
