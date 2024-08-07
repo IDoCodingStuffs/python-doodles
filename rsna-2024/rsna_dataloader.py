@@ -745,7 +745,7 @@ def read_study_as_pcd(dir_path, series_types_dict=None, downsampling_factor=None
 
         index_voxel = np.vstack((x, y, z))
         grid_index_array = index_voxel.T
-        pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(grid_index_array))
+        pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(grid_index_array.astype(np.float64)))
 
         vals = np.expand_dims(img[x, y, z], -1)
         if series_desc == "T1":
@@ -755,7 +755,7 @@ def read_study_as_pcd(dir_path, series_types_dict=None, downsampling_factor=None
         else:
             raise ValueError(f"Unknown series desc: {series_desc}")
 
-        pcd.colors = o3d.utility.Vector3dVector(vals)  # Converted to np.float64
+        pcd.colors = o3d.utility.Vector3dVector(vals.astype(np.float64))
 
         dX, dY = dicom_slice.PixelSpacing
         X = np.array(list(dicom_slice.ImageOrientationPatient[:3]) + [0]) * dX
@@ -798,15 +798,22 @@ def read_study_as_voxel_grid(dir_path, series_type_dict=None):
 
     voxel_grid = o3d.geometry.VoxelGrid().create_from_point_cloud(pcd_overall, dX)
 
-    coords = np.array([voxel.grid_index for voxel in voxel_grid.get_voxels()])
-    vals = np.array([voxel.color[0:2] for voxel in voxel_grid.get_voxels()])
+    coords = []
+    vals = []
+
+    for voxel in voxel_grid.get_voxels():
+        coords.append(voxel.grid_index)
+        vals.append(voxel.color[:2])
+
+    coords = np.array(coords)
+    vals = np.array(vals)
 
     size = np.max(coords, axis=0) + 1
     # 1 channel per pulse sequence type, CHWD (I think?)
-    grid = np.zeros((2, size[0], size[1], size[2]))
+    grid = np.zeros((2, size[0], size[1], size[2])).astype(np.float16)
 
-    grid[0, coords[:, 0], coords[:, 1], coords[:, 2]] = vals[:, 0]
-    grid[1, coords[:, 0], coords[:, 1], coords[:, 2]] = vals[:, 1]
+    grid[0, coords[:, 0], coords[:, 1], coords[:, 2]] = vals[:, 0].astype(np.float16)
+    grid[1, coords[:, 0], coords[:, 1], coords[:, 2]] = vals[:, 1].astype(np.float16)
 
     f = pgzip.PgzipFile(cache_path, "w")
     np.save(f, grid)
