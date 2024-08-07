@@ -58,8 +58,8 @@ class PatientLevelDataset(Dataset):
                           .drop_duplicates())
 
         self.subjects = self.dataframe[['study_id']].drop_duplicates().reset_index(drop=True)
-        self.series = self.dataframe[["study_id", "series_id", "series_description"]].drop_duplicates().groupby("study_id")["series_id"].apply(list).to_dict()
-        self.series_descs = self.dataframe[["study_id", "series_id", "series_description"]].drop_duplicates().groupby("series_id")["series_description"].apply(lambda x: x).to_dict()
+        self.series = self.dataframe[["study_id", "series_id"]].drop_duplicates().groupby("study_id")["series_id"].apply(list).to_dict()
+        self.series_descs = {e[0]: e[1] for e in self.dataframe[["series_id", "series_description"]].drop_duplicates().values}
 
         self.transform_3d = transform_3d
 
@@ -732,6 +732,7 @@ def read_study_as_pcd(dir_path, series_types_dict=None, downsampling_factor=None
         dicom_slice = dcmread(path)
 
         series_id = os.path.basename(os.path.dirname(path))
+        study_id = os.path.basename(os.path.dirname(os.path.dirname(path)))
         if series_types_dict is None or int(series_id) not in series_types_dict:
             series_desc = dicom_slice.SeriesDescription
         else:
