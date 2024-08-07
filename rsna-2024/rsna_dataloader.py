@@ -775,6 +775,60 @@ def read_study_as_pcd(dir_path, series_types_dict=None, downsampling_factor=None
     return pcd_overall
 
 
+def read_study_as_pcd_cuda(dir_path, series_types_dict=None, downsampling_factor=None):
+    device = o3d.core.Device("CUDA:0")
+    dtype = o3d.core.float32
+    pcd_overall = o3d.geometry.PointCloud()
+
+    for path in glob.glob(os.path.join(dir_path, "**/*.dcm"), recursive=True):
+        dicom_slice = dcmread(path)
+
+        series_id = os.path.basename(os.path.dirname(path))
+        study_id = os.path.basename(os.path.dirname(os.path.dirname(path)))
+        if series_types_dict is None or int(series_id) not in series_types_dict:
+            series_desc = dicom_slice.SeriesDescription
+        else:
+            series_desc = series_types_dict[int(series_id)]
+            series_desc = series_desc.split(" ")[-1]
+            series_desc = series_desc.split("/")[0]
+
+        img = np.expand_dims(dicom_slice.pixel_array, -1)
+        x, y, z = np.where(img)
+
+        index_voxel = np.vstack((x, y, z))[:, ::downsampling_factor]
+        grid_index_array = index_voxel.T
+        pcd = o3d.t.geometry.PointCloud(device)
+        pcd.point.positions = o3d.core.Tensor(grid_index_array, dtype, device)
+
+        vals = np.expand_dims(img[x, y, z][::downsampling_factor], -1)
+        if series_desc == "T1":
+            vals = np.pad(vals, ((0, 0), (0, 2)))
+        elif series_desc in ("T2", "T2/STIR"):
+            vals = np.pad(vals, ((0, 0), (1, 1)))
+        else:
+            raise ValueError(f"Unknown series desc: {series_desc}")
+
+        pcd.point.colors = o3d.core.Tensor(vals, dtype, device)
+
+        dX, dY = dicom_slice.PixelSpacing
+        X = np.array(list(dicom_slice.ImageOrientationPatient[:3]) + [0]) * dX
+        Y = np.array(list(dicom_slice.ImageOrientationPatient[3:]) + [0]) * dY
+        S = np.array(list(dicom_slice.ImagePositionPatient) + [1])
+
+        transform_matrix = np.array([X, Y, np.zeros(len(X)), S]).T
+        transform_matrix = transform_matrix @ np.matrix(
+            [[0, 1, 0, 0],
+             [1, 0, 0, 0],
+             [0, 0, 1, 0],
+             [0, 0, 0, 1]]
+        )
+
+        pcd.transform(o3d.core.Tensor(transform_matrix, dtype, device))
+        pcd_overall += pcd.to_legacy()
+
+    return pcd_overall
+
+
 def read_study_as_voxel_grid(dir_path, series_type_dict=None):
     cache_path = os.path.join(dir_path, "cached_grid.npy.gz")
     f = None
@@ -790,7 +844,8 @@ def read_study_as_voxel_grid(dir_path, series_type_dict=None):
                 f.close()
             os.remove(cache_path)
 
-    pcd_overall = read_study_as_pcd(dir_path, series_types_dict=series_type_dict)
+    # pcd_overall = read_study_as_pcd(dir_path, series_types_dict=series_type_dict)
+    pcd_overall = read_study_as_pcd_cuda(dir_path, series_types_dict=series_type_dict)
 
     path = next(glob.iglob(os.path.join(dir_path, "**/*.dcm"), recursive=True))
     dicom_slice = dcmread(path)
