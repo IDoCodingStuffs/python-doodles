@@ -58,6 +58,8 @@ class PatientLevelDataset(Dataset):
                           .drop_duplicates())
 
         self.subjects = self.dataframe[['study_id']].drop_duplicates().reset_index(drop=True)
+        self.series = self.dataframe[["study_id", "series_id", "series_description"]].drop_duplicates().groupby("study_id")["series_id"].apply(list).to_dict()
+        self.series_descs = self.dataframe[["study_id", "series_id", "series_description"]].drop_duplicates().groupby("study_id")["series_id"].apply(list).to_dict()
 
         self.transform_3d = transform_3d
 
@@ -74,7 +76,7 @@ class PatientLevelDataset(Dataset):
         label = np.array(self.labels[(curr["study_id"])])
         study_path = os.path.join(self.base_path, str(curr["study_id"]))
 
-        study_images = read_study_as_voxel_grid(study_path)
+        study_images = read_study_as_voxel_grid(study_path, self.series_descs)
 
         # if is_mirror:
         #     series_images = np.flip(study_images, axis=2 if series_desc == "Axial T2" else 0)
@@ -723,11 +725,20 @@ def read_series_as_voxel_grid(dir_path):
     return grid
 
 
-def read_study_as_pcd(dir_path, downsampling_factor=None):
+def read_study_as_pcd(dir_path, series_types_dict=None, downsampling_factor=None):
     pcd_overall = o3d.geometry.PointCloud()
 
     for path in glob.glob(os.path.join(dir_path, "**/*.dcm"), recursive=True):
         dicom_slice = dcmread(path)
+
+        if series_types_dict is None:
+            series_desc = dicom_slice.SeriesDescription
+        else:
+            series_id = os.path.basename(os.path.dirname(path))
+            series_desc = series_types_dict[series_id]
+            series_desc = series_desc.split(" ")[-1]
+            series_desc = series_desc.split("/")[0]
+
         img = np.expand_dims(dicom_slice.pixel_array, -1)
         x, y, z = np.where(img)
 
@@ -736,9 +747,9 @@ def read_study_as_pcd(dir_path, downsampling_factor=None):
         pcd = o3d.geometry.PointCloud(o3d.utility.Vector3dVector(grid_index_array))
 
         vals = np.expand_dims(img[x, y, z], -1)
-        if dicom_slice.SeriesDescription == "T1":
+        if series_desc == "T1":
             vals = np.pad(vals, ((0, 0), (0, 2)))
-        elif dicom_slice.SeriesDescription == "T2":
+        elif series_desc in ("T2", "T2/STIR"):
             vals = np.pad(vals, ((0, 0), (1, 1)))
         else:
             raise ValueError("Unknown series desc")
@@ -763,7 +774,7 @@ def read_study_as_pcd(dir_path, downsampling_factor=None):
     return pcd_overall
 
 
-def read_study_as_voxel_grid(dir_path):
+def read_study_as_voxel_grid(dir_path, series_type_dict=None):
     cache_path = os.path.join(dir_path, "cached_grid.npy.gz")
     f = None
     if os.path.exists(cache_path):
@@ -778,7 +789,7 @@ def read_study_as_voxel_grid(dir_path):
                 f.close()
             os.remove(cache_path)
 
-    pcd_overall = read_study_as_pcd(dir_path)
+    pcd_overall = read_study_as_pcd(dir_path, series_types_dict=series_type_dict)
 
     path = next(glob.iglob(os.path.join(dir_path, "**/*.dcm"), recursive=True))
     dicom_slice = dcmread(path)
