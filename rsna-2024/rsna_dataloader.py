@@ -59,7 +59,7 @@ class PatientLevelDataset(Dataset):
 
         self.subjects = self.dataframe[['study_id']].drop_duplicates().reset_index(drop=True)
         self.series = self.dataframe[["study_id", "series_id", "series_description"]].drop_duplicates().groupby("study_id")["series_id"].apply(list).to_dict()
-        self.series_descs = self.dataframe[["study_id", "series_id", "series_description"]].drop_duplicates().groupby("study_id")["series_id"].apply(list).to_dict()
+        self.series_descs = self.dataframe[["study_id", "series_id", "series_description"]].drop_duplicates().groupby("series_id")["series_description"].apply(lambda x: x).to_dict()
 
         self.transform_3d = transform_3d
 
@@ -752,7 +752,7 @@ def read_study_as_pcd(dir_path, series_types_dict=None, downsampling_factor=None
         elif series_desc in ("T2", "T2/STIR"):
             vals = np.pad(vals, ((0, 0), (1, 1)))
         else:
-            raise ValueError("Unknown series desc")
+            raise ValueError(f"Unknown series desc: {series_desc}")
 
         pcd.colors = o3d.utility.Vector3dVector(vals)  # Converted to np.float64
 
